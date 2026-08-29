@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url  	    = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  orders        Order[]
+  tickets       Ticket[]           @relation("TicketOwner")
+  validations   TicketValidation[] @relation("ValidatedBy")
+  createdEvents Event[]            @relation("EventCreator")
+}
+
+model Category {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  slug   String  @unique
+  events Event[]
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  status      EventStatus @default(DRAFT)
+
+  startsAt  DateTime
+  endsAt    DateTime?
+  venueName String?
+  city      String
+
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  createdById String?
+  createdBy   User?     @relation("EventCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lots    Lot[]
+  orders  Order[]
+  tickets Ticket[]
+
+  @@index([city])
+  @@index([startsAt])
+}
+
+model Lot {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id])
+  name         String // ex.: "1º Lote", "Pista", "VIP"
+  price        Decimal  @db.Decimal(10, 2)
+  quantity     Int // total disponível
+  quantitySold Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  orders  Order[]
+  tickets Ticket[]
+
+  @@index([eventId])
+}
+
+model Order {
+  id       String      @id @default(cuid())
+  userId   String
+  user     User        @relation(fields: [userId], references: [id])
+  eventId  String
+  event    Event       @relation(fields: [eventId], references: [id])
+  lotId    String
+  lot      Lot         @relation(fields: [lotId], references: [id])
+  quantity Int         @default(1)
+  amount   Decimal     @db.Decimal(10, 2)
+  status   OrderStatus @default(PENDING)
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+
+  tickets Ticket[]
+
+  @@index([userId])
+  @@index([eventId])
+}
+
+// ------------------------------------------------------------
+//  INGRESSO  (o produto entregue)
+// ------------------------------------------------------------
+
+// GES-16: QR gerado após pagamento
+// GES-8: vinculado ao dono logado (ownerId)
+// GES-34: marcado como USED na validação (status + usedAt)
+model Ticket {
+  id     String       @id @default(cuid())
+  qrCode String       @unique
+  status TicketStatus @default(VALID)
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+  lotId   String
+  lot     Lot    @relation(fields: [lotId], references: [id])
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+  ownerId String
+  owner   User   @relation("TicketOwner", fields: [ownerId], references: [id])
+
+  issuedAt DateTime  @default(now())
+  usedAt   DateTime?
+
+  validations TicketValidation[]
+
+  @@index([eventId])
+  @@index([ownerId])
+}
+
+// ------------------------------------------------------------
+//  VALIDAÇÃO NA ENTRADA  (GES-32 / 33 / 34)
+// ------------------------------------------------------------
+
+// GES-32: leitura de QR pela câmera
+// GES-33: resultado dá o feedback (VALID = verde / demais = vermelho)
+// GES-34: uma validação VALID marca o Ticket como USED
+model TicketValidation {
+  id            String           @id @default(cuid())
+  ticketId      String
+  ticket        Ticket           @relation(fields: [ticketId], references: [id])
+  validatedById String
+  validatedBy   User             @relation("ValidatedBy", fields: [validatedById], references: [id])
+  result        ValidationResult
+  createdAt     DateTime         @default(now())
+
+  @@index([ticketId])
+}
+
+// ------------------------------------------------------------
+//  ENUMS
+// ------------------------------------------------------------
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  FINISHED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+}
+
+// GES-33: VALID = verde; ALREADY_USED / INVALID = vermelho
+enum ValidationResult {
+  VALID
+  ALREADY_USED
+  INVALID
+}
