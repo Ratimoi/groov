@@ -3,170 +3,237 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
+model Usuario {
+  id String @id @default(cuid())
 
-  orders        Order[]
-  tickets       Ticket[]           @relation("TicketOwner")
-  validations   TicketValidation[] @relation("ValidatedBy")
-  createdEvents Event[]            @relation("EventCreator")
+  nome      String
+  username  String  @unique
+  avatarUrl String?
+
+  email    String   @unique
+  senha    String
+  papel    Papel    @default(CLIENTE)
+  criadoEm DateTime @default(now())
+
+  pedidos         Pedido[]
+  ingressos       Ingresso[]          @relation("DonoIngresso")
+  validacoes      ValidacaoIngresso[] @relation("ValidadoPor")
+  eventosCriados  Evento[]            @relation("CriadorEvento")
+  gruposLiderados Grupo[]             @relation("LiderGrupo")
+  participacoes   MembroGrupo[]
 }
 
-model Category {
-  id     String  @id @default(cuid())
-  name   String  @unique
-  slug   String  @unique
-  events Event[]
+model Categoria {
+  id      String   @id @default(cuid())
+  nome    String   @unique
+  eventos Evento[]
 }
 
-model Event {
-  id          String      @id @default(cuid())
-  title       String
-  description String?
-  imageUrl    String?
-  status      EventStatus @default(DRAFT)
+model Evento {
+  id        String    @id @default(cuid())
+  titulo    String
+  descricao String?
+  imagemUrl String?
+  comecaEm  DateTime
+  terminaEm DateTime?
+  nomeLocal String?
+  cidade    String
 
-  startsAt  DateTime
-  endsAt    DateTime?
-  venueName String?
-  city      String
+  categoriaId String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  createdById String?
-  createdBy   User?     @relation("EventCreator", fields: [createdById], references: [id])
+  criadoPorId String?
+  criadoPor   Usuario? @relation("CriadorEvento", fields: [criadoPorId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
-  lots    Lot[]
-  orders  Order[]
-  tickets Ticket[]
+  lotes      Lote[]
+  pedidos    Pedido[]
+  ingressos  Ingresso[]
+  validacoes ValidacaoIngresso[]
+  grupos     Grupo[]
 
-  @@index([city])
-  @@index([startsAt])
+  @@index([cidade])
 }
 
-model Lot {
-  id           String   @id @default(cuid())
-  eventId      String
-  event        Event    @relation(fields: [eventId], references: [id])
-  name         String // ex.: "1º Lote", "Pista", "VIP"
-  price        Decimal  @db.Decimal(10, 2)
-  quantity     Int // total disponível
-  quantitySold Int      @default(0)
-  createdAt    DateTime @default(now())
+model Lote {
+  id                String   @id @default(cuid())
+  eventoId          String
+  evento            Evento   @relation(fields: [eventoId], references: [id])
+  nome              String
+  preco             Decimal  @db.Decimal(10, 2)
+  quantidade        Int
+  quantidadeVendida Int      @default(0)
+  criadoEm          DateTime @default(now())
 
-  orders  Order[]
-  tickets Ticket[]
+  minimoGrupo   Int?
+  descontoGrupo Decimal? @db.Decimal(5, 4)
 
-  @@index([eventId])
+  pedidos   Pedido[]
+  ingressos Ingresso[]
+  grupos    Grupo[]
+
+  @@index([eventoId])
 }
 
-model Order {
-  id       String      @id @default(cuid())
-  userId   String
-  user     User        @relation(fields: [userId], references: [id])
-  eventId  String
-  event    Event       @relation(fields: [eventId], references: [id])
-  lotId    String
-  lot      Lot         @relation(fields: [lotId], references: [id])
-  quantity Int         @default(1)
-  amount   Decimal     @db.Decimal(10, 2)
-  status   OrderStatus @default(PENDING)
+model Pedido {
+  id         String       @id @default(cuid())
+  usuarioId  String
+  usuario    Usuario      @relation(fields: [usuarioId], references: [id])
+  eventoId   String
+  evento     Evento       @relation(fields: [eventoId], references: [id])
+  loteId     String
+  lote       Lote         @relation(fields: [loteId], references: [id])
+  quantidade Int          @default(1)
+  status     StatusPedido @default(PENDENTE)
 
-  createdAt DateTime  @default(now())
-  paidAt    DateTime?
+  subtotal    Decimal @db.Decimal(10, 2)
+  desconto    Decimal @default(0) @db.Decimal(10, 2)
+  taxaServico Decimal @default(0) @db.Decimal(10, 2)
+  valor       Decimal @db.Decimal(10, 2)
 
-  tickets Ticket[]
+  criadoEm DateTime  @default(now())
+  pagoEm   DateTime?
 
-  @@index([userId])
-  @@index([eventId])
+  ingressos   Ingresso[]
+  membroGrupo MembroGrupo?
+
+  @@index([usuarioId])
+  @@index([eventoId])
 }
 
-// ------------------------------------------------------------
-//  INGRESSO  (o produto entregue)
-// ------------------------------------------------------------
+model Grupo {
+  id   String @id @default(cuid())
+  nome String
 
-// GES-16: QR gerado após pagamento
-// GES-8: vinculado ao dono logado (ownerId)
-// GES-34: marcado como USED na validação (status + usedAt)
-model Ticket {
-  id     String       @id @default(cuid())
-  qrCode String       @unique
-  status TicketStatus @default(VALID)
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
 
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id])
-  lotId   String
-  lot     Lot    @relation(fields: [lotId], references: [id])
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id])
-  ownerId String
-  owner   User   @relation("TicketOwner", fields: [ownerId], references: [id])
+  loteId String
+  lote   Lote   @relation(fields: [loteId], references: [id])
 
-  issuedAt DateTime  @default(now())
-  usedAt   DateTime?
+  liderId String
+  lider   Usuario @relation("LiderGrupo", fields: [liderId], references: [id])
 
-  validations TicketValidation[]
+  metaMembros Int
+  expiraEm    DateTime
+  status      StatusGrupo @default(ABERTO)
+  criadoEm    DateTime    @default(now())
 
-  @@index([eventId])
-  @@index([ownerId])
+  membros MembroGrupo[]
+
+  @@index([eventoId])
+  @@index([liderId])
 }
 
-// ------------------------------------------------------------
-//  VALIDAÇÃO NA ENTRADA  (GES-32 / 33 / 34)
-// ------------------------------------------------------------
+model MembroGrupo {
+  id String @id @default(cuid())
 
-// GES-32: leitura de QR pela câmera
-// GES-33: resultado dá o feedback (VALID = verde / demais = vermelho)
-// GES-34: uma validação VALID marca o Ticket como USED
-model TicketValidation {
-  id            String           @id @default(cuid())
-  ticketId      String
-  ticket        Ticket           @relation(fields: [ticketId], references: [id])
-  validatedById String
-  validatedBy   User             @relation("ValidatedBy", fields: [validatedById], references: [id])
-  result        ValidationResult
-  createdAt     DateTime         @default(now())
+  grupoId String
+  grupo   Grupo  @relation(fields: [grupoId], references: [id])
 
-  @@index([ticketId])
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  status StatusMembroGrupo @default(CONVIDADO)
+
+  pedidoId String? @unique
+  pedido   Pedido? @relation(fields: [pedidoId], references: [id])
+
+  convidadoEm DateTime @default(now())
+
+  @@unique([grupoId, usuarioId])
+  @@index([usuarioId])
 }
 
-// ------------------------------------------------------------
-//  ENUMS
-// ------------------------------------------------------------
+model Ingresso {
+  id       String         @id @default(cuid())
+  codigoQr String         @unique
+  status   StatusIngresso @default(VALIDO)
 
-enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
-  FINISHED
+  eventoId String
+  evento   Evento  @relation(fields: [eventoId], references: [id])
+  loteId   String
+  lote     Lote    @relation(fields: [loteId], references: [id])
+  pedidoId String
+  pedido   Pedido  @relation(fields: [pedidoId], references: [id])
+  donoId   String
+  dono     Usuario @relation("DonoIngresso", fields: [donoId], references: [id])
+
+  emitidoEm DateTime  @default(now())
+  usadoEm   DateTime?
+
+  validacoes ValidacaoIngresso[]
+
+  @@index([eventoId])
+  @@index([donoId])
 }
 
-enum OrderStatus {
-  PENDING
-  PAID
-  CANCELLED
+model ValidacaoIngresso {
+  id String @id @default(cuid())
+
+  codigoLido String
+  ingressoId String?
+  ingresso   Ingresso? @relation(fields: [ingressoId], references: [id])
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  validadoPorId String
+  validadoPor   Usuario            @relation("ValidadoPor", fields: [validadoPorId], references: [id])
+  resultado     ResultadoValidacao
+  criadoEm      DateTime           @default(now())
+
+  @@index([ingressoId])
+  @@index([eventoId])
 }
 
-enum TicketStatus {
-  VALID
-  USED
-  CANCELLED
+enum Papel {
+  CLIENTE
+  PRODUTOR
+  ADMIN
 }
 
-// GES-33: VALID = verde; ALREADY_USED / INVALID = vermelho
-enum ValidationResult {
-  VALID
-  ALREADY_USED
-  INVALID
+enum StatusEvento {
+  RASCUNHO
+  PUBLICADO
+  CANCELADO
+  ENCERRADO
+}
+
+enum StatusPedido {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
+
+enum StatusGrupo {
+  ABERTO
+  CONFIRMADO
+  EXPIRADO
+  CANCELADO
+}
+
+enum StatusMembroGrupo {
+  CONVIDADO
+  PENDENTE
+  PAGO
+  RECUSADO
+}
+
+enum StatusIngresso {
+  VALIDO
+  USADO
+  CANCELADO
+}
+
+enum ResultadoValidacao {
+  VALIDO
+  JA_UTILIZADO
+  INVALIDO
 }
