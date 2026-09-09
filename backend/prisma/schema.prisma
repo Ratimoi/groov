@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id String @id @default(cuid())
+
+  nome      String
+  username  String  @unique
+  avatarUrl String?
+
+  email    String   @unique
+  senha    String
+  papel    Papel    @default(CLIENTE)
+  criadoEm DateTime @default(now())
+
+  pedidos         Pedido[]
+  ingressos       Ingresso[]          @relation("DonoIngresso")
+  validacoes      ValidacaoIngresso[] @relation("ValidadoPor")
+  eventosCriados  Evento[]            @relation("CriadorEvento")
+  gruposLiderados Grupo[]             @relation("LiderGrupo")
+  participacoes   MembroGrupo[]
+}
+
+model Categoria {
+  id      String   @id @default(cuid())
+  nome    String   @unique
+  eventos Evento[]
+}
+
+model Evento {
+  id        String    @id @default(cuid())
+  titulo    String
+  descricao String?
+  imagemUrl String?
+  comecaEm  DateTime
+  terminaEm DateTime?
+  nomeLocal String?
+  cidade    String
+
+  categoriaId String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+
+  criadoPorId String?
+  criadoPor   Usuario? @relation("CriadorEvento", fields: [criadoPorId], references: [id])
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  lotes      Lote[]
+  pedidos    Pedido[]
+  ingressos  Ingresso[]
+  validacoes ValidacaoIngresso[]
+  grupos     Grupo[]
+
+  @@index([cidade])
+}
+
+model Lote {
+  id                String   @id @default(cuid())
+  eventoId          String
+  evento            Evento   @relation(fields: [eventoId], references: [id])
+  nome              String
+  preco             Decimal  @db.Decimal(10, 2)
+  quantidade        Int
+  quantidadeVendida Int      @default(0)
+  criadoEm          DateTime @default(now())
+
+  minimoGrupo   Int?
+  descontoGrupo Decimal? @db.Decimal(5, 4)
+
+  pedidos   Pedido[]
+  ingressos Ingresso[]
+  grupos    Grupo[]
+
+  @@index([eventoId])
+}
+
+model Pedido {
+  id         String       @id @default(cuid())
+  usuarioId  String
+  usuario    Usuario      @relation(fields: [usuarioId], references: [id])
+  eventoId   String
+  evento     Evento       @relation(fields: [eventoId], references: [id])
+  loteId     String
+  lote       Lote         @relation(fields: [loteId], references: [id])
+  quantidade Int          @default(1)
+  status     StatusPedido @default(PENDENTE)
+
+  subtotal    Decimal @db.Decimal(10, 2)
+  desconto    Decimal @default(0) @db.Decimal(10, 2)
+  taxaServico Decimal @default(0) @db.Decimal(10, 2)
+  valor       Decimal @db.Decimal(10, 2)
+
+  criadoEm DateTime  @default(now())
+  pagoEm   DateTime?
+
+  ingressos   Ingresso[]
+  membroGrupo MembroGrupo?
+
+  @@index([usuarioId])
+  @@index([eventoId])
+}
+
+model Grupo {
+  id   String @id @default(cuid())
+  nome String
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  loteId String
+  lote   Lote   @relation(fields: [loteId], references: [id])
+
+  liderId String
+  lider   Usuario @relation("LiderGrupo", fields: [liderId], references: [id])
+
+  metaMembros Int
+  expiraEm    DateTime
+  status      StatusGrupo @default(ABERTO)
+  criadoEm    DateTime    @default(now())
+
+  membros MembroGrupo[]
+
+  @@index([eventoId])
+  @@index([liderId])
+}
+
+model MembroGrupo {
+  id String @id @default(cuid())
+
+  grupoId String
+  grupo   Grupo  @relation(fields: [grupoId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  status StatusMembroGrupo @default(CONVIDADO)
+
+  pedidoId String? @unique
+  pedido   Pedido? @relation(fields: [pedidoId], references: [id])
+
+  convidadoEm DateTime @default(now())
+
+  @@unique([grupoId, usuarioId])
+  @@index([usuarioId])
+}
+
+model Ingresso {
+  id       String         @id @default(cuid())
+  codigoQr String         @unique
+  status   StatusIngresso @default(VALIDO)
+
+  eventoId String
+  evento   Evento  @relation(fields: [eventoId], references: [id])
+  loteId   String
+  lote     Lote    @relation(fields: [loteId], references: [id])
+  pedidoId String
+  pedido   Pedido  @relation(fields: [pedidoId], references: [id])
+  donoId   String
+  dono     Usuario @relation("DonoIngresso", fields: [donoId], references: [id])
+
+  emitidoEm DateTime  @default(now())
+  usadoEm   DateTime?
+
+  validacoes ValidacaoIngresso[]
+
+  @@index([eventoId])
+  @@index([donoId])
+}
+
+model ValidacaoIngresso {
+  id String @id @default(cuid())
+
+  codigoLido String
+  ingressoId String?
+  ingresso   Ingresso? @relation(fields: [ingressoId], references: [id])
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  validadoPorId String
+  validadoPor   Usuario            @relation("ValidadoPor", fields: [validadoPorId], references: [id])
+  resultado     ResultadoValidacao
+  criadoEm      DateTime           @default(now())
+
+  @@index([ingressoId])
+  @@index([eventoId])
+}
+
+enum Papel {
+  CLIENTE
+  PRODUTOR
+  ADMIN
+}
+
+enum StatusEvento {
+  RASCUNHO
+  PUBLICADO
+  CANCELADO
+  ENCERRADO
+}
+
+enum StatusPedido {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
+
+enum StatusGrupo {
+  ABERTO
+  CONFIRMADO
+  EXPIRADO
+  CANCELADO
+}
+
+enum StatusMembroGrupo {
+  CONVIDADO
+  PENDENTE
+  PAGO
+  RECUSADO
+}
+
+enum StatusIngresso {
+  VALIDO
+  USADO
+  CANCELADO
+}
+
+enum ResultadoValidacao {
+  VALIDO
+  JA_UTILIZADO
+  INVALIDO
+}
