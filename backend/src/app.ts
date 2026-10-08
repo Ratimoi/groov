@@ -1,7 +1,7 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 
-const prisma = require('./config/prisma');
+import prisma from './config/prisma';
 
 const app = express();
 
@@ -21,4 +21,4 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
-module.exports = app;
+export default app;

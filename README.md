@@ -6,7 +6,7 @@ Sistema de gestão ágil.
 
 ```
 groov/
-├── backend/          # API Node.js + Express
+├── backend/          # API Node.js + Express (TypeScript)
 │   ├── src/
 │   │   ├── config/         # configurações (env, banco, etc.)
 │   │   ├── controllers/    # camada HTTP (recebe request, chama service)
@@ -16,8 +16,9 @@ groov/
 │   │   ├── routes/         # definição das rotas
 │   │   ├── services/       # regras de negócio
 │   │   ├── utils/          # funções utilitárias
-│   │   ├── app.js          # configuração do Express
-│   │   └── server.js       # ponto de entrada
+│   │   ├── app.ts          # configuração do Express
+│   │   └── server.ts       # ponto de entrada
+│   ├── prisma/             # schema e migrações do banco
 │   └── tests/
 └── frontend/         # SPA React + Vite
     ├── public/
@@ -36,14 +37,18 @@ groov/
 
 ## Como rodar
 
+O projeto usa **Node 24**. Com o [nvm](https://github.com/nvm-sh/nvm), rode `nvm use` na raiz: a versão vem do `.nvmrc`.
+
 ### Backend
 
 ```bash
 cd backend
 npm install
 cp .env.example .env
-npm run dev
+npm run dev          # desenvolvimento: roda o TypeScript direto e reinicia ao salvar
 ```
+
+Outros scripts: `npm run build` compila para `dist/`, `npm start` roda o build, `npm run typecheck` checa os tipos e `npm test` roda os testes.
 
 ### Frontend
 
