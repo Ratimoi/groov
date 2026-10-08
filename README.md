@@ -19,19 +19,19 @@ groov/
 │   │   ├── app.js          # configuração do Express
 │   │   └── server.js       # ponto de entrada
 │   └── tests/
-└── frontend/         # SPA React + Vite
-    ├── public/
+└── frontend/         # App React Native + Expo (TypeScript)
+    ├── assets/              # imagens, ícones, splash
+    ├── app.json             # configuração do app (nome, ícone, plugins)
     └── src/
-        ├── assets/          # imagens, ícones, etc.
+        ├── app/             # telas e rotas (Expo Router: cada arquivo é uma tela)
+        │   ├── _layout.tsx  # navegação raiz
+        │   └── index.tsx    # tela inicial
         ├── components/      # componentes reutilizáveis
+        ├── constants/       # tema, cores e outras constantes
         ├── contexts/        # contextos React
         ├── hooks/           # hooks customizados
-        ├── pages/           # páginas/telas
         ├── services/        # chamadas à API
-        ├── styles/          # estilos globais
-        ├── utils/           # funções utilitárias
-        ├── App.jsx
-        └── main.jsx
+        └── utils/           # funções utilitárias
 ```
 
 ## Como rodar
@@ -50,7 +50,8 @@ npm run dev
 ```bash
 cd frontend
 npm install
-npm run dev
+cp .env.example .env
+npx expo start
 ```
 
 ## Fluxo de contribuição
