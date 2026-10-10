@@ -1,7 +1,13 @@
 import { Prisma } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
+import { AppError } from "../utils/AppError";
 
 export function errorHandler(error: unknown, req: Request, res: Response, next: NextFunction): void {
+  if (error instanceof AppError) {
+    res.status(error.statusCode).json({ message: error.message });
+    return;
+  }
+
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
     res.status(409).json({ message: "Informação já existe, viola restrição de unicidade", fields: error.meta?.target });
     return;

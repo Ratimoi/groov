@@ -63,4 +63,30 @@ export class GroupController {
       next(error);
     }
   };
+
+  listMembers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.groupService.listMembers(req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  addMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const member = await this.groupService.addMember(req.params.id, req.body);
+      res.status(201).json(member);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  removeMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await this.groupService.removeMember(req.params.id, req.params.usuarioId);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
 }

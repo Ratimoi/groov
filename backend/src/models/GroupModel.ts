@@ -12,7 +12,10 @@ export class GroupModel {
 
   async create(data: GroupCreateRequest): Promise<Grupo> {
     return this.prismaClient.grupo.create({
-      data,
+      data: {
+        ...data,
+        membros: { create: { usuarioId: data.liderId } },
+      },
     });
   }
 
@@ -40,9 +43,10 @@ export class GroupModel {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await this.prismaClient.grupo.delete({
-        where: { id },
-      });
+      await this.prismaClient.$transaction([
+        this.prismaClient.membroGrupo.deleteMany({ where: { grupoId: id } }),
+        this.prismaClient.grupo.delete({ where: { id } }),
+      ]);
       return true;
     } catch (error) {
       if (isNotFoundError(error)) return false;
