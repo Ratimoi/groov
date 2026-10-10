@@ -19,12 +19,14 @@ model Usuario {
   papel    Papel    @default(CLIENTE)
   criadoEm DateTime @default(now())
 
-  pedidos         Pedido[]
-  ingressos       Ingresso[]          @relation("DonoIngresso")
-  validacoes      ValidacaoIngresso[] @relation("ValidadoPor")
-  eventosCriados  Evento[]            @relation("CriadorEvento")
-  gruposLiderados Grupo[]             @relation("LiderGrupo")
-  participacoes   MembroGrupo[]
+  pedidos             Pedido[]
+  ingressos           Ingresso[]           @relation("DonoIngresso")
+  validacoes          ValidacaoIngresso[]  @relation("ValidadoPor")
+  eventosCriados      Evento[]             @relation("CriadorEvento")
+  gruposLiderados     Grupo[]              @relation("LiderGrupo")
+  participacoes       MembroGrupo[]
+  comprasIniciadas    CompraGrupo[]        @relation("IniciadorCompra")
+  participacoesCompra ParticipanteCompra[]
 }
 
 model Categoria {
@@ -56,7 +58,6 @@ model Evento {
   pedidos    Pedido[]
   ingressos  Ingresso[]
   validacoes ValidacaoIngresso[]
-  grupos     Grupo[]
 
   @@index([cidade])
 }
@@ -71,12 +72,14 @@ model Lote {
   quantidadeVendida Int      @default(0)
   criadoEm          DateTime @default(now())
 
-  minimoGrupo   Int?
-  descontoGrupo Decimal? @db.Decimal(5, 4)
+  tamanhoGrupo        Int?
+  descontoGrupo       Decimal? @db.Decimal(5, 4)
+  prazoGrupoHoras     Int?
+  quantidadeReservada Int      @default(0)
 
-  pedidos   Pedido[]
-  ingressos Ingresso[]
-  grupos    Grupo[]
+  pedidos      Pedido[]
+  ingressos    Ingresso[]
+  comprasGrupo CompraGrupo[]
 
   @@index([eventoId])
 }
@@ -100,8 +103,8 @@ model Pedido {
   criadoEm DateTime  @default(now())
   pagoEm   DateTime?
 
-  ingressos   Ingresso[]
-  membroGrupo MembroGrupo?
+  ingressos          Ingresso[]
+  participanteCompra ParticipanteCompra?
 
   @@index([usuarioId])
   @@index([eventoId])
@@ -111,22 +114,14 @@ model Grupo {
   id   String @id @default(cuid())
   nome String
 
-  eventoId String
-  evento   Evento @relation(fields: [eventoId], references: [id])
-
-  loteId String
-  lote   Lote   @relation(fields: [loteId], references: [id])
-
   liderId String
   lider   Usuario @relation("LiderGrupo", fields: [liderId], references: [id])
 
-  metaMembros Int
-  status      StatusGrupo @default(ABERTO)
-  criadoEm    DateTime    @default(now())
+  criadoEm DateTime @default(now())
 
   membros MembroGrupo[]
+  compras CompraGrupo[]
 
-  @@index([eventoId])
   @@index([liderId])
 }
 
@@ -139,14 +134,49 @@ model MembroGrupo {
   usuarioId String
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
-  status StatusMembroGrupo @default(CONVIDADO)
+  entrouEm DateTime @default(now())
+
+  @@unique([grupoId, usuarioId])
+  @@index([usuarioId])
+}
+
+model CompraGrupo {
+  id String @id @default(cuid())
+
+  grupoId String
+  grupo   Grupo  @relation(fields: [grupoId], references: [id])
+
+  loteId String
+  lote   Lote   @relation(fields: [loteId], references: [id])
+
+  iniciadorId String
+  iniciador   Usuario @relation("IniciadorCompra", fields: [iniciadorId], references: [id])
+
+  status   StatusCompraGrupo @default(PENDENTE)
+  expiraEm DateTime
+  criadoEm DateTime          @default(now())
+
+  participantes ParticipanteCompra[]
+
+  @@index([grupoId])
+  @@index([loteId])
+}
+
+model ParticipanteCompra {
+  id String @id @default(cuid())
+
+  compraGrupoId String
+  compraGrupo   CompraGrupo @relation(fields: [compraGrupoId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
 
   pedidoId String? @unique
   pedido   Pedido? @relation(fields: [pedidoId], references: [id])
 
-  convidadoEm DateTime @default(now())
+  status StatusParticipante @default(PENDENTE)
 
-  @@unique([grupoId, usuarioId])
+  @@unique([compraGrupoId, usuarioId])
   @@index([usuarioId])
 }
 
@@ -211,18 +241,16 @@ enum StatusPedido {
   CANCELADO
 }
 
-enum StatusGrupo {
-  ABERTO
-  CONFIRMADO
-  EXPIRADO
-  CANCELADO
+enum StatusCompraGrupo {
+  PENDENTE
+  CONFIRMADA
+  EXPIRADA
 }
 
-enum StatusMembroGrupo {
-  CONVIDADO
+enum StatusParticipante {
   PENDENTE
   PAGO
-  RECUSADO
+  REEMBOLSADO
 }
 
 enum StatusIngresso {

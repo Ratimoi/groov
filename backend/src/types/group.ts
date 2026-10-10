@@ -2,10 +2,7 @@ import type { Grupo } from "@prisma/client";
 
 export type GroupCreateRequest = {
   nome: string;
-  eventoId: string;
-  loteId: string;
   liderId: string;
-  metaMembros: number;
 };
 
 export type GroupUpdateRequest = Partial<GroupCreateRequest>;
