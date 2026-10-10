@@ -1,34 +1,49 @@
+import { Prisma, PrismaClient } from "@prisma/client";
 import prisma from "../config/prisma";
-import type { User, UserCreateRequest, UserServiceContract } from "../types/user";
+import { UserModel } from "../models/UserModel";
+import type { UserCreateRequest, UserServiceContract, UserUpdateRequest } from "../types/user";
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025";
+}
 
 export class UserService implements UserServiceContract {
-  private prismaClient: any;
+  private prismaClient: PrismaClient;
 
-  constructor() {
-    this.prismaClient = prisma;
+  constructor(prismaClient: PrismaClient = prisma) {
+    this.prismaClient = prismaClient;
   }
 
-  async create(data: UserCreateRequest): Promise<User> {
-    return await this.prismaClient.usuario.create({
+  async create(data: UserCreateRequest): Promise<UserModel> {
+    const usuario = await this.prismaClient.usuario.create({
       data,
     });
+    return UserModel.fromPrisma(usuario);
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.prismaClient.usuario.findMany();
+  async findAll(): Promise<UserModel[]> {
+    const usuarios = await this.prismaClient.usuario.findMany();
+    return usuarios.map(UserModel.fromPrisma);
   }
 
-  async findById(id: string): Promise<User | null> {
-    return await this.prismaClient.usuario.findUnique({
+  async findById(id: string): Promise<UserModel | null> {
+    const usuario = await this.prismaClient.usuario.findUnique({
       where: { id },
     });
+    return usuario ? UserModel.fromPrisma(usuario) : null;
   }
 
-  async update(id: string, updatedUser: Partial<UserCreateRequest>): Promise<User | null> {
-    return await this.prismaClient.usuario.update({
-      where: { id },
-      data: updatedUser,
-    });
+  async update(id: string, data: UserUpdateRequest): Promise<UserModel | null> {
+    try {
+      const usuario = await this.prismaClient.usuario.update({
+        where: { id },
+        data,
+      });
+      return UserModel.fromPrisma(usuario);
+    } catch (error) {
+      if (isNotFoundError(error)) return null;
+      throw error;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
@@ -37,8 +52,9 @@ export class UserService implements UserServiceContract {
         where: { id },
       });
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (isNotFoundError(error)) return false;
+      throw error;
     }
   }
 }

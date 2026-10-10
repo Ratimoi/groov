@@ -1,28 +1,21 @@
-export type PapelUsuario = "CLIENTE" | "PRODUTOR" | "ADMIN";
-
-export type User = {
-  id: string;
-  nome: string;
-  username: string;
-  email: string;
-  avatarUrl: string | null;
-  senha: string;
-  papel: PapelUsuario;
-  criadoEm: Date;
-};
+import type { Papel } from "@prisma/client";
+import type { UserModel } from "../models/UserModel";
 
 export type UserCreateRequest = {
   nome: string;
   username: string;
   email: string;
   senha: string;
-  papel?: PapelUsuario;
+  avatarUrl?: string | null;
+  papel?: Papel;
 };
 
+export type UserUpdateRequest = Partial<UserCreateRequest>;
+
 export interface UserServiceContract {
-  create(data: UserCreateRequest): Promise<User>;
-  findAll(): Promise<User[]>;
-  findById(id: string): Promise<User | null>;
-  update(id: string, data: Partial<UserCreateRequest>): Promise<User | null>;
+  create(data: UserCreateRequest): Promise<UserModel>;
+  findAll(): Promise<UserModel[]>;
+  findById(id: string): Promise<UserModel | null>;
+  update(id: string, data: UserUpdateRequest): Promise<UserModel | null>;
   delete(id: string): Promise<boolean>;
 }
