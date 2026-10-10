@@ -3,6 +3,8 @@ import cors from 'cors';
 
 import prisma from './config/prisma';
 import userRoutes from './routes/UserRoutes';
+import groupRoutes from './routes/GroupRoutes';
+import groupPurchaseRoutes from './routes/GroupPurchaseRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -24,6 +26,8 @@ app.get('/health/db', async (req, res) => {
 });
 
 app.use('/users', userRoutes);
+app.use('/groups', groupRoutes);
+app.use('/group-purchases', groupPurchaseRoutes);
 
 app.use(errorHandler);
 

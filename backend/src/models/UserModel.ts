@@ -1,10 +1,7 @@
-import { Prisma, PrismaClient, type Usuario } from "@prisma/client";
+import { PrismaClient, type Usuario } from "@prisma/client";
 import prisma from "../config/prisma";
+import { isNotFoundError } from "../utils/prismaErrors";
 import type { UserCreateRequest, UserUpdateRequest } from "../types/user";
-
-function isNotFoundError(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025";
-}
 
 export class UserModel {
   private prismaClient: PrismaClient;
