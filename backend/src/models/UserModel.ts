@@ -1,27 +1,55 @@
-import type { Papel, Usuario } from "@prisma/client";
+import { Prisma, PrismaClient, type Usuario } from "@prisma/client";
+import prisma from "../config/prisma";
+import type { UserCreateRequest, UserUpdateRequest } from "../types/user";
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025";
+}
 
 export class UserModel {
-  readonly id: string;
-  nome: string;
-  username: string;
-  avatarUrl: string | null;
-  email: string;
-  senha: string;
-  papel: Papel;
-  readonly criadoEm: Date;
+  private prismaClient: PrismaClient;
 
-  constructor(data: Usuario) {
-    this.id = data.id;
-    this.nome = data.nome;
-    this.username = data.username;
-    this.avatarUrl = data.avatarUrl;
-    this.email = data.email;
-    this.senha = data.senha;
-    this.papel = data.papel;
-    this.criadoEm = data.criadoEm;
+  constructor(prismaClient: PrismaClient = prisma) {
+    this.prismaClient = prismaClient;
   }
 
-  static fromPrisma(data: Usuario): UserModel {
-    return new UserModel(data);
+  async create(data: UserCreateRequest): Promise<Usuario> {
+    return this.prismaClient.usuario.create({
+      data,
+    });
+  }
+
+  async findAll(): Promise<Usuario[]> {
+    return this.prismaClient.usuario.findMany();
+  }
+
+  async findById(id: string): Promise<Usuario | null> {
+    return this.prismaClient.usuario.findUnique({
+      where: { id },
+    });
+  }
+
+  async update(id: string, data: UserUpdateRequest): Promise<Usuario | null> {
+    try {
+      return await this.prismaClient.usuario.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      if (isNotFoundError(error)) return null;
+      throw error;
+    }
+  }
+
+  async delete(id: string): Promise<boolean> {
+    try {
+      await this.prismaClient.usuario.delete({
+        where: { id },
+      });
+      return true;
+    } catch (error) {
+      if (isNotFoundError(error)) return false;
+      throw error;
+    }
   }
 }

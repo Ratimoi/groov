@@ -1,5 +1,4 @@
-import type { Papel } from "@prisma/client";
-import type { UserModel } from "../models/UserModel";
+import type { Papel, Usuario } from "@prisma/client";
 
 export type UserCreateRequest = {
   nome: string;
@@ -13,9 +12,9 @@ export type UserCreateRequest = {
 export type UserUpdateRequest = Partial<UserCreateRequest>;
 
 export interface UserServiceContract {
-  create(data: UserCreateRequest): Promise<UserModel>;
-  findAll(): Promise<UserModel[]>;
-  findById(id: string): Promise<UserModel | null>;
-  update(id: string, data: UserUpdateRequest): Promise<UserModel | null>;
+  create(data: UserCreateRequest): Promise<Usuario>;
+  findAll(): Promise<Usuario[]>;
+  findById(id: string): Promise<Usuario | null>;
+  update(id: string, data: UserUpdateRequest): Promise<Usuario | null>;
   delete(id: string): Promise<boolean>;
 }
