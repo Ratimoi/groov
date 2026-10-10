@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 
 import prisma from './config/prisma';
+import userRoutes from './routes/UserRoutes';
 
 const app = express();
 
@@ -20,5 +21,7 @@ app.get('/health/db', async (req, res) => {
     res.status(503).json({ status: 'error', database: 'disconnected' });
   }
 });
+
+app.use('/users', userRoutes);
 
 export default app;
