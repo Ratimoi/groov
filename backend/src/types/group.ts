@@ -1,0 +1,19 @@
+import type { Grupo } from "@prisma/client";
+
+export type GroupCreateRequest = {
+  nome: string;
+  eventoId: string;
+  loteId: string;
+  liderId: string;
+  metaMembros: number;
+};
+
+export type GroupUpdateRequest = Partial<GroupCreateRequest>;
+
+export interface GroupServiceContract {
+  create(data: GroupCreateRequest): Promise<Grupo>;
+  findAll(): Promise<Grupo[]>;
+  findById(id: string): Promise<Grupo | null>;
+  update(id: string, data: GroupUpdateRequest): Promise<Grupo | null>;
+  delete(id: string): Promise<boolean>;
+}

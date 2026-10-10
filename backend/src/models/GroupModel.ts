@@ -1,34 +1,34 @@
-import { PrismaClient, type Usuario } from "@prisma/client";
+import { PrismaClient, type Grupo } from "@prisma/client";
 import prisma from "../config/prisma";
 import { isNotFoundError } from "../utils/prismaErrors";
-import type { UserCreateRequest, UserUpdateRequest } from "../types/user";
+import type { GroupCreateRequest, GroupUpdateRequest } from "../types/group";
 
-export class UserModel {
+export class GroupModel {
   private prismaClient: PrismaClient;
 
   constructor(prismaClient: PrismaClient = prisma) {
     this.prismaClient = prismaClient;
   }
 
-  async create(data: UserCreateRequest): Promise<Usuario> {
-    return this.prismaClient.usuario.create({
+  async create(data: GroupCreateRequest): Promise<Grupo> {
+    return this.prismaClient.grupo.create({
       data,
     });
   }
 
-  async findAll(): Promise<Usuario[]> {
-    return this.prismaClient.usuario.findMany();
+  async findAll(): Promise<Grupo[]> {
+    return this.prismaClient.grupo.findMany();
   }
 
-  async findById(id: string): Promise<Usuario | null> {
-    return this.prismaClient.usuario.findUnique({
+  async findById(id: string): Promise<Grupo | null> {
+    return this.prismaClient.grupo.findUnique({
       where: { id },
     });
   }
 
-  async update(id: string, data: UserUpdateRequest): Promise<Usuario | null> {
+  async update(id: string, data: GroupUpdateRequest): Promise<Grupo | null> {
     try {
-      return await this.prismaClient.usuario.update({
+      return await this.prismaClient.grupo.update({
         where: { id },
         data,
       });
@@ -40,7 +40,7 @@ export class UserModel {
 
   async delete(id: string): Promise<boolean> {
     try {
-      await this.prismaClient.usuario.delete({
+      await this.prismaClient.grupo.delete({
         where: { id },
       });
       return true;

@@ -7,6 +7,15 @@ export function errorHandler(error: unknown, req: Request, res: Response, next: 
     return;
   }
 
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+    if (req.method === "DELETE") {
+      res.status(409).json({ message: "Registro possui dependências e não pode ser removido", constraint: error.meta?.constraint });
+      return;
+    }
+    res.status(400).json({ message: "Referência a registro inexistente", constraint: error.meta?.constraint });
+    return;
+  }
+
   console.error(error);
   res.status(500).json({ message: "Erro interno do servidor" });
 }

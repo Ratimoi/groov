@@ -121,7 +121,6 @@ model Grupo {
   lider   Usuario @relation("LiderGrupo", fields: [liderId], references: [id])
 
   metaMembros Int
-  expiraEm    DateTime
   status      StatusGrupo @default(ABERTO)
   criadoEm    DateTime    @default(now())
 
