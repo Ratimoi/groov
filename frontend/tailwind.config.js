@@ -87,6 +87,17 @@ module.exports = {
         "body-sm": ["Inter-Regular"]
       }
     },
+    fontSize: {
+      "display-lg": ["48px", { lineHeight: "56px" }],
+      "headline-lg": ["32px", { lineHeight: "40px" }],
+      "headline-lg-mobile": ["28px", { lineHeight: "36px" }],
+      "headline-md": ["22px", { lineHeight: "28px" }],
+      "body-lg": ["18px", { lineHeight: "26px" }],
+      "body-md": ["16px", { lineHeight: "24px" }],
+      "body-sm": ["14px", { lineHeight: "20px" }],
+      "label-caps": ["12px", { lineHeight: "16px", letterSpacing: 1 }],
+      "ticket-data": ["14px", { lineHeight: "20px" }],
+    },
   },
   plugins: [],
 };
