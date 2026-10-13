@@ -1,9 +1,9 @@
 import "../../global.css";
-import { useEffect } from "react";
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useFonts } from "expo-font";
+import { View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  useFonts,
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from "@expo-google-fonts/plus-jakarta-sans";
@@ -12,23 +12,32 @@ import {
   JetBrainsMono_500Medium,
   JetBrainsMono_600SemiBold,
 } from "@expo-google-fonts/jetbrains-mono";
+import { Tabs } from "expo-router";
+import { NavBar } from "../components/NavBar";
 
-SplashScreen.preventAutoHideAsync();
+const queryClient = new QueryClient();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    "PlusJakartaSans-Bold": PlusJakartaSans_700Bold,
-    "PlusJakartaSans-ExtraBold": PlusJakartaSans_800ExtraBold,
-    "Inter-Regular": Inter_400Regular,
-    "JetBrainsMono-Medium": JetBrainsMono_500Medium,
-    "JetBrainsMono-SemiBold": JetBrainsMono_600SemiBold,
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    Inter_400Regular,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_600SemiBold,
   });
 
-  useEffect(() => {
-    if (loaded || error) SplashScreen.hideAsync();
-  }, [loaded, error]);
+  if (!fontsLoaded) return null;
 
-  if (!loaded && !error) return null;
-
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <View className="flex-1 bg-background">
+          <Tabs
+            screenOptions={{ headerShown: false }}
+            tabBar={(props) => <NavBar {...props} />}
+          />
+        </View>
+      </QueryClientProvider>
+    </SafeAreaProvider>
+  );
 }
