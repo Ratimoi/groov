@@ -14,7 +14,7 @@ export class EventModel {
     });
   }
 
-    async findAll(): Promise<Evento[]> {
-      return this.prismaClient.evento.findMany();
-    }
+  async findAll(): Promise<Evento[]> {
+    return this.prismaClient.evento.findMany();
+  }
 }
