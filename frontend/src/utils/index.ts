@@ -1,0 +1,11 @@
+export type { CategoriaType } from "./CategoriaType";
+export type { CompraGrupoType } from "./CompraGrupoType";
+export type { EventoType } from "./EventoType";
+export type { GrupoType } from "./GrupoType";
+export type { IngressoType } from "./IngressoType";
+export type { LoteType } from "./LoteType";
+export type { MembroGrupoType } from "./MembroGrupoType";
+export type { ParticipanteCompraType } from "./ParticipanteCompraType";
+export type { PedidoType } from "./PedidoType";
+export type { UsuarioType } from "./UsuarioType";
+export type { ValidacaoIngressoType } from "./ValidacaoIngressoType";
