@@ -102,6 +102,3 @@ jobs:
 
       - run: npm ci
       - run: eas update --branch production --message "${{ github.sha }}" --non-interactive
-        env:
-          EXPO_PUBLIC_NEON_DATA_API_URL: ${{ secrets.EXPO_PUBLIC_NEON_DATA_API_URL }}
-          EXPO_PUBLIC_NEON_AUTH_URL: ${{ secrets.EXPO_PUBLIC_NEON_AUTH_URL }}
