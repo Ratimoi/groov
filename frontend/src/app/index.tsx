@@ -1,7 +1,27 @@
-import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from "react-native";
+import { useEffect, useState } from "react";
+import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from "react-native";
 
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 export default function HomeScreen() {
+  const [eventos, setEventos] = useState<any[]>([]);  
+  
+  useEffect(() => {
+  async function buscaDados() {
+    try {
+      const response = await fetch(`${apiUrl}/filmes`);
+      const dados = await response.json();
+      
+      setEventos(dados);
+
+    } catch (error) {
+      console.error("Erro ao buscar eventos:", error);
+    }
+  }
+  
+  buscaDados();
+  }, [])
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <ScrollView
@@ -54,10 +74,9 @@ export default function HomeScreen() {
             {/* Card 1 */}
             <TouchableOpacity activeOpacity={0.8} className="bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col">
               <View className="relative h-64 w-full">
-                {/* <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDsy_Nt1-FqQQIMFqUfYPb4APLZKviwk6GU3cDbtDMmFutLxSOsadbKwBzoJFmO7L9rkjC4PIaI1KUrVCISollngOzq3fmcXiyOdUIcqySt_vzFbAyG9lPB5tl5QjUW-Cqp4OToKlhuWOtH7XO_KsPTqoXUmoi-8JnbXEmMQdv5_jev7mdGtxznJU3qr7kEKFDAEB-IbtyYtT9NWJ2bgRzSJuf5zGipkleXSd1JWJ28D6_ORfbzVw2C2Q' }}
+                <Image source={{ uri: eventos[0].}}
                   className="w-full h-full object-cover"
-                /> */}
+                />
                 <View className="absolute top-4 left-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
                   <Text className="font-label-caps text-label-caps text-secondary">TECHNO</Text>
                 </View>
