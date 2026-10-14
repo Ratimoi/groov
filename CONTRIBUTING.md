@@ -70,9 +70,11 @@ Os jobs de deploy só rodam em `push` na `main`, dependem da CI verde e usam o e
 | Job | O que faz | Secrets necessários |
 |---|---|---|
 | Deploy - Migrações (Neon) | `npx prisma migrate deploy` no banco de produção | `DATABASE_URL` |
-| Deploy - Frontend (EAS Update) | `eas update --branch production` (atualização OTA do app) | `EXPO_TOKEN`, `EXPO_PUBLIC_NEON_DATA_API_URL`, `EXPO_PUBLIC_NEON_AUTH_URL` |
+| Deploy - Frontend (EAS Update) | `eas update --branch production` (atualização OTA do app) | `EXPO_TOKEN` |
 
 Os secrets ficam em *Settings → Environments → production* do repositório.
+
+Variáveis `EXPO_PUBLIC_*` são embutidas no bundle do app em tempo de build. Hoje o frontend não usa nenhuma, então o deploy não as define. Quando o código passar a ler uma delas (como as do Neon Data API e Auth que estão no `frontend/.env.example`), cadastre-a como secret e passe-a no `env` do passo `eas update`.
 
 O EAS Update exige configuração prévia do projeto no Expo, feita uma vez com a conta do time: `npx eas-cli init` e `npx eas-cli update:configure` dentro de `frontend/`, e commitar o `eas.json` e as alterações no `app.json` e no `package.json` (`expo-updates`). Sem isso o job de frontend falha.
 
