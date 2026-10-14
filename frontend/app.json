@@ -38,6 +38,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "605f4e04-2bd0-4bda-8a1d-b3b0e93756f0"
+      }
+    },
+    "owner": "ratimoi",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/605f4e04-2bd0-4bda-8a1d-b3b0e93756f0"
     }
   }
 }
