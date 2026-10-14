@@ -40,7 +40,7 @@ feature/xxx ──PR──▶ dev ──PR──▶ main
 4. Após aprovação e CI verde, fazer o merge em `dev` e apagar a branch.
 5. Periodicamente, abrir PR de `dev` para `main`. A CI roda de novo antes do merge.
 
-Ainda não há etapa de deploy. Quando existir, ela deve ser disparada pelo merge em `main`.
+O deploy é disparado pelo push (merge) em `main`, depois que os jobs de backend e frontend passam. Veja a seção [Deploy](#deploy).
 
 ## Hotfix
 
@@ -62,6 +62,21 @@ O workflow (`.github/workflows/ci.yml`) roda em todo PR e push para `dev` e `mai
 - `npm run export:android` (build de verificação do bundle)
 
 Para rodar as mesmas checagens localmente antes de abrir o PR, execute esses scripts dentro de cada pasta.
+
+## Deploy
+
+Os jobs de deploy só rodam em `push` na `main`, dependem da CI verde e usam o environment `production` do GitHub.
+
+| Job | O que faz | Secrets necessários |
+|---|---|---|
+| Deploy - Migrações (Neon) | `npx prisma migrate deploy` no banco de produção | `DATABASE_URL` |
+| Deploy - Frontend (EAS Update) | `eas update --branch production` (atualização OTA do app) | `EXPO_TOKEN`, `EXPO_PUBLIC_NEON_DATA_API_URL`, `EXPO_PUBLIC_NEON_AUTH_URL` |
+
+Os secrets ficam em *Settings → Environments → production* do repositório.
+
+O EAS Update exige configuração prévia do projeto no Expo, feita uma vez com a conta do time: `npx eas-cli init` e `npx eas-cli update:configure` dentro de `frontend/`, e commitar o `eas.json` e as alterações no `app.json` e no `package.json` (`expo-updates`). Sem isso o job de frontend falha.
+
+O backend (API Express) ainda não tem job de deploy porque a hospedagem não foi definida; o Neon só hospeda o banco.
 
 ## Banco de dados
 
