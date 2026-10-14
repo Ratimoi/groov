@@ -70,6 +70,7 @@ Os jobs de deploy só rodam em `push` na `main`, dependem da CI verde e usam o e
 | Job | O que faz | Secrets necessários |
 |---|---|---|
 | Deploy - Migrações (Neon) | `npx prisma migrate deploy` no banco de produção | `DATABASE_URL` |
+| Deploy - API (Render) | Chama o deploy hook do Render, **depois** das migrações | `RENDER_DEPLOY_HOOK_URL` |
 | Deploy - Frontend (EAS Update) | `eas update --branch production` (atualização OTA do app) | `EXPO_TOKEN` |
 
 Os secrets ficam em *Settings → Environments → production* do repositório.
@@ -78,7 +79,17 @@ Variáveis `EXPO_PUBLIC_*` são embutidas no bundle do app em tempo de build. Ho
 
 O EAS Update exige configuração prévia do projeto no Expo, feita uma vez com a conta do time: `npx eas-cli init` e `npx eas-cli update:configure` dentro de `frontend/`, e commitar o `eas.json` e as alterações no `app.json` e no `package.json` (`expo-updates`). Sem isso o job de frontend falha.
 
-O backend (API Express) ainda não tem job de deploy porque a hospedagem não foi definida; o Neon só hospeda o banco.
+### API no Render
+
+A API Express roda no [Render](https://render.com); o Neon hospeda só o banco. O serviço é descrito em [`render.yaml`](render.yaml) e o auto-deploy do Render fica **desligado**: quem dispara o deploy é a CI, pelo deploy hook, e só depois de aplicar as migrações. Assim a API nova nunca sobe sobre um schema antigo.
+
+Configuração feita uma vez:
+
+1. No Render: *New → Blueprint*, apontando para este repositório. Ele lê o `render.yaml` e cria o serviço `groov-api`.
+2. Preencher `DATABASE_URL` (connection string do Neon) quando o Render pedir.
+3. No serviço: *Settings → Deploy Hook*, copiar a URL e cadastrá-la como secret `RENDER_DEPLOY_HOOK_URL` no environment `production` do GitHub.
+
+O health check usa `GET /health`.
 
 ## Banco de dados
 
