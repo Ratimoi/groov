@@ -5,6 +5,7 @@ import prisma from './config/prisma';
 import userRoutes from './routes/UserRoutes';
 import groupRoutes from './routes/GroupRoutes';
 import groupPurchaseRoutes from './routes/GroupPurchaseRoutes';
+import eventRoutes from './routes/EventRoutes'
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -25,9 +26,10 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
-app.use('/users', userRoutes);
-app.use('/groups', groupRoutes);
-app.use('/group-purchases', groupPurchaseRoutes);
+app.use('/usuarios', userRoutes);
+app.use('/grupos', groupRoutes);
+app.use('/grupos/compras', groupPurchaseRoutes);
+app.use('/eventos', eventRoutes)
 
 app.use(errorHandler);
 
