@@ -1,5 +1,6 @@
 import { Evento, PrismaClient } from "@prisma/client";
 import prisma from "../config/prisma";
+import type { PaginationParams } from "../utils/pagination";
 
 export class EventModel {
   private prismaClient: PrismaClient;
@@ -14,7 +15,16 @@ export class EventModel {
     });
   }
 
-  async findAll(): Promise<Evento[]> {
-    return this.prismaClient.evento.findMany();
+  async findPage({ page, limit }: PaginationParams): Promise<{ events: Evento[]; total: number }> {
+    const [events, total] = await Promise.all([
+      this.prismaClient.evento.findMany({
+        // O id desempata eventos que começam juntos; sem ele as páginas podem repetir ou perder itens.
+        orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prismaClient.evento.count(),
+    ]);
+    return { events, total };
   }
 }

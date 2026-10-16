@@ -24,6 +24,7 @@ jobs:
 
       - run: npm ci
       - run: npm run lint --if-present
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build --if-present
 
@@ -73,6 +74,26 @@ jobs:
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  deploy-backend:
+    name: Deploy - API (Render)
+    needs: [deploy-database]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-backend
+      cancel-in-progress: false
+    steps:
+      - name: Dispara o deploy no Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Secret RENDER_DEPLOY_HOOK_URL não configurado no environment production"
+            exit 1
+          fi
+          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
 
   deploy-frontend:
     name: Deploy - Frontend (EAS Update)

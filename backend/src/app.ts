@@ -27,8 +27,9 @@ app.get('/health/db', async (req, res) => {
 });
 
 app.use('/usuarios', userRoutes);
-app.use('/grupos', groupRoutes);
+// '/grupos/compras' precisa vir antes de '/grupos', senão '/grupos/:id' captura "compras" como id.
 app.use('/grupos/compras', groupPurchaseRoutes);
+app.use('/grupos', groupRoutes);
 app.use('/eventos', eventRoutes)
 
 app.use(errorHandler);
