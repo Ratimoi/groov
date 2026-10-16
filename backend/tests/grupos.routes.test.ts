@@ -1,5 +1,6 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { logadoComo } from "./helpers/auth";
 import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
 import { prismaError } from "./helpers/prismaErrors";
 
@@ -7,17 +8,22 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
 
+let AUTH: { Authorization: string };
+
 const grupo = { id: "g1", nome: "Rolê", liderId: "u1" };
 const membro = { grupoId: "g1", usuarioId: "u2", usuario: { id: "u2", nome: "Bia" } };
 
 describe("/grupos", () => {
-  beforeEach(resetPrismaMock);
+  beforeEach(() => {
+    resetPrismaMock();
+    AUTH = logadoComo("CLIENTE", "u1");
+  });
 
   describe("CRUD", () => {
     it("POST cria o grupo já com o líder como primeiro membro", async () => {
       prismaMock.grupo.create.mockResolvedValue(grupo);
 
-      const res = await request(app).post("/grupos").send({ nome: "Rolê", liderId: "u1" });
+      const res = await request(app).post("/grupos").set(AUTH).send({ nome: "Rolê", liderId: "u1" });
 
       expect(res.status).toBe(201);
       expect(prismaMock.grupo.create).toHaveBeenCalledWith({
@@ -28,7 +34,7 @@ describe("/grupos", () => {
     it("POST com líder inexistente responde 400 (P2003)", async () => {
       prismaMock.grupo.create.mockRejectedValue(prismaError("P2003", { constraint: "fk" }));
 
-      const res = await request(app).post("/grupos").send({ nome: "Rolê", liderId: "nada" });
+      const res = await request(app).post("/grupos").set(AUTH).send({ nome: "Rolê", liderId: "nada" });
 
       expect(res.status).toBe(400);
       expect(res.body.message).toBe("Referência a registro inexistente");
@@ -37,7 +43,7 @@ describe("/grupos", () => {
     it("GET lista os grupos", async () => {
       prismaMock.grupo.findMany.mockResolvedValue([grupo]);
 
-      const res = await request(app).get("/grupos");
+      const res = await request(app).get("/grupos").set(AUTH);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual([grupo]);
@@ -46,7 +52,7 @@ describe("/grupos", () => {
     it("GET /:id devolve o grupo", async () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
 
-      const res = await request(app).get("/grupos/g1");
+      const res = await request(app).get("/grupos/g1").set(AUTH);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(grupo);
@@ -55,7 +61,7 @@ describe("/grupos", () => {
     it("GET /:id inexistente responde 404", async () => {
       prismaMock.grupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).get("/grupos/nada");
+      const res = await request(app).get("/grupos/nada").set(AUTH);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Group not found" });
@@ -64,7 +70,7 @@ describe("/grupos", () => {
     it("PUT /:id só altera o nome, ignorando outros campos do corpo", async () => {
       prismaMock.grupo.update.mockResolvedValue({ ...grupo, nome: "Novo" });
 
-      const res = await request(app).put("/grupos/g1").send({ nome: "Novo", liderId: "outro" });
+      const res = await request(app).put("/grupos/g1").set(AUTH).send({ nome: "Novo", liderId: "outro" });
 
       expect(res.status).toBe(200);
       expect(prismaMock.grupo.update).toHaveBeenCalledWith({ where: { id: "g1" }, data: { nome: "Novo" } });
@@ -73,7 +79,7 @@ describe("/grupos", () => {
     it("PUT /:id inexistente responde 404", async () => {
       prismaMock.grupo.update.mockRejectedValue(prismaError("P2025"));
 
-      const res = await request(app).put("/grupos/nada").send({ nome: "X" });
+      const res = await request(app).put("/grupos/nada").set(AUTH).send({ nome: "X" });
 
       expect(res.status).toBe(404);
     });
@@ -81,7 +87,7 @@ describe("/grupos", () => {
     it("DELETE /:id remove os membros e o grupo na mesma transação", async () => {
       prismaMock.$transaction.mockResolvedValue([]);
 
-      const res = await request(app).delete("/grupos/g1");
+      const res = await request(app).delete("/grupos/g1").set(AUTH);
 
       expect(res.status).toBe(204);
       expect(prismaMock.membroGrupo.deleteMany).toHaveBeenCalledWith({ where: { grupoId: "g1" } });
@@ -92,7 +98,7 @@ describe("/grupos", () => {
     it("DELETE /:id inexistente responde 404", async () => {
       prismaMock.$transaction.mockRejectedValue(prismaError("P2025"));
 
-      const res = await request(app).delete("/grupos/nada");
+      const res = await request(app).delete("/grupos/nada").set(AUTH);
 
       expect(res.status).toBe(404);
     });
@@ -100,7 +106,7 @@ describe("/grupos", () => {
     it("DELETE /:id com compra em grupo vinculada responde 409", async () => {
       prismaMock.$transaction.mockRejectedValue(prismaError("P2003", { constraint: "fk" }));
 
-      const res = await request(app).delete("/grupos/g1");
+      const res = await request(app).delete("/grupos/g1").set(AUTH);
 
       expect(res.status).toBe(409);
     });
@@ -111,7 +117,7 @@ describe("/grupos", () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
       prismaMock.membroGrupo.findMany.mockResolvedValue([membro]);
 
-      const res = await request(app).get("/grupos/g1/members");
+      const res = await request(app).get("/grupos/g1/members").set(AUTH);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual([membro]);
@@ -120,7 +126,7 @@ describe("/grupos", () => {
     it("GET /:id/members de grupo inexistente responde 404", async () => {
       prismaMock.grupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).get("/grupos/nada/members");
+      const res = await request(app).get("/grupos/nada/members").set(AUTH);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Grupo não encontrado" });
@@ -131,7 +137,7 @@ describe("/grupos", () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
       prismaMock.membroGrupo.create.mockResolvedValue(membro);
 
-      const res = await request(app).post("/grupos/g1/members").send({ usuarioId: "u2" });
+      const res = await request(app).post("/grupos/g1/members").set(AUTH).send({ usuarioId: "u2" });
 
       expect(res.status).toBe(201);
       expect(prismaMock.membroGrupo.create).toHaveBeenCalledWith(
@@ -143,7 +149,7 @@ describe("/grupos", () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
       prismaMock.membroGrupo.create.mockRejectedValue(prismaError("P2002", { target: ["grupoId", "usuarioId"] }));
 
-      const res = await request(app).post("/grupos/g1/members").send({ usuarioId: "u2" });
+      const res = await request(app).post("/grupos/g1/members").set(AUTH).send({ usuarioId: "u2" });
 
       expect(res.status).toBe(409);
     });
@@ -151,7 +157,7 @@ describe("/grupos", () => {
     it("POST /:id/members em grupo inexistente responde 404 sem tentar criar", async () => {
       prismaMock.grupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).post("/grupos/nada/members").send({ usuarioId: "u2" });
+      const res = await request(app).post("/grupos/nada/members").set(AUTH).send({ usuarioId: "u2" });
 
       expect(res.status).toBe(404);
       expect(prismaMock.membroGrupo.create).not.toHaveBeenCalled();
@@ -161,7 +167,7 @@ describe("/grupos", () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
       prismaMock.membroGrupo.delete.mockResolvedValue(membro);
 
-      const res = await request(app).delete("/grupos/g1/members/u2");
+      const res = await request(app).delete("/grupos/g1/members/u2").set(AUTH);
 
       expect(res.status).toBe(204);
       expect(prismaMock.membroGrupo.delete).toHaveBeenCalledWith({
@@ -172,7 +178,7 @@ describe("/grupos", () => {
     it("não permite remover o líder do grupo", async () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
 
-      const res = await request(app).delete("/grupos/g1/members/u1");
+      const res = await request(app).delete("/grupos/g1/members/u1").set(AUTH);
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ message: "O líder não pode ser removido do grupo" });
@@ -183,7 +189,7 @@ describe("/grupos", () => {
       prismaMock.grupo.findUnique.mockResolvedValue(grupo);
       prismaMock.membroGrupo.delete.mockRejectedValue(prismaError("P2025"));
 
-      const res = await request(app).delete("/grupos/g1/members/u9");
+      const res = await request(app).delete("/grupos/g1/members/u9").set(AUTH);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Membro não encontrado no grupo" });
@@ -192,7 +198,7 @@ describe("/grupos", () => {
     it("remover membro de grupo inexistente responde 404", async () => {
       prismaMock.grupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).delete("/grupos/nada/members/u2");
+      const res = await request(app).delete("/grupos/nada/members/u2").set(AUTH);
 
       expect(res.status).toBe(404);
     });
