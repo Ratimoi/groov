@@ -75,7 +75,9 @@ Rotas disponíveis:
 | `/usuarios` | CRUD de usuários |
 | `/grupos` | CRUD de grupos e gestão de membros (`/grupos/:id/members`) |
 | `/grupos/compras` | Criação e consulta de compras em grupo |
-| `/eventos` | Listagem e consulta de eventos (somente leitura) |
+| `/eventos` | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos (somente leitura) |
+
+A listagem de eventos devolve `{ data, page, limit, total, totalPages }`, ordenada pela data de início. `page` e `limit` inválidos respondem 400.
 
 ### Frontend
 
