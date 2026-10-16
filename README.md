@@ -65,16 +65,17 @@ npx prisma migrate dev   # aplica as migrações e gera o cliente Prisma
 npm run dev              # roda o TypeScript direto e reinicia ao salvar
 ```
 
-Outros scripts: `npm run build` compila para `dist/`, `npm start` roda o build, `npm run typecheck` checa os tipos e `npm test` roda os testes (Vitest).
+Outros scripts: `npm run build` compila para `dist/`, `npm start` roda o build, `npm run typecheck` checa os tipos e `npm test` roda os testes (Vitest + Supertest, sem precisar de banco).
 
 Rotas disponíveis:
 
 | Rota | Descrição |
 |---|---|
 | `GET /health`, `GET /health/db` | Saúde da API e da conexão com o banco |
-| `/users` | CRUD de usuários |
-| `/groups` | CRUD de grupos e gestão de membros (`/groups/:id/members`) |
-| `/group-purchases` | Criação e consulta de compras em grupo |
+| `/usuarios` | CRUD de usuários |
+| `/grupos` | CRUD de grupos e gestão de membros (`/grupos/:id/members`) |
+| `/grupos/compras` | Criação e consulta de compras em grupo |
+| `/eventos` | Listagem e consulta de eventos (somente leitura) |
 
 ### Frontend
 
