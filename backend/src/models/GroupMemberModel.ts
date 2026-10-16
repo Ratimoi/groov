@@ -25,6 +25,14 @@ export class GroupMemberModel {
     });
   }
 
+  async isMember(grupoId: string, usuarioId: string): Promise<boolean> {
+    const membro = await this.prismaClient.membroGrupo.findUnique({
+      where: { grupoId_usuarioId: { grupoId, usuarioId } },
+      select: { grupoId: true },
+    });
+    return membro !== null;
+  }
+
   async create(grupoId: string, usuarioId: string): Promise<GroupMember> {
     return this.prismaClient.membroGrupo.create({
       data: { grupoId, usuarioId },
