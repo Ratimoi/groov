@@ -52,7 +52,8 @@ O workflow (`.github/workflows/ci.yml`) roda em todo PR e push para `dev` e `mai
 
 **Backend** (`backend/`)
 - `npm ci`
-- `npm test` (Vitest)
+- `npm run typecheck` (código e testes)
+- `npm test` (Vitest + Supertest; o Prisma é substituído por um mock, então não precisa de banco)
 - `npm run build` (compila o TypeScript)
 
 **Frontend** (`frontend/`)
