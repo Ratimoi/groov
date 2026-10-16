@@ -84,6 +84,8 @@ Rotas disponíveis:
 | `POST /grupos/compras` | logado | Inicia uma compra em grupo (o iniciador é você e precisa ser membro do grupo) |
 | `GET /grupos/compras`, `GET /grupos/compras/:id` | participantes da compra ou ADMIN | Lista só as suas; as demais respondem 404 |
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
+| `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
+| `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
 
 ### Autenticação
 
@@ -100,6 +102,8 @@ Todo cadastro entra como `CLIENTE`. Para criar o primeiro `ADMIN`, cadastre o us
 ```sql
 UPDATE "Usuario" SET papel = 'ADMIN' WHERE email = 'seu@email.com';
 ```
+
+Campos de um evento: `titulo`, `cidade` e `comecaEm` (data ISO 8601, ex.: `2026-12-31T22:00:00Z`) são obrigatórios; `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (http ou https) e `categoriaId` são opcionais. `terminaEm` não pode ser anterior a `comecaEm`.
 
 A listagem de eventos devolve `{ data, page, limit, total, totalPages }`, ordenada pela data de início. `page` e `limit` inválidos respondem 400.
 
