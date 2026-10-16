@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: groov-api
+    runtime: node
+    region: ohio # mesma região do banco no Neon (us-east-2)
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: false # o deploy é disparado pela CI (deploy hook), depois das migrações
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # preencher no painel do Render
