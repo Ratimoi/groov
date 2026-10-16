@@ -92,6 +92,8 @@ Configuração feita uma vez:
 
 O health check usa `GET /health`.
 
+A API exige a variável `JWT_SECRET` (mínimo 32 caracteres) e não sobe sem ela. O `render.yaml` pede ao Render que gere um valor aleatório (`generateValue`). Se o deploy falhar no health check logo após esta mudança, confira em *Environment* do serviço se `JWT_SECRET` existe; se não, crie uma com um valor gerado como descrito no README. Trocar o segredo invalida todos os tokens emitidos.
+
 ## Banco de dados
 
 Mudanças no `backend/prisma/schema.prisma` precisam de uma migração versionada:
