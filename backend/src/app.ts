@@ -2,13 +2,18 @@ import express from 'express';
 import cors from 'cors';
 
 import prisma from './config/prisma';
+import authRoutes from './routes/AuthRoutes';
 import userRoutes from './routes/UserRoutes';
 import groupRoutes from './routes/GroupRoutes';
 import groupPurchaseRoutes from './routes/GroupPurchaseRoutes';
 import eventRoutes from './routes/EventRoutes'
+import { authenticate } from './middlewares/auth';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
+
+// Atrás do proxy do Render: sem isso todos os clientes teriam o mesmo IP (e o mesmo limite de login).
+app.set('trust proxy', 1);
 
 app.use(cors());
 app.use(express.json());
@@ -26,10 +31,11 @@ app.get('/health/db', async (req, res) => {
   }
 });
 
+app.use('/auth', authRoutes);
 app.use('/usuarios', userRoutes);
 // '/grupos/compras' precisa vir antes de '/grupos', senão '/grupos/:id' captura "compras" como id.
-app.use('/grupos/compras', groupPurchaseRoutes);
-app.use('/grupos', groupRoutes);
+app.use('/grupos/compras', authenticate, groupPurchaseRoutes);
+app.use('/grupos', authenticate, groupRoutes);
 app.use('/eventos', eventRoutes)
 
 app.use(errorHandler);

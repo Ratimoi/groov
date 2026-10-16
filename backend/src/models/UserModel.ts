@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Usuario } from "@prisma/client";
 import prisma from "../config/prisma";
 import { isNotFoundError } from "../utils/prismaErrors";
 import type { PublicUser, UserCreateRequest, UserUpdateRequest } from "../types/user";
@@ -28,6 +28,13 @@ export class UserModel {
     return this.prismaClient.usuario.findUnique({
       where: { id },
       omit: omitPassword,
+    });
+  }
+
+  // Único método que lê a senha (hash). Existe só para o login: não repassar o resultado à API.
+  async findByEmailWithPassword(email: string): Promise<Usuario | null> {
+    return this.prismaClient.usuario.findUnique({
+      where: { email },
     });
   }
 
