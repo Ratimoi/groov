@@ -77,8 +77,12 @@ Rotas disponíveis:
 | `POST /usuarios` | público | Cadastro (sempre como `CLIENTE`) |
 | `GET /usuarios` | ADMIN | Lista usuários |
 | `GET, PUT, DELETE /usuarios/:id` | o próprio usuário ou ADMIN | Só um ADMIN altera `papel` |
-| `/grupos` | logado | CRUD de grupos e gestão de membros (`/grupos/:id/members`) |
-| `/grupos/compras` | logado | Criação e consulta de compras em grupo |
+| `POST /grupos`, `GET /grupos` | logado | Cria um grupo (o líder é você) e lista os grupos de que você participa |
+| `GET /grupos/:id`, `GET /grupos/:id/members` | membros do grupo ou ADMIN | Quem não participa recebe 404 |
+| `PUT, DELETE /grupos/:id`, `POST /grupos/:id/members` | líder do grupo ou ADMIN | Renomear, apagar e convidar membros |
+| `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | Remover alguém ou sair do grupo; o líder não pode ser removido |
+| `POST /grupos/compras` | logado | Inicia uma compra em grupo (o iniciador é você e precisa ser membro do grupo) |
+| `GET /grupos/compras`, `GET /grupos/compras/:id` | participantes da compra ou ADMIN | Lista só as suas; as demais respondem 404 |
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
 
 ### Autenticação

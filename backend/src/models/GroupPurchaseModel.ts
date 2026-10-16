@@ -30,8 +30,10 @@ export class GroupPurchaseModel {
     this.prismaClient = prismaClient;
   }
 
-  async findAll(): Promise<GroupPurchase[]> {
+  // Com `usuarioId`, só as compras em que o usuário participa.
+  async findAll(usuarioId?: string): Promise<GroupPurchase[]> {
     return this.prismaClient.compraGrupo.findMany({
+      where: usuarioId ? { participantes: { some: { usuarioId } } } : undefined,
       include: groupPurchaseInclude,
       orderBy: { criadoEm: "desc" },
     });

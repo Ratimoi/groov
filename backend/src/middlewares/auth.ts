@@ -1,6 +1,7 @@
 import type { Papel } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 import { UserModel } from "../models/UserModel";
+import type { AuthUser } from "../types/auth";
 import { AppError } from "../utils/AppError";
 import { verifyToken } from "../utils/token";
 
@@ -24,6 +25,14 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   } catch (error) {
     next(error);
   }
+}
+
+// Usuário logado da requisição. Só vale em rotas atrás de `authenticate`.
+export function getAuthUser(req: Request): AuthUser {
+  if (!req.user) {
+    throw new AppError("Token de autenticação ausente", 401);
+  }
+  return req.user;
 }
 
 // Usar depois de `authenticate`.
