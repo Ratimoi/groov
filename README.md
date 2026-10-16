@@ -87,6 +87,8 @@ Rotas disponíveis:
 | `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
 | `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
 
+> Quem vai consumir a API (o app) deve ler o guia [docs/API.md](docs/API.md): formatos de resposta, erros, permissões e tipos TypeScript.
+
 ### Autenticação
 
 O login devolve um token JWT, que deve ser enviado nas rotas protegidas no cabeçalho `Authorization: Bearer <token>`. O token vale 1 dia (`JWT_EXPIRES_IN`) e carrega só o id do usuário: o papel é lido do banco a cada requisição, então apagar ou rebaixar um usuário vale na hora. Rotas protegidas sem token válido respondem 401; sem permissão, 403. O login é limitado a 10 tentativas por IP a cada 15 minutos (429).
