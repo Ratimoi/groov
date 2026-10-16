@@ -15,6 +15,7 @@ export const prismaMock = {
   grupo: delegate(),
   membroGrupo: delegate(),
   compraGrupo: delegate(),
+  participanteCompra: delegate(),
   lote: delegate(),
   evento: delegate(),
   $queryRaw: vi.fn(),
@@ -29,4 +30,9 @@ export function resetPrismaMock(): void {
     }
     for (const fn of Object.values(value)) fn.mockReset();
   }
+}
+
+// Executa a transação em forma de callback usando o próprio mock como `tx`.
+export function runTransactionCallbacks(): void {
+  prismaMock.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => fn(prismaMock));
 }
