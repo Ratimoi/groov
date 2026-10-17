@@ -122,8 +122,10 @@ O perfil `preview` do `frontend/eas.json` gera um APK que se instala direto no a
 
 ```bash
 cd frontend
-npx eas-cli build --platform android --profile preview
+npm run build:apk
 ```
+
+Os builds do app são **só para Android**: o script já fixa `--platform android`, e o iOS não está configurado no projeto (não há `bundleIdentifier` nem conta Apple Developer). Não use `--platform all`.
 
 O comando devolve um link; abra-o no celular e baixe o APK (é preciso permitir a instalação de apps de fontes desconhecidas). O build leva de 10 a 20 minutos no plano gratuito. O APK de `preview` recebe atualizações OTA do branch `preview` do EAS Update (`eas update --branch preview`), não do `production`.
 
