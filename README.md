@@ -86,6 +86,8 @@ Rotas disponíveis:
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
 | `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
 | `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
+| `GET /eventos/:eventoId/lotes`, `GET /lotes/:id` | público | Lotes de um evento (preço, quantidade e disponibilidade) e um lote |
+| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | criador do evento (PRODUTOR) ou ADMIN | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
 
 > Quem vai consumir a API (o app) deve ler o guia [docs/API.md](docs/API.md): formatos de resposta, erros, permissões e tipos TypeScript.
 
