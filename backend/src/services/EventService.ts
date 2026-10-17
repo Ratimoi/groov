@@ -2,7 +2,7 @@ import { Evento } from "@prisma/client";
 import { EventModel } from "../models/EventModel";
 import type { AuthUser } from "../types/auth";
 import { EventServiceContract } from "../types/event";
-import { AppError } from "../utils/AppError";
+import { assertCanManageEvent } from "../utils/eventAccess";
 import { assertEndAfterStart, parseEventCreate, parseEventUpdate } from "../utils/eventInput";
 import { Paginated, parsePagination, PaginationQuery, toPaginated } from "../utils/pagination";
 
@@ -30,7 +30,7 @@ export class EventService implements EventServiceContract {
   async update(id: string, body: unknown, actor: AuthUser): Promise<Evento | null> {
     const event = await this.eventModel.findById(id);
     if (!event) return null;
-    this.assertCanManage(event, actor);
+    assertCanManageEvent(event.criadoPorId, actor);
 
     const data = parseEventUpdate(body);
     // O fim precisa continuar depois do início, considerando o que já está salvo.
@@ -44,14 +44,7 @@ export class EventService implements EventServiceContract {
   async delete(id: string, actor: AuthUser): Promise<boolean> {
     const event = await this.eventModel.findById(id);
     if (!event) return false;
-    this.assertCanManage(event, actor);
+    assertCanManageEvent(event.criadoPorId, actor);
     return this.eventModel.delete(id);
-  }
-
-  // Eventos são públicos, então quem não pode gerenciar recebe 403 (e não 404).
-  private assertCanManage(event: Evento, actor: AuthUser): void {
-    if (actor.papel !== "ADMIN" && event.criadoPorId !== actor.id) {
-      throw new AppError("Somente o criador do evento pode fazer isso", 403);
-    }
   }
 }
