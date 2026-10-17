@@ -94,6 +94,39 @@ O health check usa `GET /health`.
 
 A API exige a variável `JWT_SECRET` (mínimo 32 caracteres) e não sobe sem ela. O `render.yaml` pede ao Render que gere um valor aleatório (`generateValue`). Se o deploy falhar no health check logo após esta mudança, confira em *Environment* do serviço se `JWT_SECRET` existe; se não, crie uma com um valor gerado como descrito no README. Trocar o segredo invalida todos os tokens emitidos.
 
+## Versões
+
+As versões seguem o [versionamento semântico](https://semver.org/lang/pt-BR/) e são nomeadas **`Vx.x.x`**, com V maiúsculo: `V1.0.0`, `V1.1.0`, `V1.1.1`.
+
+| Parte | Quando sobe | Exemplo |
+|---|---|---|
+| `V`**x**`.0.0` | mudança que quebra o contrato da API ou do app | `V1.0.0` → `V2.0.0` |
+| `Vx.`**x**`.0` | funcionalidade nova compatível | `V1.0.0` → `V1.1.0` |
+| `Vx.x.`**x** | correção de bug | `V1.1.0` → `V1.1.1` |
+
+- **Tag e release:** a versão é marcada com uma tag anotada `Vx.x.x` na `main`, depois do merge `dev → main`, e vira uma *Release* no GitHub com o mesmo título (`V1.0.0`).
+- **`version` do app:** no `frontend/app.json` fica **sem o V** (`"version": "1.0.0"`), porque o Android e o EAS exigem número puro. Quem escreve `V` é só a tag, a release e a comunicação.
+- **Atualizações OTA:** o `runtimeVersion` do app segue a `version`. Mudou dependência nativa? Suba a versão (ao menos a minor) e gere um build novo; só mudanças em JS/TS vão por EAS Update.
+
+Para marcar uma versão, depois do merge em `main`:
+
+```bash
+git checkout main && git pull
+git tag -a V1.0.0 -m "V1.0.0"
+git push origin V1.0.0
+```
+
+## Gerar o APK (Android)
+
+O perfil `preview` do `frontend/eas.json` gera um APK que se instala direto no aparelho, sem loja. É preciso estar logado no Expo (`npx eas-cli login`) e ter o código commitado:
+
+```bash
+cd frontend
+npx eas-cli build --platform android --profile preview
+```
+
+O comando devolve um link; abra-o no celular e baixe o APK (é preciso permitir a instalação de apps de fontes desconhecidas). O build leva de 10 a 20 minutos no plano gratuito. O APK de `preview` recebe atualizações OTA do branch `preview` do EAS Update (`eas update --branch preview`), não do `production`.
+
 ## Banco de dados
 
 Mudanças no `backend/prisma/schema.prisma` precisam de uma migração versionada:
