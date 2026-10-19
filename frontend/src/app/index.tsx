@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from "react-native";
+import { CardEvento } from "../components/CardEvento";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
@@ -9,7 +10,7 @@ export default function HomeScreen() {
   useEffect(() => {
   async function buscaDados() {
     try {
-      const response = await fetch(`${apiUrl}/filmes`);
+      const response = await fetch(`${apiUrl}/eventos`);
       const dados = await response.json();
       
       setEventos(dados);
@@ -21,6 +22,10 @@ export default function HomeScreen() {
   
   buscaDados();
   }, [])
+
+  const listaEventos = eventos.map( evento => (
+    <CardEvento data={evento} key={evento} />
+  ))
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -68,50 +73,8 @@ export default function HomeScreen() {
               <Text className="font-body-sm text-body-sm text-secondary">Ver todos</Text>
             </TouchableOpacity>
           </View>
-
-
           <View className="flex-col gap-gutter">
-            {/* Card 1 */}
-            <TouchableOpacity activeOpacity={0.8} className="bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col">
-              <View className="relative h-64 w-full">
-                <Image source={{ uri: eventos[0].}}
-                  className="w-full h-full object-cover"
-                />
-                <View className="absolute top-4 left-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
-                  <Text className="font-label-caps text-label-caps text-secondary">TECHNO</Text>
-                </View>
-                <View className="absolute bottom-4 right-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
-                  <Text className="font-label-caps text-label-caps text-secondary">R$ 180</Text>
-                </View>
-              </View>
-              <View className="p-4 flex-col gap-stack-sm">
-                <Text className="font-body-sm text-body-sm text-secondary">SEX, 27 OUT • 23:00</Text>
-                <Text className="font-headline-md text-headline-md text-on-surface" numberOfLines={1}>Neon Dreams Warehouse</Text>
-                <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={1}>Sector 7G Industrial Park</Text>
-              </View>
-            </TouchableOpacity>
-
-
-            {/* Card 2 */}
-            <TouchableOpacity activeOpacity={0.8} className="bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col">
-              <View className="relative h-64 w-full">
-                {/* <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC0jKSVy2Ihy8mU0IJ7BeARV857Te00LIfahzUK9VPnDyzRWlMWsKVuLtmM8xM0dfaMFyOhFsNB7PhdiC0xyO1UH4KyNt5wfb9YxHIJ-QB-DSnLyfNXOCBJ9pYFsH4dbrDng2QrBHCshb3He3L70KIXBR6_Y3Fs0YaKx06LJ-H6zgejeAUhiYmCaUPjLX8zga0H8KwAFHfTxcdn3jHG1u4F4x3xrp2wsudc0obtL8lTn-83O2WamQLClg' }}
-                  className="w-full h-full object-cover"
-                /> */}
-                <View className="absolute top-4 left-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
-                  <Text className="font-label-caps text-label-caps text-secondary">HIP HOP</Text>
-                </View>
-                <View className="absolute bottom-4 right-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
-                  <Text className="font-label-caps text-label-caps text-secondary">R$ 90</Text>
-                </View>
-              </View>
-              <View className="p-4 flex-col gap-stack-sm">
-                <Text className="font-body-sm text-body-sm text-secondary">SÁB, 28 OUT • 22:00</Text>
-                <Text className="font-headline-md text-headline-md text-on-surface" numberOfLines={1}>The Cypher Vol. 4</Text>
-                <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={1}>Basement 45 Venue</Text>
-              </View>
-            </TouchableOpacity>
+            {listaEventos}
           </View>
         </View>
 
