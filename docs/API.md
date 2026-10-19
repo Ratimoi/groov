@@ -123,7 +123,7 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
 - A lista vem em `resposta.data` (**não é um array direto**).
 - Ordenada por data de início crescente (os mais antigos primeiro, inclusive eventos já passados). Ainda não há filtro por cidade, categoria ou data.
 - Para carregar mais (scroll infinito): peça `page + 1` enquanto `page < totalPages`.
-- Os eventos não trazem `categoria`, `lotes` nem preço. Hoje só existe o id da categoria.
+- Os eventos não trazem `categoria` nem preço. O preço está nos **lotes** (veja abaixo: `GET /eventos/:eventoId/lotes`). Da categoria só existe o id.
 
 ### `GET /eventos/:id` (público)
 Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não existir.
@@ -136,6 +136,44 @@ Só `PRODUTOR` ou `ADMIN`; editar e apagar exigem ser o criador do evento (ADMIN
 - `terminaEm` não pode ser antes de `comecaEm`.
 - No `PUT`, envie só o que mudou; `null` limpa um campo opcional.
 - `DELETE` devolve `204`. Evento que já tem lotes ou pedidos dá `409`.
+
+## Lotes (ingressos de um evento)
+
+Um evento vende ingressos por **lotes** ("1º lote", "Pista", "VIP"...), cada um com preço e quantidade próprios. O preço do ingresso está no lote, não no evento.
+
+```json
+{
+  "id": "clx...", "eventoId": "clx...", "nome": "1º lote",
+  "preco": "180.00",
+  "quantidade": 100, "quantidadeVendida": 10, "quantidadeReservada": 5, "quantidadeDisponivel": 85,
+  "tamanhoGrupo": 4, "descontoGrupo": "0.1500", "prazoGrupoHoras": 48,
+  "criadoEm": "2026-10-01T12:00:00.000Z"
+}
+```
+
+- **`preco`** é texto com 2 casas (`"180.00"`). **`descontoGrupo`** é uma fração em texto com 4 casas: `"0.1500"` = 15% de desconto.
+- **`quantidadeDisponivel`** = `quantidade − vendidos − reservados` (nunca negativa). É o que o app deve mostrar como "restam N". Os ingressos de uma compra em grupo pendente ficam **reservados** até a compra se concretizar.
+- Os campos de grupo (`tamanhoGrupo`, `prazoGrupoHoras`, `descontoGrupo`) são `null` quando o lote **não aceita compra em grupo**. Só dá para iniciar uma compra em grupo em lote com `tamanhoGrupo` e `prazoGrupoHoras` preenchidos.
+
+| Rota | Quem |
+|---|---|
+| `GET /eventos/:eventoId/lotes` | público. Lista os lotes do evento, do mais antigo para o mais novo (sem paginação). `404` se o evento não existir; evento sem lotes devolve `[]` |
+| `GET /lotes/:id` | público |
+| `POST /eventos/:eventoId/lotes` | PRODUTOR criador do evento ou ADMIN |
+| `PUT /lotes/:id` | idem |
+| `DELETE /lotes/:id` | idem → `204` |
+
+Para o `loteId` de uma compra em grupo, use o `id` de um lote devolvido por `GET /eventos/:eventoId/lotes`.
+
+**Criar e editar** (só PRODUTOR/ADMIN):
+- Obrigatórios no `POST`: `nome` (até 100 caracteres), `preco` (número ou texto, até 2 casas, de 0 a 99999999.99) e `quantidade` (inteiro de 1 a 1.000.000).
+- Compra em grupo, opcional: `tamanhoGrupo` (2 a 50), `prazoGrupoHoras` (1 a 720) e `descontoGrupo` (de 0 a 0.9999). `tamanhoGrupo` e `prazoGrupoHoras` precisam vir **juntos**, e `descontoGrupo` só existe se o grupo estiver ligado. `null` desliga o campo; para desligar a compra em grupo por inteiro, envie os três como `null`.
+- No `PUT`, envie só o que mudou. Os contadores (`quantidadeVendida`, `quantidadeReservada`) não são graváveis.
+
+**Proteções das vendas** (`409`):
+- A `quantidade` não pode ser menor que vendidos + reservados.
+- Com ingressos reservados, a configuração de compra em grupo não pode mudar (reenviar os mesmos valores é aceito). Preço e nome continuam editáveis.
+- Um lote com ingressos vendidos ou reservados, ou com pedidos e compras vinculados, não pode ser apagado.
 
 ## Grupos
 
@@ -207,9 +245,8 @@ Resposta `201` (e `GET`):
 `status` da compra: `PENDENTE`, `CONFIRMADA`, `EXPIRADA`. `status` do participante: `PENDENTE`, `PAGO`, `REEMBOLSADO`.
 
 **O que ainda não existe na API:**
-- **Lotes não têm rota.** Não há como listar os lotes de um evento nem seus preços, nem criar lotes. Sem `loteId` o app não consegue iniciar uma compra em grupo. É a próxima peça do backend.
 - Não há pagamento, confirmação da compra nem expiração automática: a compra nasce `PENDENTE` e fica assim.
-- Categorias, pedidos e ingressos também não têm rota.
+- Categorias, pedidos e ingressos não têm rota.
 
 ## Tipos TypeScript (sugestão)
 
@@ -233,6 +270,14 @@ export type Evento = {
   id: string; titulo: string; descricao: string | null; imagemUrl: string | null;
   comecaEm: string; terminaEm: string | null; nomeLocal: string | null; cidade: string;
   categoriaId: string | null; criadoPorId: string | null; criadoEm: string; atualizadoEm: string;
+};
+
+export type Lote = {
+  id: string; eventoId: string; nome: string;
+  preco: string;                 // "180.00"
+  quantidade: number; quantidadeVendida: number; quantidadeReservada: number; quantidadeDisponivel: number;
+  tamanhoGrupo: number | null; descontoGrupo: string | null; prazoGrupoHoras: number | null;
+  criadoEm: string;
 };
 
 export type Pagina<T> = { data: T[]; page: number; limit: number; total: number; totalPages: number };

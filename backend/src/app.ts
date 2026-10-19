@@ -7,6 +7,7 @@ import userRoutes from './routes/UserRoutes';
 import groupRoutes from './routes/GroupRoutes';
 import groupPurchaseRoutes from './routes/GroupPurchaseRoutes';
 import eventRoutes from './routes/EventRoutes'
+import lotRoutes from './routes/LotRoutes';
 import { authenticate } from './middlewares/auth';
 import { errorHandler } from './middlewares/errorHandler';
 
@@ -37,6 +38,7 @@ app.use('/usuarios', userRoutes);
 app.use('/grupos/compras', authenticate, groupPurchaseRoutes);
 app.use('/grupos', authenticate, groupRoutes);
 app.use('/eventos', eventRoutes)
+app.use('/lotes', lotRoutes);
 
 app.use(errorHandler);
 

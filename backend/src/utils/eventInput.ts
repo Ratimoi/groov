@@ -1,4 +1,4 @@
-import { AppError } from "./AppError";
+import { asObject, fail } from "./validation";
 
 export type EventData = {
   titulo: string;
@@ -15,10 +15,6 @@ export type EventCreateData = Partial<EventData> & Pick<EventData, "titulo" | "c
 export type EventUpdateData = Partial<EventData>;
 
 const MAX_LENGTH = { titulo: 200, descricao: 5000, nomeLocal: 200, cidade: 100, imagemUrl: 2000, categoriaId: 100 };
-
-function fail(message: string): never {
-  throw new AppError(message, 400);
-}
 
 function requiredText(value: unknown, name: keyof typeof MAX_LENGTH): string {
   if (typeof value !== "string" || value.trim() === "") fail(`${name} é obrigatório`);
@@ -57,11 +53,6 @@ function isoDate(value: unknown, name: string): Date {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) fail(`${name} deve ser uma data válida`);
   return date;
-}
-
-function asObject(body: unknown): Record<string, unknown> {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) fail("O corpo deve ser um objeto JSON");
-  return body as Record<string, unknown>;
 }
 
 // Converte e valida os campos presentes. Campos desconhecidos (id, criadoPorId, criadoEm...) são ignorados.
