@@ -1,11 +1,26 @@
-import { Pressable, Text, TouchableOpacity, View, Image } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { ComponentProps } from "react";
+import { Text, TouchableOpacity, View, Image } from "react-native";
 import type { EventoType } from "../utils/index";
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-export function NavBar({ data }: { data: EventoType }) {
+export function CardEvento({ data }: { data: EventoType }) {
+
+  const lote_atual = data.lotes?.length ? data.lotes[data.lotes.length - 1] : null;
+  const preco = lote_atual?.preco;
+  
+  function formatarDataEvento(comecaEm: Date, horario: Date) {
+    if (!comecaEm) return '';
+
+    const dataFormatada = format(new Date(comecaEm), "EEE, dd MMM", { locale: ptBR });
+
+    let horaFormatada = '';
+    if (horario) {
+      horaFormatada = format(new Date(horario), " '•' HH:mm", { locale: ptBR });
+    }
+
+    return (dataFormatada + horaFormatada).toUpperCase();
+  }
+  
   return (
             <TouchableOpacity activeOpacity={0.8} className="bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col">
               <View className="relative h-64 w-full">
@@ -16,17 +31,14 @@ export function NavBar({ data }: { data: EventoType }) {
                   resizeMode="cover"
                 />
               )}
-                <View className="absolute top-4 left-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
-                  <Text className="font-label-caps text-label-caps text-secondary">TECHNO</Text>
-                </View>
                 <View className="absolute bottom-4 right-4 px-3 py-1 bg-black/60 rounded-full border border-glass-border">
-                  <Text className="font-label-caps text-label-caps text-secondary">R$ 180</Text>
+                  <Text className="font-label-caps text-label-caps text-secondary">{preco}</Text>
                 </View>
               </View>
               <View className="p-4 flex-col gap-stack-sm">
-                <Text className="font-body-sm text-body-sm text-secondary">SEX, 27 OUT • 23:00</Text>
-                <Text className="font-headline-md text-headline-md text-on-surface" numberOfLines={1}>Neon Dreams Warehouse</Text>
-                <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={1}>Sector 7G Industrial Park</Text>
+                <Text className="font-body-sm text-body-sm text-secondary">{formatarDataEvento(data.comecaEm, data.horario)}</Text>
+                <Text className="font-headline-md text-headline-md text-on-surface" numberOfLines={1}>{data.titulo}</Text>
+                <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={1}>{data.nomeLocal}</Text>
               </View>
             </TouchableOpacity>
   );
