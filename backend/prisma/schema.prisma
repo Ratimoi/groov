@@ -42,8 +42,10 @@ model Evento {
   imagemUrl String?
   comecaEm  DateTime
   terminaEm DateTime?
+  horario   DateTime?   @db.Time
   nomeLocal String?
   cidade    String
+  destaque  Boolean? @default(false)
 
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
