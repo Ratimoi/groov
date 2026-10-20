@@ -2,9 +2,10 @@ import { GroupMemberModel } from "../models/GroupMemberModel";
 import { GroupModel } from "../models/GroupModel";
 import { GroupPurchaseModel } from "../models/GroupPurchaseModel";
 import { LotModel } from "../models/LotModel";
+import type { AuthUser } from "../types/auth";
 import type {
   GroupPurchase,
-  GroupPurchaseCreateRequest,
+  GroupPurchaseCreateBody,
   GroupPurchaseServiceContract,
 } from "../types/groupPurchase";
 import { AppError } from "../utils/AppError";
@@ -29,7 +30,11 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     this.lotModel = lotModel;
   }
 
-  async create(data: GroupPurchaseCreateRequest): Promise<GroupPurchase> {
+  // O iniciador é sempre quem está logado. Como ele entra na lista de participantes, a regra de
+  // "todos pertencem ao grupo" também garante que só um membro inicia uma compra do grupo.
+  async create(body: GroupPurchaseCreateBody, actor: AuthUser): Promise<GroupPurchase> {
+    const data = { ...body, iniciadorId: actor.id };
+
     if (!Array.isArray(data.participantesIds)) {
       throw new AppError("participantesIds deve ser uma lista de ids de usuários", 400);
     }
@@ -87,11 +92,16 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     return purchase;
   }
 
-  async findAll(): Promise<GroupPurchase[]> {
-    return this.groupPurchaseModel.findAll();
+  // ADMIN vê todas; os demais, só as compras de que participam.
+  async findAll(actor: AuthUser): Promise<GroupPurchase[]> {
+    return this.groupPurchaseModel.findAll(actor.papel === "ADMIN" ? undefined : actor.id);
   }
 
-  async findById(id: string): Promise<GroupPurchase | null> {
-    return this.groupPurchaseModel.findById(id);
+  async findById(id: string, actor: AuthUser): Promise<GroupPurchase | null> {
+    const purchase = await this.groupPurchaseModel.findById(id);
+    if (!purchase) return null;
+
+    const participates = purchase.participantes.some((participante) => participante.usuarioId === actor.id);
+    return actor.papel === "ADMIN" || participates ? purchase : null;
   }
 }

@@ -52,7 +52,8 @@ O workflow (`.github/workflows/ci.yml`) roda em todo PR e push para `dev` e `mai
 
 **Backend** (`backend/`)
 - `npm ci`
-- `npm test` (Vitest)
+- `npm run typecheck` (código e testes)
+- `npm test` (Vitest + Supertest; o Prisma é substituído por um mock, então não precisa de banco)
 - `npm run build` (compila o TypeScript)
 
 **Frontend** (`frontend/`)
@@ -70,13 +71,63 @@ Os jobs de deploy só rodam em `push` na `main`, dependem da CI verde e usam o e
 | Job | O que faz | Secrets necessários |
 |---|---|---|
 | Deploy - Migrações (Neon) | `npx prisma migrate deploy` no banco de produção | `DATABASE_URL` |
-| Deploy - Frontend (EAS Update) | `eas update --branch production` (atualização OTA do app) | `EXPO_TOKEN`, `EXPO_PUBLIC_NEON_DATA_API_URL`, `EXPO_PUBLIC_NEON_AUTH_URL` |
+| Deploy - API (Render) | Chama o deploy hook do Render, **depois** das migrações | `RENDER_DEPLOY_HOOK_URL` |
+| Deploy - Frontend (EAS Update) | `eas update --branch production` (atualização OTA do app) | `EXPO_TOKEN` |
 
 Os secrets ficam em *Settings → Environments → production* do repositório.
 
+Variáveis `EXPO_PUBLIC_*` são embutidas no bundle do app em tempo de build. Hoje o frontend não usa nenhuma, então o deploy não as define. Quando o código passar a ler uma delas (como as do Neon Data API e Auth que estão no `frontend/.env.example`), cadastre-a como secret e passe-a no `env` do passo `eas update`.
+
 O EAS Update exige configuração prévia do projeto no Expo, feita uma vez com a conta do time: `npx eas-cli init` e `npx eas-cli update:configure` dentro de `frontend/`, e commitar o `eas.json` e as alterações no `app.json` e no `package.json` (`expo-updates`). Sem isso o job de frontend falha.
 
-O backend (API Express) ainda não tem job de deploy porque a hospedagem não foi definida; o Neon só hospeda o banco.
+### API no Render
+
+A API Express roda no [Render](https://render.com); o Neon hospeda só o banco. O serviço é descrito em [`render.yaml`](render.yaml) e o auto-deploy do Render fica **desligado**: quem dispara o deploy é a CI, pelo deploy hook, e só depois de aplicar as migrações. Assim a API nova nunca sobe sobre um schema antigo.
+
+Configuração feita uma vez:
+
+1. No Render: *New → Blueprint*, apontando para este repositório. Ele lê o `render.yaml` e cria o serviço `groov-api`.
+2. Preencher `DATABASE_URL` (connection string do Neon) quando o Render pedir.
+3. No serviço: *Settings → Deploy Hook*, copiar a URL e cadastrá-la como secret `RENDER_DEPLOY_HOOK_URL` no environment `production` do GitHub.
+
+O health check usa `GET /health`.
+
+A API exige a variável `JWT_SECRET` (mínimo 32 caracteres) e não sobe sem ela. O `render.yaml` pede ao Render que gere um valor aleatório (`generateValue`). Se o deploy falhar no health check logo após esta mudança, confira em *Environment* do serviço se `JWT_SECRET` existe; se não, crie uma com um valor gerado como descrito no README. Trocar o segredo invalida todos os tokens emitidos.
+
+## Versões
+
+As versões seguem o [versionamento semântico](https://semver.org/lang/pt-BR/) e são nomeadas **`Vx.x.x`**, com V maiúsculo: `V1.0.0`, `V1.1.0`, `V1.1.1`.
+
+| Parte | Quando sobe | Exemplo |
+|---|---|---|
+| `V`**x**`.0.0` | mudança que quebra o contrato da API ou do app | `V1.0.0` → `V2.0.0` |
+| `Vx.`**x**`.0` | funcionalidade nova compatível | `V1.0.0` → `V1.1.0` |
+| `Vx.x.`**x** | correção de bug | `V1.1.0` → `V1.1.1` |
+
+- **Tag e release:** a versão é marcada com uma tag anotada `Vx.x.x` na `main`, depois do merge `dev → main`, e vira uma *Release* no GitHub com o mesmo título (`V1.0.0`).
+- **`version` do app:** no `frontend/app.json` fica **sem o V** (`"version": "1.0.0"`), porque o Android e o EAS exigem número puro. Quem escreve `V` é só a tag, a release e a comunicação.
+- **Atualizações OTA:** o `runtimeVersion` do app segue a `version`. Mudou dependência nativa? Suba a versão (ao menos a minor) e gere um build novo; só mudanças em JS/TS vão por EAS Update.
+
+Para marcar uma versão, depois do merge em `main`:
+
+```bash
+git checkout main && git pull
+git tag -a V1.0.0 -m "V1.0.0"
+git push origin V1.0.0
+```
+
+## Gerar o APK (Android)
+
+O perfil `preview` do `frontend/eas.json` gera um APK que se instala direto no aparelho, sem loja. É preciso estar logado no Expo (`npx eas-cli login`) e ter o código commitado:
+
+```bash
+cd frontend
+npm run build:apk
+```
+
+Os builds do app são **só para Android**: o script já fixa `--platform android`, e o iOS não está configurado no projeto (não há `bundleIdentifier` nem conta Apple Developer). Não use `--platform all`.
+
+O comando devolve um link; abra-o no celular e baixe o APK (é preciso permitir a instalação de apps de fontes desconhecidas). O build leva de 10 a 20 minutos no plano gratuito. O APK de `preview` recebe atualizações OTA do branch `preview` do EAS Update (`eas update --branch preview`), não do `production`.
 
 ## Banco de dados
 
