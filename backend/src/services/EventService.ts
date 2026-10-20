@@ -1,6 +1,6 @@
 import { Evento } from "@prisma/client";
 import { EventModel } from "../models/EventModel";
-import { EventServiceContract } from "../types/event";
+import { EventServiceContract, EventoCompleto } from "../types/event";
 
 export class EventService implements EventServiceContract {
   private eventModel: EventModel;
@@ -9,13 +9,11 @@ export class EventService implements EventServiceContract {
     this.eventModel = eventModel;
   }
 
-
-  async findAll(): Promise<Evento[]> {
+  async findAll(): Promise<EventoCompleto[]> {
     return this.eventModel.findAll();
   }
 
   async findById(id: string): Promise<Evento | null> {
     return this.eventModel.findById(id);
   }
-
 }

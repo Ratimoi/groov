@@ -1,5 +1,6 @@
 import { Evento, PrismaClient } from "@prisma/client";
 import prisma from "../config/prisma";
+import { eventoInclude, EventoCompleto } from "../types/event";
 
 export class EventModel {
   private prismaClient: PrismaClient;
@@ -14,7 +15,8 @@ export class EventModel {
     });
   }
 
-    async findAll(): Promise<Evento[]> {
-      return this.prismaClient.evento.findMany();
-    }
+
+  async findAll(): Promise<EventoCompleto[]> {
+    return prisma.evento.findMany({ include: eventoInclude });
+  }
 }
