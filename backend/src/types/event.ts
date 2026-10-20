@@ -2,8 +2,6 @@ import { Evento } from "@prisma/client";
 import type { AuthUser } from "./auth";
 import type { Paginated, PaginationQuery } from "../utils/pagination";
 
-// `body` é o corpo bruto da requisição: o service valida e escolhe os campos permitidos.
-// O criador do evento é sempre o usuário logado.
 export interface EventServiceContract {
   findAll(query: PaginationQuery): Promise<Paginated<Evento>>;
   findById(id: string): Promise<Evento | null>;

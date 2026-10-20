@@ -33,7 +33,6 @@ export class EventService implements EventServiceContract {
     assertCanManageEvent(event.criadoPorId, actor);
 
     const data = parseEventUpdate(body);
-    // O fim precisa continuar depois do início, considerando o que já está salvo.
     assertEndAfterStart(
       data.comecaEm ?? event.comecaEm,
       data.terminaEm !== undefined ? data.terminaEm : event.terminaEm,
