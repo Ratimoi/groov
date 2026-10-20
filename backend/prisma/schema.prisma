@@ -27,6 +27,7 @@ model Usuario {
   participacoes       MembroGrupo[]
   comprasIniciadas    CompraGrupo[]        @relation("IniciadorCompra")
   participacoesCompra ParticipanteCompra[]
+  eventosComoAtracao  Evento[]  @relation("AtracoesEvento")
 }
 
 model Categoria {
@@ -46,6 +47,7 @@ model Evento {
   nomeLocal String?
   cidade    String
   destaque  Boolean? @default(false)
+  atracoes  Usuario[] @relation("AtracoesEvento")
 
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
