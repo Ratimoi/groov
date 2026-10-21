@@ -13,6 +13,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Postgres descartável só para validar as migrações do Prisma (não é o banco de produção).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: groov
+          POSTGRES_PASSWORD: groov
+          POSTGRES_DB: groov_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U groov -d groov_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MIGRATIONS_DATABASE_URL: postgresql://groov:groov@localhost:5432/groov_ci
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +44,19 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build --if-present
+
+      # As migrações precisam rodar do zero num banco vazio...
+      - name: Aplica as migrações num banco vazio
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.MIGRATIONS_DATABASE_URL }}
+
+      # ...e o resultado precisa ser idêntico ao schema.prisma. Falha se alguém mudar o schema sem
+      # criar a migração, ou apagar migrações (o banco de produção nunca receberia a mudança).
+      - name: Confere que o schema não tem alterações sem migração
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+        env:
+          DATABASE_URL: ${{ env.MIGRATIONS_DATABASE_URL }}
 
   frontend:
     name: Frontend

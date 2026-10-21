@@ -139,3 +139,5 @@ npx prisma migrate dev --name descricao-da-mudanca
 ```
 
 Commite a pasta gerada em `backend/prisma/migrations/` junto com o schema.
+
+**Nunca apague a pasta `backend/prisma/migrations/` nem use `prisma db push` para mudar o banco compartilhado.** Em produção, quem altera o banco é o `prisma migrate deploy`, que só aplica as migrações versionadas: coluna ou tabela nova no schema sem migração não chega à produção, e o app passa a consultar algo que não existe (erro 500). A CI protege isso: ela aplica as migrações num Postgres vazio e falha se o resultado diferir do `schema.prisma`.
