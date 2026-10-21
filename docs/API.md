@@ -110,10 +110,14 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
   "data": [
     {
       "id": "clx...", "titulo": "Neon Dreams", "descricao": null, "imagemUrl": "https://...",
-      "comecaEm": "2026-12-01T22:00:00.000Z", "terminaEm": null,
+      "comecaEm": "2026-12-01T22:00:00.000Z", "terminaEm": null, "horario": null, "destaque": false,
       "nomeLocal": "Sector 7G", "cidade": "Recife",
-      "categoriaId": null, "criadoPorId": "clx...",
-      "criadoEm": "...", "atualizadoEm": "..."
+      "categoriaId": "clx...", "criadoPorId": "clx...",
+      "criadoEm": "...", "atualizadoEm": "...",
+      "categoria": { "id": "clx...", "nome": "Techno" },
+      "lotes": [ { "id": "clx...", "nome": "1º lote", "preco": "180", "quantidade": 100, "quantidadeVendida": 10, "quantidadeReservada": 5 } ],
+      "atracoes": [ { "id": "clx...", "nome": "DJ Fulano", "username": "djfulano", "avatarUrl": null } ],
+      "criadoPor": { "id": "clx...", "nome": "Produtora X", "username": "produtorax", "avatarUrl": null }
     }
   ],
   "page": 1, "limit": 20, "total": 57, "totalPages": 3
@@ -123,7 +127,9 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
 - A lista vem em `resposta.data` (**não é um array direto**).
 - Ordenada por data de início crescente (os mais antigos primeiro, inclusive eventos já passados). Ainda não há filtro por cidade, categoria ou data.
 - Para carregar mais (scroll infinito): peça `page + 1` enquanto `page < totalPages`.
-- Os eventos não trazem `categoria` nem preço. O preço está nos **lotes** (veja abaixo: `GET /eventos/:eventoId/lotes`). Da categoria só existe o id.
+- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `atracoes` e `criadoPor` trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail, senha ou papel.
+- **Atenção ao formato dos lotes embutidos:** dentro do evento eles vêm **crus**, com `preco` como `"180"` (sem casas fixas) e **sem** `quantidadeDisponivel`. Para o formato completo (`"180.00"` e a disponibilidade calculada), use `GET /eventos/:eventoId/lotes` (veja a seção Lotes). Não misture os dois formatos na mesma tela.
+- `horario` (hora do dia, sem data) e `destaque` (se o evento aparece em destaque) são campos do evento; `destaque` pode ser `null` em eventos antigos.
 
 ### `GET /eventos/:id` (público)
 Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não existir.
