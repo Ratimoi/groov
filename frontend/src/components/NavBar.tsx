@@ -6,6 +6,9 @@ import { ComponentProps } from "react";
 
 const COR_INATIVA = "#ffffff";
 
+export const ALTURA_NAVBAR = 64;
+export const MARGEM_INFERIOR_NAVBAR = 20;
+
 const ABAS = [
   { rota: "index", icone: "home" },
   { rota: "busca", icone: "search" },
@@ -25,10 +28,10 @@ export function NavBar({ state, navigation }: BottomTabBarProps) {
     <View
       pointerEvents="box-none"
       className="absolute inset-x-4 items-center"
-      style={{ bottom: insets.bottom + 20, zIndex: 100, elevation: 100 }}
+      style={{ bottom: insets.bottom + MARGEM_INFERIOR_NAVBAR, zIndex: 100, elevation: 100 }}
     >
       <View className="w-full max-w-sm rounded-full border border-surface-container-high/60 bg-surface-container-lowest/90 shadow-2xl">
-        <View className="h-16 flex-row items-center justify-around px-space-xs">
+        <View className="flex-row items-center justify-around px-space-xs" style={{ height: ALTURA_NAVBAR }}>
           {ABAS.map((aba) => {
             const ativa = rotaAtiva === aba.rota;
             return (
