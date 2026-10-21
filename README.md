@@ -69,13 +69,45 @@ Outros scripts: `npm run build` compila para `dist/`, `npm start` roda o build, 
 
 Rotas disponíveis:
 
-| Rota | Descrição |
-|---|---|
-| `GET /health`, `GET /health/db` | Saúde da API e da conexão com o banco |
-| `/usuarios` | CRUD de usuários |
-| `/grupos` | CRUD de grupos e gestão de membros (`/grupos/:id/members`) |
-| `/grupos/compras` | Criação e consulta de compras em grupo |
-| `/eventos` | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos (somente leitura) |
+| Rota | Acesso | Descrição |
+|---|---|---|
+| `GET /health`, `GET /health/db` | público | Saúde da API e da conexão com o banco |
+| `POST /auth/login` | público | Login com `{ email, senha }`; devolve `{ token, usuario }` |
+| `GET /auth/me` | logado | Dados do usuário do token |
+| `POST /usuarios` | público | Cadastro (sempre como `CLIENTE`) |
+| `GET /usuarios` | ADMIN | Lista usuários |
+| `GET, PUT, DELETE /usuarios/:id` | o próprio usuário ou ADMIN | Só um ADMIN altera `papel` |
+| `POST /grupos`, `GET /grupos` | logado | Cria um grupo (o líder é você) e lista os grupos de que você participa |
+| `GET /grupos/:id`, `GET /grupos/:id/members` | membros do grupo ou ADMIN | Quem não participa recebe 404 |
+| `PUT, DELETE /grupos/:id`, `POST /grupos/:id/members` | líder do grupo ou ADMIN | Renomear, apagar e convidar membros |
+| `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | Remover alguém ou sair do grupo; o líder não pode ser removido |
+| `POST /grupos/compras` | logado | Inicia uma compra em grupo (o iniciador é você e precisa ser membro do grupo) |
+| `GET /grupos/compras`, `GET /grupos/compras/:id` | participantes da compra ou ADMIN | Lista só as suas; as demais respondem 404 |
+| `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
+| `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
+| `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
+| `GET /eventos/:eventoId/lotes`, `GET /lotes/:id` | público | Lotes de um evento (preço, quantidade e disponibilidade) e um lote |
+| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | criador do evento (PRODUTOR) ou ADMIN | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
+
+> Quem vai consumir a API (o app) deve ler o guia [docs/API.md](docs/API.md): formatos de resposta, erros, permissões e tipos TypeScript.
+
+### Autenticação
+
+O login devolve um token JWT, que deve ser enviado nas rotas protegidas no cabeçalho `Authorization: Bearer <token>`. O token vale 1 dia (`JWT_EXPIRES_IN`) e carrega só o id do usuário: o papel é lido do banco a cada requisição, então apagar ou rebaixar um usuário vale na hora. Rotas protegidas sem token válido respondem 401; sem permissão, 403. O login é limitado a 10 tentativas por IP a cada 15 minutos (429).
+
+A API **não sobe** sem `JWT_SECRET` (mínimo 32 caracteres). Gere um com:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+Todo cadastro entra como `CLIENTE`. Para criar o primeiro `ADMIN`, cadastre o usuário normalmente e promova-o direto no banco (console SQL do Neon):
+
+```sql
+UPDATE "Usuario" SET papel = 'ADMIN' WHERE email = 'seu@email.com';
+```
+
+Campos de um evento: `titulo`, `cidade` e `comecaEm` (data ISO 8601, ex.: `2026-12-31T22:00:00Z`) são obrigatórios; `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (http ou https) e `categoriaId` são opcionais. `terminaEm` não pode ser anterior a `comecaEm`.
 
 A listagem de eventos devolve `{ data, page, limit, total, totalPages }`, ordenada pela data de início. `page` e `limit` inválidos respondem 400.
 

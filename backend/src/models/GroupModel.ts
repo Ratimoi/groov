@@ -23,6 +23,12 @@ export class GroupModel {
     return this.prismaClient.grupo.findMany();
   }
 
+  async findAllByMember(usuarioId: string): Promise<Grupo[]> {
+    return this.prismaClient.grupo.findMany({
+      where: { membros: { some: { usuarioId } } },
+    });
+  }
+
   async findById(id: string): Promise<Grupo | null> {
     return this.prismaClient.grupo.findUnique({
       where: { id },

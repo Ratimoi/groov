@@ -1,3 +1,4 @@
+import { Papel } from "@prisma/client";
 import { UserModel } from "../models/UserModel";
 import type {
   PublicUser,
@@ -8,6 +9,17 @@ import type {
 import { AppError } from "../utils/AppError";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "../utils/password";
 
+// Só estes campos entram no banco; o resto do corpo (id, criadoEm, papel no cadastro...) é ignorado.
+function pick<T extends object, K extends keyof T>(data: T, keys: readonly K[]): Partial<Pick<T, K>> {
+  const result: Partial<Pick<T, K>> = {};
+  for (const key of keys) {
+    if (data[key] !== undefined) result[key] = data[key];
+  }
+  return result;
+}
+
+const PROFILE_FIELDS = ["nome", "username", "email", "avatarUrl"] as const;
+
 export class UserService implements UserServiceContract {
   private userModel: UserModel;
 
@@ -17,7 +29,7 @@ export class UserService implements UserServiceContract {
 
   async create(data: UserCreateRequest): Promise<PublicUser> {
     const senha = await this.hashValidPassword(data.senha);
-    return this.userModel.create({ ...data, senha });
+    return this.userModel.create({ ...pick(data, PROFILE_FIELDS), senha } as UserCreateRequest);
   }
 
   async findAll(): Promise<PublicUser[]> {
@@ -29,11 +41,15 @@ export class UserService implements UserServiceContract {
   }
 
   async update(id: string, data: UserUpdateRequest): Promise<PublicUser | null> {
-    if (data.senha === undefined) {
-      return this.userModel.update(id, data);
+    const changes: UserUpdateRequest = pick(data, [...PROFILE_FIELDS, "papel"] as const);
+
+    if (changes.papel !== undefined && !Object.values(Papel).includes(changes.papel)) {
+      throw new AppError("papel inválido", 400);
     }
-    const senha = await this.hashValidPassword(data.senha);
-    return this.userModel.update(id, { ...data, senha });
+    if (data.senha !== undefined) {
+      changes.senha = await this.hashValidPassword(data.senha);
+    }
+    return this.userModel.update(id, changes);
   }
 
   async delete(id: string): Promise<boolean> {

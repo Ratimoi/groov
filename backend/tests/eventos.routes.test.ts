@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
+import { eventoInclude } from "../src/types/event";
 
 vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
@@ -28,6 +29,7 @@ describe("/eventos", () => {
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: 0,
         take: 20,
+        include: eventoInclude,
       });
     });
 
@@ -105,7 +107,7 @@ describe("/eventos", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(evento);
-    expect(prismaMock.evento.findUnique).toHaveBeenCalledWith({ where: { id: "e1" } });
+    expect(prismaMock.evento.findUnique).toHaveBeenCalledWith({ where: { id: "e1" }, include: eventoInclude, });
   });
 
   it("GET /:id inexistente responde 404 com mensagem de evento", async () => {

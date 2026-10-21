@@ -1,10 +1,13 @@
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bearer, logadoComo } from "./helpers/auth";
 import { prismaMock, resetPrismaMock, runTransactionCallbacks } from "./helpers/prismaMock";
 
 vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
+
+let AUTH: { Authorization: string };
 
 const AGORA = new Date("2026-11-01T12:00:00.000Z");
 
@@ -33,7 +36,10 @@ function cenarioValido() {
 }
 
 describe("/grupos/compras", () => {
-  beforeEach(resetPrismaMock);
+  beforeEach(() => {
+    resetPrismaMock();
+    AUTH = logadoComo("CLIENTE", "u1");
+  });
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -44,8 +50,8 @@ describe("/grupos/compras", () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(AGORA);
       cenarioValido();
-
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      // O token precisa ser assinado depois de fixar o relógio, senão já nasce expirado para a API.
+      const res = await request(app).post("/grupos/compras").set(bearer("u1")).send(corpo);
 
       expect(res.status).toBe(201);
       expect(prismaMock.lote.update).toHaveBeenCalledWith({
@@ -65,11 +71,49 @@ describe("/grupos/compras", () => {
       );
     });
 
-    it("conta o iniciador uma vez só, mesmo que ele apareça na lista de participantes", async () => {
+    it("o iniciador é o usuário logado, mesmo que o corpo mande outro iniciadorId", async () => {
       cenarioValido();
 
       const res = await request(app)
         .post("/grupos/compras")
+        .set(logadoComo("CLIENTE", "u2"))
+        .send({ ...corpo, iniciadorId: "u4", participantesIds: ["u1", "u3"] });
+
+      expect(res.status).toBe(201);
+      expect(prismaMock.compraGrupo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            iniciadorId: "u2",
+            participantes: { create: [{ usuarioId: "u2" }, { usuarioId: "u1" }, { usuarioId: "u3" }] },
+          }),
+        }),
+      );
+    });
+
+    it("quem não pertence ao grupo não consegue iniciar a compra (400)", async () => {
+      cenarioValido(); // membros do grupo: u1 a u4
+
+      const res = await request(app)
+        .post("/grupos/compras")
+        .set(logadoComo("CLIENTE", "u9"))
+        .send({ ...corpo, participantesIds: ["u1", "u2"] });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("Usuários não pertencem ao grupo: u9");
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("sem token responde 401", async () => {
+      const res = await request(app).post("/grupos/compras").send(corpo);
+
+      expect(res.status).toBe(401);
+    });
+
+    it("conta o iniciador uma vez só, mesmo que ele apareça na lista de participantes", async () => {
+      cenarioValido();
+
+      const res = await request(app)
+        .post("/grupos/compras").set(AUTH)
         .send({ ...corpo, participantesIds: ["u1", "u2", "u3"] });
 
       expect(res.status).toBe(201);
@@ -77,7 +121,7 @@ describe("/grupos/compras", () => {
 
     it("rejeita participantesIds que não seja uma lista", async () => {
       const res = await request(app)
-        .post("/grupos/compras")
+        .post("/grupos/compras").set(AUTH)
         .send({ ...corpo, participantesIds: "u2" });
 
       expect(res.status).toBe(400);
@@ -88,7 +132,7 @@ describe("/grupos/compras", () => {
       cenarioValido();
       prismaMock.lote.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Lote não encontrado" });
@@ -101,7 +145,7 @@ describe("/grupos/compras", () => {
       cenarioValido();
       prismaMock.lote.findUnique.mockResolvedValue({ ...lote, ...parcial });
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ message: "Este lote não aceita compra em grupo" });
@@ -111,7 +155,7 @@ describe("/grupos/compras", () => {
       cenarioValido();
       prismaMock.grupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Grupo não encontrado" });
@@ -123,7 +167,7 @@ describe("/grupos/compras", () => {
     ])("exige exatamente o tamanho do lote (%s participantes)", async (_nome, participantesIds) => {
       cenarioValido();
 
-      const res = await request(app).post("/grupos/compras").send({ ...corpo, participantesIds });
+      const res = await request(app).post("/grupos/compras").set(AUTH).send({ ...corpo, participantesIds });
 
       expect(res.status).toBe(400);
       expect(res.body.message).toContain("exatamente 3 participantes");
@@ -134,7 +178,7 @@ describe("/grupos/compras", () => {
       cenarioValido();
       prismaMock.membroGrupo.findMany.mockResolvedValue([{ usuarioId: "u1" }, { usuarioId: "u2" }]);
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(400);
       expect(res.body.message).toBe("Usuários não pertencem ao grupo: u3");
@@ -144,7 +188,7 @@ describe("/grupos/compras", () => {
       cenarioValido();
       prismaMock.participanteCompra.findMany.mockResolvedValue([{ usuarioId: "u2" }]);
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(409);
       expect(res.body.message).toContain("u2");
@@ -164,7 +208,7 @@ describe("/grupos/compras", () => {
       // 98 vendidos + 3 reservados = 101 > 100
       prismaMock.lote.update.mockResolvedValue({ ...lote, quantidadeVendida: 98, quantidadeReservada: 3 });
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(409);
       expect(res.body).toEqual({ message: "Ingressos insuficientes no lote para esta compra em grupo" });
@@ -176,7 +220,7 @@ describe("/grupos/compras", () => {
       // 97 vendidos + 3 reservados = 100, igual à capacidade
       prismaMock.lote.update.mockResolvedValue({ ...lote, quantidadeVendida: 97, quantidadeReservada: 3 });
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(201);
     });
@@ -186,36 +230,72 @@ describe("/grupos/compras", () => {
       cenarioValido();
       prismaMock.lote.update.mockRejectedValue(new Error("deadlock"));
 
-      const res = await request(app).post("/grupos/compras").send(corpo);
+      const res = await request(app).post("/grupos/compras").set(AUTH).send(corpo);
 
       expect(res.status).toBe(500);
     });
   });
 
   describe("consulta", () => {
-    it("GET lista as compras (não pode ser confundido com GET /grupos/:id)", async () => {
-      prismaMock.compraGrupo.findMany.mockResolvedValue([{ id: "c1" }]);
+    const compra = {
+      id: "c1",
+      participantes: [{ usuarioId: "u1" }, { usuarioId: "u2" }, { usuarioId: "u3" }],
+    };
 
-      const res = await request(app).get("/grupos/compras");
+    it("usuário comum lista só as compras de que participa", async () => {
+      prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
+
+      const res = await request(app).get("/grupos/compras").set(logadoComo("CLIENTE", "u2"));
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual([{ id: "c1" }]);
+      expect(res.body).toEqual([compra]);
+      expect(prismaMock.compraGrupo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { participantes: { some: { usuarioId: "u2" } } } }),
+      );
+      // GET /grupos/compras não pode ser confundido com GET /grupos/:id
       expect(prismaMock.grupo.findUnique).not.toHaveBeenCalled();
     });
 
-    it("GET /:id devolve a compra", async () => {
-      prismaMock.compraGrupo.findUnique.mockResolvedValue({ id: "c1" });
+    it("ADMIN lista todas as compras", async () => {
+      prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
 
-      const res = await request(app).get("/grupos/compras/c1");
+      const res = await request(app).get("/grupos/compras").set(logadoComo("ADMIN", "adm"));
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ id: "c1" });
+      expect(prismaMock.compraGrupo.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: undefined }));
     });
 
-    it("GET /:id inexistente responde 404", async () => {
+    it("sem token responde 401", async () => {
+      const res = await request(app).get("/grupos/compras");
+
+      expect(res.status).toBe(401);
+    });
+
+    it.each([
+      ["um participante", () => logadoComo("CLIENTE", "u3")],
+      ["um ADMIN", () => logadoComo("ADMIN", "adm")],
+    ])("%s vê a compra", async (_nome, quem) => {
+      prismaMock.compraGrupo.findUnique.mockResolvedValue(compra);
+
+      const res = await request(app).get("/grupos/compras/c1").set(quem());
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(compra);
+    });
+
+    it("quem não participa recebe 404, como se a compra não existisse", async () => {
+      prismaMock.compraGrupo.findUnique.mockResolvedValue(compra);
+
+      const res = await request(app).get("/grupos/compras/c1").set(logadoComo("CLIENTE", "u9"));
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ message: "Compra em grupo não encontrada" });
+    });
+
+    it("compra inexistente responde 404", async () => {
       prismaMock.compraGrupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).get("/grupos/compras/nada");
+      const res = await request(app).get("/grupos/compras/nada").set(logadoComo("ADMIN", "adm"));
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Compra em grupo não encontrada" });

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { getAuthUser } from "../middlewares/auth";
 import type { GroupPurchaseServiceContract } from "../types/groupPurchase";
 
 export class GroupPurchaseController {
@@ -10,7 +11,7 @@ export class GroupPurchaseController {
 
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const purchase = await this.groupPurchaseService.create(req.body);
+      const purchase = await this.groupPurchaseService.create(req.body, getAuthUser(req));
       res.status(201).json(purchase);
     } catch (error) {
       next(error);
@@ -19,7 +20,7 @@ export class GroupPurchaseController {
 
   findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.status(200).json(await this.groupPurchaseService.findAll());
+      res.status(200).json(await this.groupPurchaseService.findAll(getAuthUser(req)));
     } catch (error) {
       next(error);
     }
@@ -27,7 +28,7 @@ export class GroupPurchaseController {
 
   findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const purchase = await this.groupPurchaseService.findById(req.params.id);
+      const purchase = await this.groupPurchaseService.findById(req.params.id, getAuthUser(req));
       if (!purchase) {
         res.status(404).json({ message: "Compra em grupo não encontrada" });
         return;
