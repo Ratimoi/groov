@@ -3,6 +3,8 @@ import prisma from "../config/prisma";
 import type { EventCreateData, EventUpdateData } from "../utils/eventInput";
 import type { PaginationParams } from "../utils/pagination";
 import { isNotFoundError } from "../utils/prismaErrors";
+import { eventoInclude, EventoCompleto } from "../types/event";
+
 
 export class EventModel {
   private prismaClient: PrismaClient;
@@ -15,6 +17,10 @@ export class EventModel {
     return this.prismaClient.evento.findUnique({
       where: { id },
     });
+  }
+
+  async findAll(): Promise<EventoCompleto[]> {
+    return prisma.evento.findMany({ include: eventoInclude });
   }
 
   async create(data: EventCreateData, criadoPorId: string): Promise<Evento> {
