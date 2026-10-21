@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
+import { eventoInclude } from "../src/types/event";
 
 vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
@@ -28,6 +29,7 @@ describe("/eventos", () => {
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: 0,
         take: 20,
+        include: eventoInclude,
       });
     });
 
