@@ -8,6 +8,7 @@ export const lotController = new LotController(new LotService());
 
 // Leitura pública (o app precisa mostrar preços antes do login).
 router.get("/:id", lotController.findById);
+router.get("/evento/:eventoId", lotController.findByEvent);
 
 // Escrita: PRODUTOR ou ADMIN, e ser o criador do evento do lote (ou ADMIN), checado no service.
 const canWrite = [authenticate, requireRole("PRODUTOR", "ADMIN")];

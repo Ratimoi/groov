@@ -107,7 +107,7 @@ describe("/eventos", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(evento);
-    expect(prismaMock.evento.findUnique).toHaveBeenCalledWith({ where: { id: "e1" } });
+    expect(prismaMock.evento.findUnique).toHaveBeenCalledWith({ where: { id: "e1" }, include: eventoInclude, });
   });
 
   it("GET /:id inexistente responde 404 com mensagem de evento", async () => {

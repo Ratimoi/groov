@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View, Image } from "react-native";
 import type { EventoType } from "../utils/index";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { router } from "expo-router";
 
 export function CardEvento({ data }: { data: EventoType }) {
 
@@ -22,7 +23,7 @@ export function CardEvento({ data }: { data: EventoType }) {
   }
   
   return (
-            <TouchableOpacity activeOpacity={0.8} className="w-72 bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col">
+            <TouchableOpacity  onPress={() => router.push({ pathname: "/detalhes", params: { id: data.id } })} activeOpacity={0.8} className="w-72 bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col">
               <View className="h-32 w-full relative">
                 {data.imagemUrl && (
                     <Image 
