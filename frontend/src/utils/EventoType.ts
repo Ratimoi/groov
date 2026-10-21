@@ -26,4 +26,5 @@ export type EventoType = {
   ingressos: IngressoType[];
   validacoes: ValidacaoIngressoType[];
   destaque: Boolean;
+  atracoes: UsuarioType[]
 };
