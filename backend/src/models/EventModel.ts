@@ -15,6 +15,7 @@ export class EventModel {
   async findById(id: string): Promise<Evento | null> {
     return this.prismaClient.evento.findUnique({
       where: { id },
+      include: eventoInclude,
     });
   }
 
