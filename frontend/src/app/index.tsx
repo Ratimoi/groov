@@ -16,7 +16,8 @@ export default function HomeScreen() {
   async function buscaDados() {
     try {
       const response = await fetch(`${apiUrl}/eventos`);
-      const dados = await response.json();
+      const resposta = await response.json();
+      const dados = resposta.data ?? [];
       
       setEventos(dados);
 

@@ -54,6 +54,11 @@ export class EventModel {
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
+        include: {
+          categoria: true,
+          lotes: { orderBy: { preco: "asc" } },
+          atracoes: { select: { id: true, nome: true, username: true, avatarUrl: true } },
+        },
       }),
       this.prismaClient.evento.count(),
     ]);
