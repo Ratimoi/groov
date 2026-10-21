@@ -1,7 +1,7 @@
 import { Evento } from "@prisma/client";
 import { EventModel } from "../models/EventModel";
 import type { AuthUser } from "../types/auth";
-import { EventServiceContract } from "../types/event";
+import { EventServiceContract, EventoCompleto } from "../types/event";
 import { assertCanManageEvent } from "../utils/eventAccess";
 import { assertEndAfterStart, parseEventCreate, parseEventUpdate } from "../utils/eventInput";
 import { Paginated, parsePagination, PaginationQuery, toPaginated } from "../utils/pagination";
@@ -13,7 +13,7 @@ export class EventService implements EventServiceContract {
     this.eventModel = eventModel;
   }
 
-  async findAll(query: PaginationQuery): Promise<Paginated<Evento>> {
+  async findAll(query: PaginationQuery): Promise<Paginated<EventoCompleto>> {
     const pagination = parsePagination(query);
     const { events, total } = await this.eventModel.findPage(pagination);
     return toPaginated(events, total, pagination);

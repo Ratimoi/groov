@@ -3,6 +3,7 @@ import prisma from "../config/prisma";
 import type { EventCreateData, EventUpdateData } from "../utils/eventInput";
 import type { PaginationParams } from "../utils/pagination";
 import { isNotFoundError } from "../utils/prismaErrors";
+import { eventoInclude, EventoCompleto } from "../types/event";
 
 export class EventModel {
   private prismaClient: PrismaClient;
@@ -47,13 +48,14 @@ export class EventModel {
     }
   }
 
-  async findPage({ page, limit }: PaginationParams): Promise<{ events: Evento[]; total: number }> {
+  async findPage({ page, limit }: PaginationParams): Promise<{ events: EventoCompleto[]; total: number }> {
     const [events, total] = await Promise.all([
       this.prismaClient.evento.findMany({
         // O id desempata eventos que começam juntos; sem ele as páginas podem repetir ou perder itens.
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
+        include: eventoInclude,
       }),
       this.prismaClient.evento.count(),
     ]);
