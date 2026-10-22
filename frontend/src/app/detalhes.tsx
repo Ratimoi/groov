@@ -4,11 +4,13 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
 import { EventoType } from "@/utils";
+import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 export default function DetalhesEvento() {
   const { id } = useLocalSearchParams();
+  const espacoNavBar = useEspacoNavBar();
   const [evento, setEvento] = useState<EventoType>();
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function DetalhesEvento() {
   return (
     <ScrollView
       className="flex-1 bg-surface"
-      contentContainerClassName="pb-24"
+      contentContainerStyle={{ paddingBottom: espacoNavBar }}
       showsVerticalScrollIndicator={false}
     >
       {/* Hero Section */}
