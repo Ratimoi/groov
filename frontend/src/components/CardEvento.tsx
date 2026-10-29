@@ -38,7 +38,7 @@ export function CardEvento({ data }: { data: EventoType }) {
                 <Text className="font-body-lg text-body-lg text-on-surface mt-1" numberOfLines={1}>{data.titulo}</Text>
                 <View className="flex-row justify-between items-center mt-2">
                   <Text className="font-body-sm text-body-sm text-on-surface-variant">{data.nomeLocal}</Text>
-                  <Text className="font-label-caps text-label-caps text-primary">R$ 250</Text>
+                  <Text className="font-label-caps text-label-caps text-primary">R$ {preco}</Text>
                 </View>
               </View>
             </TouchableOpacity>
