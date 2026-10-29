@@ -50,7 +50,7 @@ export default function Lotes() {
     }
     
     buscaDados();
-  }, [])
+  }, [eventoId])
 
     const listaLotes = Array.isArray(lotes) ? lotes.map(lote => (
     <CardLote data={lote} key={lote.id} />
