@@ -16,7 +16,6 @@ export default function DetalhesEvento() {
   const router = useRouter();
 
   useEffect(() => {
-    setEvento(undefined);
     async function buscaDados() {
       const response = await fetch(`${apiUrl}/eventos/${id}`);
       const dados = await response.json();
