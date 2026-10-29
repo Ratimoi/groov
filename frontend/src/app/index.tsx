@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from "react-native";
+import { Text, View, ScrollView, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { CardEventoDestaque } from "../components/CardEventoDestaque";
 import { CardEvento } from "../components/CardEvento";
 
@@ -8,6 +10,7 @@ const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 export default function HomeScreen() {
   const [eventos, setEventos] = useState<any[]>([]);  
   const [eventoDestaque, setEventoDestaque] = useState<any | null>(null);
+  const espacoNavBar = useEspacoNavBar();
   const [filtroCategoria, setFiltroCategoria] = useState<string>("Festas");
 
 
@@ -44,9 +47,10 @@ export default function HomeScreen() {
   ))
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView edges={["top"]} className="flex-1 bg-background">
       <ScrollView
-        contentContainerClassName="pt-8 pb-12 flex-col gap-section-gap"
+        contentContainerClassName="pt-8 flex-col gap-section-gap"
+        contentContainerStyle={{ paddingBottom: espacoNavBar }}
         showsVerticalScrollIndicator={false}
       >
         {/* Categories */}
@@ -77,14 +81,6 @@ export default function HomeScreen() {
                 :  "border-glass-border bg-surface-container"
             }`}>
               <Text className="font-label-caps text-label-caps text-on-surface">Educativos</Text>
-            </TouchableOpacity>
-           
-            <TouchableOpacity className="px-4 py-2 rounded-full border border-glass-border bg-surface-container">
-              <Text className="font-label-caps text-label-caps text-on-surface">FESTIVAIS</Text>
-            </TouchableOpacity>
-           
-            <TouchableOpacity className="px-4 py-2 rounded-full border border-glass-border bg-surface-container">
-              <Text className="font-label-caps text-label-caps text-on-surface">UNDERGROUND</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
