@@ -25,6 +25,6 @@ export type EventoType = {
   pedidos: PedidoType[];
   ingressos: IngressoType[];
   validacoes: ValidacaoIngressoType[];
-  destaque: Boolean;
+  destaque: boolean;
   atracoes: UsuarioType[]
 };
