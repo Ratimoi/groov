@@ -52,9 +52,12 @@ export default function Lotes() {
     buscaDados();
   }, [eventoId])
 
-    const listaLotes = Array.isArray(lotes) ? lotes.map(lote => (
-    <CardLote data={lote} key={lote.id} />
-    )) : [];
+  const listaLotes = Array.isArray(lotes) 
+    ? lotes
+        .filter(lote => lote.quantidade > 0)
+        .map(lote => <CardLote data={lote} key={lote.id} />) 
+    : [];
+
 
   return (
     <View className="flex-1 bg-background">
@@ -112,11 +115,6 @@ export default function Lotes() {
               );
             })}
 
-            {/* Taxa de Serviço (Opcional - Pode manter fixo ou calcular uma % em cima do subtotal depois) */}
-            <View className="flex-row justify-between items-center mt-2">
-              <Text className="font-body-sm text-body-sm text-[#d4c0d7]">Taxas de Serviço</Text>
-              <Text className="font-body-sm font-medium text-[#d4c0d7]">R$ 12,50</Text>
-            </View>
             
           </View>
           
