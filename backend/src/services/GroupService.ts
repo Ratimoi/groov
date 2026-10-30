@@ -110,4 +110,9 @@ export class GroupService implements GroupServiceContract {
       throw new AppError("Somente o líder do grupo pode fazer isso", 403);
     }
   }
+
+  async findByUsuario(usuarioId: string) {
+    const grupos = await this.groupModel.findByUsuario(usuarioId);
+    return grupos.map((grupo) => ({ ...grupo, souLider: grupo.liderId === usuarioId }));
+  }
 }
