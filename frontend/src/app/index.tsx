@@ -82,14 +82,6 @@ export default function HomeScreen() {
             }`}>
               <Text className="font-label-caps text-label-caps text-on-surface">Educativos</Text>
             </TouchableOpacity>
-           
-            <TouchableOpacity className="px-4 py-2 rounded-full border border-glass-border bg-surface-container">
-              <Text className="font-label-caps text-label-caps text-on-surface">FESTIVAIS</Text>
-            </TouchableOpacity>
-           
-            <TouchableOpacity className="px-4 py-2 rounded-full border border-glass-border bg-surface-container">
-              <Text className="font-label-caps text-label-caps text-on-surface">UNDERGROUND</Text>
-            </TouchableOpacity>
           </ScrollView>
         </View>
 

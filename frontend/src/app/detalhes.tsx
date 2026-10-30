@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Image, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { EventoType } from "@/utils";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
+
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
@@ -12,6 +13,7 @@ export default function DetalhesEvento() {
   const { id } = useLocalSearchParams();
   const espacoNavBar = useEspacoNavBar();
   const [evento, setEvento] = useState<EventoType>();
+  const router = useRouter();
 
   useEffect(() => {
     async function buscaDados() {
@@ -20,11 +22,12 @@ export default function DetalhesEvento() {
       setEvento(dados);
     }
     buscaDados();
-  }, []);
+  }, [id]);
 
   const organizador = evento?.criadoPor;
 
   return (
+    <View className="flex-1 bg-background">
     <ScrollView
       className="flex-1 bg-surface"
       contentContainerStyle={{ paddingBottom: espacoNavBar }}
@@ -215,5 +218,26 @@ export default function DetalhesEvento() {
         </View>
       </View>
     </ScrollView>
+          <View 
+      className="absolute bottom-32 right-0 w-full px-margin-mobile flex-row justify-end z-50"
+      pointerEvents="box-none" 
+      >
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => router.push(`/lotes?eventoId=${evento?.id}`)}        
+        // active:scale-95 
+        className="rounded-full active:scale-95 py-3 px-6 bg-primary-container flex-row gap-4"
+      >          <MaterialIcons 
+            name="confirmation-number" 
+            size={18} 
+            color="#ffffff" // text-on-primary-container
+          />
+          
+          <Text className="text-on-primary-container font-body-md font-bold">
+            Ingressos
+          </Text>
+      </TouchableOpacity>
+    </View>
+    </View>
   );
 }
