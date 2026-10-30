@@ -15,6 +15,7 @@ import {
 import { Tabs } from "expo-router";
 import { NavBar } from "../components/NavBar";
 import { CarrinhoProvider } from "@/contexts/CarrinhoContext";
+import { UserProvider } from "@/contexts/UserContext";
 
 const queryClient = new QueryClient();
 
@@ -32,18 +33,20 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <CarrinhoProvider>
-          <View className="flex-1 bg-background">
-            <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
-              <Tabs.Screen name="index" />
-              <Tabs.Screen name="busca" />
-              <Tabs.Screen name="grupos" />
-              <Tabs.Screen name="perfil" />
-              <Tabs.Screen name="detalhes" />
-              <Tabs.Screen name="lotes" />
-            </Tabs>
-          </View>
-        </CarrinhoProvider>
+        <UserProvider>
+          <CarrinhoProvider>
+            <View className="flex-1 bg-background">
+              <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
+                <Tabs.Screen name="index" />
+                <Tabs.Screen name="busca" />
+                <Tabs.Screen name="grupos" />
+                <Tabs.Screen name="perfil" />
+                <Tabs.Screen name="detalhes" />
+                <Tabs.Screen name="lotes" />
+              </Tabs>
+            </View>
+          </CarrinhoProvider>
+        </UserProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

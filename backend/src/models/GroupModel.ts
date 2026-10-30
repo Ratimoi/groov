@@ -1,7 +1,8 @@
 import { PrismaClient, type Grupo } from "@prisma/client";
 import prisma from "../config/prisma";
 import { isNotFoundError } from "../utils/prismaErrors";
-import type { GroupCreateRequest, GroupUpdateRequest } from "../types/group";
+import type { GroupCreateRequest, GroupUpdateRequest, GrupoCompleto } from "../types/group";
+import { grupoInclude } from "../types/group";
 
 export class GroupModel {
   private prismaClient: PrismaClient;
@@ -32,6 +33,19 @@ export class GroupModel {
   async findById(id: string): Promise<Grupo | null> {
     return this.prismaClient.grupo.findUnique({
       where: { id },
+    });
+  }
+
+  async findByUsuario(usuarioId: string): Promise<GrupoCompleto[]> {
+    return this.prismaClient.grupo.findMany({
+      where: {
+        OR: [
+          { liderId: usuarioId },
+          { membros: { some: { usuarioId } } },
+        ],
+      },
+      orderBy: { nome: "asc" },
+      include: grupoInclude,
     });
   }
 

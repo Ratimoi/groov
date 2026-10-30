@@ -106,6 +106,30 @@ const atracoesPorEvento: Record<string, string[]> = {
     "evt-educativo-05": ["usr-atracao-20"]
 };
 
+// Criando os Grupos (o líder também entra como membro)
+const grupos: Prisma.GrupoCreateManyInput[] = [
+    { id: "grp-01", nome: "Galera da Balada", liderId: "usr-cliente-01" },
+    { id: "grp-02", nome: "Amigos do Samba", liderId: "usr-cliente-03" },
+    { id: "grp-03", nome: "Clube da Cultura", liderId: "usr-atracao-08" },
+    { id: "grp-04", nome: "Raízes do Sul", liderId: "usr-atracao-12" },
+    { id: "grp-05", nome: "Turma do Conhecimento", liderId: "usr-atracao-15" },
+    { id: "grp-06", nome: "Equipe Organizadora", liderId: "usr-produtor-01" }
+];
+
+// Membros de cada Grupo (id do grupo -> ids dos usuários)
+// Todos os 25 usuários estão em pelo menos um grupo; alguns estão em dois
+const membrosPorGrupo: Record<string, string[]> = {
+    "grp-01": ["usr-cliente-01", "usr-cliente-02", "usr-atracao-01", "usr-atracao-02", "usr-atracao-04"],
+    "grp-02": ["usr-cliente-03", "usr-atracao-03", "usr-atracao-05", "usr-atracao-06", "usr-atracao-07"],
+    "grp-03": ["usr-atracao-08", "usr-atracao-09", "usr-atracao-10", "usr-atracao-11", "usr-atracao-14"],
+    "grp-04": ["usr-atracao-12", "usr-atracao-13", "usr-cliente-02", "usr-cliente-03"],
+    "grp-05": ["usr-atracao-15", "usr-atracao-16", "usr-atracao-17", "usr-atracao-18", "usr-atracao-19", "usr-atracao-20"],
+    "grp-06": ["usr-produtor-01", "usr-admin-01", "usr-cliente-01"]
+};
+
+const membrosGrupo: Prisma.MembroGrupoCreateManyInput[] = Object.entries(membrosPorGrupo)
+    .flatMap(([grupoId, usuarioIds]) => usuarioIds.map(usuarioId => ({ grupoId, usuarioId })));
+
 // Criando as Categorias
 const categorias: Prisma.CategoriaCreateManyInput[] = [
     { id: "cat-festas", nome: "Festas" },
@@ -368,6 +392,13 @@ async function main() {
 
         await prisma.usuario.createMany({ data: atracoes, skipDuplicates: true });
         console.log(`${atracoes.length} Atrações Cadastradas...`);
+
+        await prisma.grupo.createMany({ data: grupos, skipDuplicates: true });
+        console.log(`${grupos.length} Grupos Cadastrados...`);
+
+        // skipDuplicates usa o @@unique([grupoId, usuarioId]), então não duplica ao rodar de novo
+        await prisma.membroGrupo.createMany({ data: membrosGrupo, skipDuplicates: true });
+        console.log(`${membrosGrupo.length} Membros de Grupo Cadastrados...`);
 
         await prisma.categoria.createMany({ data: categorias, skipDuplicates: true });
         console.log(`${categorias.length} Categorias Cadastradas...`);
