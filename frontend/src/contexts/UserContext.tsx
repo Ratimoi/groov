@@ -11,7 +11,7 @@ export type Usuario = {
   papel: "CLIENTE" | "PRODUTOR" | "ADMIN";
 };
 
-export type DadosCadastro = { nome: string; username: string; email: string; senha: string };
+export type DadosCadastro = { nome: string; username: string; email: string; senha: string; cpf: string };
 
 type UserContextData = {
   user: Usuario | null;

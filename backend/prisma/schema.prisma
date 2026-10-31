@@ -16,6 +16,8 @@ model Usuario {
 
   email    String   @unique
   senha    String
+  // Só dígitos. Nulo em contas anteriores à exigência do CPF; nunca sai nas respostas da API.
+  cpf      String?  @unique
   papel    Papel    @default(CLIENTE)
   criadoEm DateTime @default(now())
 

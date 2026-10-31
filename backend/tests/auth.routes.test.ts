@@ -223,7 +223,7 @@ describe("autenticação", () => {
       expect((await request(app).get("/health")).status).toBe(200);
       expect((await request(app).get("/eventos")).status).toBe(200);
       expect(
-        (await request(app).post("/usuarios").send({ nome: "Ana", username: "ana", email: "a@b.c", senha: SENHA })).status,
+        (await request(app).post("/usuarios").send({ nome: "Ana", username: "ana", email: "a@b.c", senha: SENHA, cpf: "52998224725" })).status,
       ).toBe(201);
     });
 
