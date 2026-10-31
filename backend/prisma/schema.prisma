@@ -125,8 +125,17 @@ model Grupo {
 
   membros MembroGrupo[]
   compras CompraGrupo[]
+  convite ConviteGrupo?
 
   @@index([liderId])
+}
+
+// Código de convite do grupo (link compartilhável). Fica fora de Grupo para não vazar nas listagens.
+model ConviteGrupo {
+  codigo   String   @id
+  grupoId  String   @unique
+  grupo    Grupo    @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  criadoEm DateTime @default(now())
 }
 
 model MembroGrupo {

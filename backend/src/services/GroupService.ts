@@ -1,26 +1,32 @@
 import type { Grupo } from "@prisma/client";
 import { GroupMemberModel } from "../models/GroupMemberModel";
+import { GroupInviteModel } from "../models/GroupInviteModel";
 import { GroupModel } from "../models/GroupModel";
 import type { AuthUser } from "../types/auth";
 import type {
   GroupCreateBody,
+  GroupJoinResult,
   GroupMember,
   GroupMemberCreateRequest,
   GroupServiceContract,
   GroupUpdateRequest,
 } from "../types/group";
 import { AppError } from "../utils/AppError";
+import { asObject, fail } from "../utils/validation";
 
 export class GroupService implements GroupServiceContract {
   private groupModel: GroupModel;
   private groupMemberModel: GroupMemberModel;
+  private groupInviteModel: GroupInviteModel;
 
   constructor(
     groupModel: GroupModel = new GroupModel(),
     groupMemberModel: GroupMemberModel = new GroupMemberModel(),
+    groupInviteModel: GroupInviteModel = new GroupInviteModel(),
   ) {
     this.groupModel = groupModel;
     this.groupMemberModel = groupMemberModel;
+    this.groupInviteModel = groupInviteModel;
   }
 
   // O líder é sempre quem está logado: o corpo da requisição não escolhe o líder.
@@ -67,6 +73,28 @@ export class GroupService implements GroupServiceContract {
       throw new AppError("usuarioId é obrigatório", 400);
     }
     return this.groupMemberModel.create(grupoId, data.usuarioId);
+  }
+
+  // Só o líder (ou ADMIN) gera o convite; o código de um grupo é sempre o mesmo.
+  async createInvite(grupoId: string, actor: AuthUser): Promise<{ codigo: string }> {
+    const group = await this.findVisibleGroupOrThrow(grupoId, actor);
+    this.assertCanManage(group, actor);
+    return { codigo: await this.groupInviteModel.findOrCreate(grupoId) };
+  }
+
+  // Quem tem o código entra no grupo. Código desconhecido é 404; quem já é membro não duplica.
+  async join(body: { codigo?: unknown }, actor: AuthUser): Promise<GroupJoinResult> {
+    const { codigo } = asObject(body);
+    if (typeof codigo !== "string" || codigo.trim() === "" || codigo.length > 32) fail("codigo é obrigatório");
+
+    const convite = await this.groupInviteModel.findByCode(codigo.trim().toUpperCase());
+    if (!convite) throw new AppError("Convite inválido", 404);
+
+    if (await this.groupMemberModel.isMember(convite.grupoId, actor.id)) {
+      return { grupo: convite.grupo, jaEraMembro: true };
+    }
+    await this.groupMemberModel.create(convite.grupoId, actor.id);
+    return { grupo: convite.grupo, jaEraMembro: false };
   }
 
   // O líder (ou ADMIN) remove qualquer membro; cada membro pode sair do grupo por conta própria.
