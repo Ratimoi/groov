@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import prisma from "../config/prisma";
+import { generateTicketCode } from "../utils/ticketCode";
 import { ticketInclude, type Ticket, type ValidationReason, type ValidationResult } from "../types/ticket";
 
 export class TicketModel {
@@ -52,6 +53,19 @@ export class TicketModel {
 
       await registrar("VALIDO");
       return { resultado: "VALIDO", motivo: "OK", ingresso: { ...ingresso, status: "USADO", usadoEm: now } };
+    });
+  }
+
+  // Troca o dono e o código em uma só escrita condicional: o QR antigo (que o dono anterior ainda
+  // tem) deixa de valer. Retorna null se o ingresso não é mais do remetente ou já não é VALIDO.
+  async transfer(id: string, deDonoId: string, paraDonoId: string): Promise<Ticket | null> {
+    return this.prismaClient.$transaction(async (tx) => {
+      const troca = await tx.ingresso.updateMany({
+        where: { id, donoId: deDonoId, status: "VALIDO" },
+        data: { donoId: paraDonoId, codigoQr: generateTicketCode() },
+      });
+      if (troca.count === 0) return null;
+      return tx.ingresso.findUnique({ where: { id }, include: ticketInclude });
     });
   }
 

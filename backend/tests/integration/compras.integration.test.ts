@@ -218,4 +218,29 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
       expect((await request(app).post("/grupos/entrar").set(auth(estranho)).send({ codigo: "NAOEXIST" })).status).toBe(404);
     });
   });
+
+  describe("transferência de ingresso", () => {
+    it("troca o dono e o código; o QR antigo deixa de valer e ingresso usado não transfere", async () => {
+      const [adm, de, para] = [await criarUsuario("olga"), await criarUsuario("pedro"), await criarUsuario("rita")];
+      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
+      const { lote } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      const pedido = await request(app).post("/pedidos").set(auth(de)).send({ loteId: lote.id, quantidade: 2 });
+      const [primeiro, segundo] = pedido.body.ingressos as { id: string; codigoQr: string }[];
+
+      const res = await request(app).post(`/ingressos/${primeiro.id}/transferir`).set(auth(de)).send({ username: `rita-${run}` });
+      expect(res.status).toBe(200);
+      expect(res.body.donoId).toBe(para.id);
+      expect(res.body.codigoQr).not.toBe(primeiro.codigoQr);
+
+      expect((await request(app).get("/ingressos").set(auth(para))).body).toHaveLength(1);
+      expect((await request(app).get(`/ingressos/${primeiro.id}`).set(auth(de))).status).toBe(404);
+      expect((await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: primeiro.codigoQr })).status).toBe(404);
+      expect((await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: res.body.codigoQr })).status).toBe(200);
+
+      // Quem já transferiu não é mais dono; ingresso já validado não transfere.
+      expect((await request(app).post(`/ingressos/${primeiro.id}/transferir`).set(auth(de)).send({ username: `rita-${run}` })).status).toBe(404);
+      await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: segundo.codigoQr });
+      expect((await request(app).post(`/ingressos/${segundo.id}/transferir`).set(auth(de)).send({ username: `rita-${run}` })).status).toBe(409);
+    });
+  });
 });
