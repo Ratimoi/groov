@@ -173,4 +173,28 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
       expect(await prisma.ingresso.count({ where: { loteId: lote.id } })).toBe(0);
     });
   });
+
+  describe("validação na portaria", () => {
+    it("dá baixa uma única vez, mesmo com leituras simultâneas do mesmo código", async () => {
+      const [adm, u] = [await criarUsuario("jade"), await criarUsuario("kau")];
+      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
+      const { lote, evento } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      const pedido = await request(app).post("/pedidos").set(auth(u)).send({ loteId: lote.id, quantidade: 1 });
+      const codigo = pedido.body.ingressos[0].codigoQr as string;
+
+      const respostas = await Promise.all(
+        Array.from({ length: 5 }, () => request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo, eventoId: evento.id })),
+      );
+
+      const status = respostas.map((res) => res.status).sort();
+      expect(status).toEqual([200, 409, 409, 409, 409]);
+      expect(respostas.filter((res) => res.status === 409).every((res) => res.body.resultado === "JA_UTILIZADO")).toBe(true);
+      expect((await prisma.ingresso.findFirstOrThrow({ where: { codigoQr: codigo } })).status).toBe("USADO");
+      expect(await prisma.validacaoIngresso.count({ where: { codigoLido: codigo, resultado: "VALIDO" } })).toBe(1);
+      expect(await prisma.validacaoIngresso.count({ where: { codigoLido: codigo } })).toBe(5);
+
+      const comum = await request(app).post("/ingressos/validar").set(auth(u)).send({ codigo });
+      expect(comum.status).toBe(403);
+    });
+  });
 });
