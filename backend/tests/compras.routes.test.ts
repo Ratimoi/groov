@@ -256,6 +256,20 @@ describe("/grupos/compras", () => {
       expect(prismaMock.grupo.findUnique).not.toHaveBeenCalled();
     });
 
+    it("inclui o evento do lote (para a tela Meus Grupos) sem dados sensíveis", async () => {
+      prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
+
+      await request(app).get("/grupos/compras").set(logadoComo("CLIENTE", "u2"));
+
+      const { include } = prismaMock.compraGrupo.findMany.mock.calls[0][0];
+      expect(Object.keys(include.lote.select.evento.select).sort()).toEqual([
+        "categoria", "comecaEm", "id", "imagemUrl", "nomeLocal", "titulo",
+      ]);
+      expect(include.participantes.include.usuario.select).toEqual({
+        id: true, nome: true, username: true, avatarUrl: true,
+      });
+    });
+
     it("ADMIN lista todas as compras", async () => {
       prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
 

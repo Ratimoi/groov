@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import type { UserServiceContract } from "../types/user";
+import { getAuthUser } from "../middlewares/auth";
 import { AppError } from "../utils/AppError";
 
 export class UserController {
@@ -21,6 +22,14 @@ export class UserController {
   findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       res.status(200).json(await this.userService.findAll());
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  search = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.userService.search(req.query.q, getAuthUser(req).id));
     } catch (error) {
       next(error);
     }

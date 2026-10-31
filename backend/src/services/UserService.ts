@@ -3,6 +3,7 @@ import { UserModel } from "../models/UserModel";
 import type {
   PublicUser,
   UserCreateRequest,
+  UserSearchResult,
   UserServiceContract,
   UserUpdateRequest,
 } from "../types/user";
@@ -17,6 +18,9 @@ function pick<T extends object, K extends keyof T>(data: T, keys: readonly K[]):
   }
   return result;
 }
+
+const MIN_SEARCH_LENGTH = 2;
+const SEARCH_LIMIT = 20;
 
 const PROFILE_FIELDS = ["nome", "username", "email", "avatarUrl"] as const;
 
@@ -38,6 +42,15 @@ export class UserService implements UserServiceContract {
 
   async findById(id: string): Promise<PublicUser | null> {
     return this.userModel.findById(id);
+  }
+
+  // Busca para convidar pessoas a um grupo: devolve poucos resultados e só dados públicos.
+  async search(termo: unknown, actorId: string): Promise<UserSearchResult[]> {
+    const texto = typeof termo === "string" ? termo.trim() : "";
+    if (texto.length < MIN_SEARCH_LENGTH) {
+      throw new AppError(`q deve ter pelo menos ${MIN_SEARCH_LENGTH} caracteres`, 400);
+    }
+    return this.userModel.search(texto, actorId, SEARCH_LIMIT);
   }
 
   async update(id: string, data: UserUpdateRequest): Promise<PublicUser | null> {

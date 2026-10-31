@@ -11,6 +11,7 @@ const groupController = new GroupController(new GroupService());
 
 router.post("/", userController.create); // cadastro público
 router.get("/", authenticate, requireRole("ADMIN"), userController.findAll);
+router.get("/busca", authenticate, userController.search);
 router.get("/:id", authenticate, authorizeSelfOrAdmin, userController.findById);
 router.put("/:id", authenticate, authorizeSelfOrAdmin, userController.update);
 router.delete("/:id", authenticate, authorizeSelfOrAdmin, userController.delete);

@@ -1,7 +1,7 @@
 import { PrismaClient, type Usuario } from "@prisma/client";
 import prisma from "../config/prisma";
 import { isNotFoundError } from "../utils/prismaErrors";
-import type { PublicUser, UserCreateRequest, UserUpdateRequest } from "../types/user";
+import type { PublicUser, UserCreateRequest, UserSearchResult, UserUpdateRequest } from "../types/user";
 
 // A senha nunca é lida do banco para as respostas da API.
 const omitPassword = { senha: true } as const;
@@ -28,6 +28,21 @@ export class UserModel {
     return this.prismaClient.usuario.findUnique({
       where: { id },
       omit: omitPassword,
+    });
+  }
+
+  async search(termo: string, excluirId: string, limite: number): Promise<UserSearchResult[]> {
+    return this.prismaClient.usuario.findMany({
+      where: {
+        id: { not: excluirId },
+        OR: [
+          { nome: { contains: termo, mode: "insensitive" } },
+          { username: { contains: termo, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true, nome: true, username: true, avatarUrl: true },
+      orderBy: { nome: "asc" },
+      take: limite,
     });
   }
 
