@@ -197,4 +197,25 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
       expect(comum.status).toBe(403);
     });
   });
+
+  describe("convite de grupo", () => {
+    it("o líder gera um código fixo e quem tem o código entra uma única vez", async () => {
+      const [lider, amigo, estranho] = [await criarUsuario("lia"), await criarUsuario("max"), await criarUsuario("noe")];
+      const grupoId = await criarGrupo(lider, []);
+
+      const a = await request(app).post(`/grupos/${grupoId}/convite`).set(auth(lider));
+      const b = await request(app).post(`/grupos/${grupoId}/convite`).set(auth(lider));
+      expect(a.status).toBe(200);
+      expect(b.body.codigo).toBe(a.body.codigo);
+      expect((await request(app).post(`/grupos/${grupoId}/convite`).set(auth(estranho))).status).toBe(404);
+
+      const entra = await request(app).post("/grupos/entrar").set(auth(amigo)).send({ codigo: a.body.codigo.toLowerCase() });
+      expect(entra.body).toEqual({ grupo: { id: grupoId, nome: `Grupo ${run}` }, jaEraMembro: false });
+      const repete = await request(app).post("/grupos/entrar").set(auth(amigo)).send({ codigo: a.body.codigo });
+      expect(repete.body.jaEraMembro).toBe(true);
+      expect(await prisma.membroGrupo.count({ where: { grupoId } })).toBe(2);
+
+      expect((await request(app).post("/grupos/entrar").set(auth(estranho)).send({ codigo: "NAOEXIST" })).status).toBe(404);
+    });
+  });
 });

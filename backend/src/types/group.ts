@@ -31,7 +31,11 @@ export type GrupoCompleto = Prisma.GrupoGetPayload<{ include: typeof grupoInclud
 
 // Todas as operações recebem quem as executa (`actor`) e aplicam as regras de acesso.
 // Grupos que o usuário não enxerga se comportam como inexistentes (404), sem revelar que existem.
+export type GroupJoinResult = { grupo: { id: string; nome: string }; jaEraMembro: boolean };
+
 export interface GroupServiceContract {
+  createInvite(grupoId: string, actor: AuthUser): Promise<{ codigo: string }>;
+  join(body: { codigo?: unknown }, actor: AuthUser): Promise<GroupJoinResult>;
   create(data: GroupCreateBody, actor: AuthUser): Promise<Grupo>;
   findAll(actor: AuthUser): Promise<Grupo[]>;
   findById(id: string, actor: AuthUser): Promise<Grupo | null>;

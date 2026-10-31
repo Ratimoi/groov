@@ -201,6 +201,15 @@ Todas as rotas exigem login. Quem **não participa** de um grupo recebe `404`, c
 | `POST /grupos/:id/members` | líder ou ADMIN | corpo `{ "usuarioId": "..." }`. Quem já é membro dá `409` |
 | `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | `204`. Um membro pode **sair sozinho**. O líder não pode ser removido (`400`) |
 
+### Convite por link
+
+O líder compartilha um **código** (8 caracteres, ex.: `K7M2QX9P`). Quem tem o código entra no grupo; o app monta o link `groov://entrar-grupo?codigo=K7M2QX9P`.
+
+| Rota | Quem | Observação |
+|---|---|---|
+| `POST /grupos/:id/convite` | líder ou ADMIN | devolve `{ "codigo": "K7M2QX9P" }`. O código do grupo é sempre o mesmo |
+| `POST /grupos/entrar` | qualquer logado | corpo `{ "codigo": "..." }` (maiúsculas e espaços não importam). Devolve `{ "grupo": { "id", "nome" }, "jaEraMembro": false }`. Código inexistente dá `404`; quem já é membro recebe `jaEraMembro: true` e não duplica |
+
 Membro (`GET /grupos/:id/members`):
 
 ```json

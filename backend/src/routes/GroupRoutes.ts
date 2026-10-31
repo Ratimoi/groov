@@ -7,10 +7,12 @@ const groupController = new GroupController(new GroupService());
 
 router.post("/", groupController.create);
 router.get("/", groupController.findAll);
+router.post("/entrar", groupController.join);
 router.get("/:id", groupController.findById);
 router.put("/:id", groupController.update);
 router.delete("/:id", groupController.delete);
 
+router.post("/:id/convite", groupController.createInvite);
 router.get("/:id/members", groupController.listMembers);
 router.post("/:id/members", groupController.addMember);
 router.delete("/:id/members/:usuarioId", groupController.removeMember);
