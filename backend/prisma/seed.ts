@@ -1,5 +1,6 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
 import process from "process";
+import { hashPassword, MIN_PASSWORD_LENGTH } from "../src/utils/password";
 
 const prisma = new PrismaClient();
 
@@ -12,7 +13,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "carlos.admin",
         avatarUrl: "https://i.pravatar.cc/150?img=12",
         email: "carlos.mendes@eventos.com",
-        senha: "123456",
+        senha: "",
         papel: "ADMIN"
     },
     {
@@ -21,7 +22,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "fernanda.produtora",
         avatarUrl: "https://i.pravatar.cc/150?img=47",
         email: "fernanda.rocha@eventos.com",
-        senha: "123456",
+        senha: "",
         papel: "PRODUTOR"
     },
     {
@@ -30,7 +31,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "lucas.oliveira",
         avatarUrl: "https://i.pravatar.cc/150?img=33",
         email: "lucas.oliveira@email.com",
-        senha: "123456",
+        senha: "",
         papel: "CLIENTE"
     },
     {
@@ -39,7 +40,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "mari.souza",
         avatarUrl: "https://i.pravatar.cc/150?img=45",
         email: "mariana.souza@email.com",
-        senha: "123456",
+        senha: "",
         papel: "CLIENTE"
     },
     {
@@ -48,7 +49,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "rafa.costa",
         avatarUrl: "https://i.pravatar.cc/150?img=59",
         email: "rafael.costa@email.com",
-        senha: "123456"
+        senha: ""
         // papel não informado: assume o padrão CLIENTE
     }
 ];
@@ -56,30 +57,30 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
 // Criando os Usuários que serão Atrações dos eventos (DJs, artistas, palestrantes...)
 const atracoes: Prisma.UsuarioCreateManyInput[] = [
     // Festas
-    { id: "usr-atracao-01", nome: "DJ Lumen", username: "djlumen", avatarUrl: "https://i.pravatar.cc/150?img=11", email: "djlumen@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-02", nome: "DJ Kaio Vortex", username: "kaiovortex", avatarUrl: "https://i.pravatar.cc/150?img=13", email: "kaiovortex@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-03", nome: "Banda Maré Alta", username: "banda.marealta", avatarUrl: "https://i.pravatar.cc/150?img=14", email: "marealta@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-04", nome: "DJ Sol Nascente", username: "djsolnascente", avatarUrl: "https://i.pravatar.cc/150?img=15", email: "solnascente@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-05", nome: "Bia Ventura", username: "biaventura", avatarUrl: "https://i.pravatar.cc/150?img=5", email: "biaventura@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-06", nome: "DJ Retrô Max", username: "djretromax", avatarUrl: "https://i.pravatar.cc/150?img=17", email: "retromax@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-07", nome: "Bateria Unidos do Porto", username: "unidosdoporto", avatarUrl: "https://i.pravatar.cc/150?img=18", email: "unidosdoporto@atracoes.com", senha: "123456" },
+    { id: "usr-atracao-01", nome: "DJ Lumen", username: "djlumen", avatarUrl: "https://i.pravatar.cc/150?img=11", email: "djlumen@atracoes.com", senha: "" },
+    { id: "usr-atracao-02", nome: "DJ Kaio Vortex", username: "kaiovortex", avatarUrl: "https://i.pravatar.cc/150?img=13", email: "kaiovortex@atracoes.com", senha: "" },
+    { id: "usr-atracao-03", nome: "Banda Maré Alta", username: "banda.marealta", avatarUrl: "https://i.pravatar.cc/150?img=14", email: "marealta@atracoes.com", senha: "" },
+    { id: "usr-atracao-04", nome: "DJ Sol Nascente", username: "djsolnascente", avatarUrl: "https://i.pravatar.cc/150?img=15", email: "solnascente@atracoes.com", senha: "" },
+    { id: "usr-atracao-05", nome: "Bia Ventura", username: "biaventura", avatarUrl: "https://i.pravatar.cc/150?img=5", email: "biaventura@atracoes.com", senha: "" },
+    { id: "usr-atracao-06", nome: "DJ Retrô Max", username: "djretromax", avatarUrl: "https://i.pravatar.cc/150?img=17", email: "retromax@atracoes.com", senha: "" },
+    { id: "usr-atracao-07", nome: "Bateria Unidos do Porto", username: "unidosdoporto", avatarUrl: "https://i.pravatar.cc/150?img=18", email: "unidosdoporto@atracoes.com", senha: "" },
 
     // Culturais
-    { id: "usr-atracao-08", nome: "Maestro Henrique Albuquerque", username: "maestro.henrique", avatarUrl: "https://i.pravatar.cc/150?img=52", email: "henrique.albuquerque@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-09", nome: "Lia Montenegro", username: "lia.montenegro", avatarUrl: "https://i.pravatar.cc/150?img=20", email: "lia.montenegro@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-10", nome: "Tiago Ramos", username: "tiago.ramos", avatarUrl: "https://i.pravatar.cc/150?img=53", email: "tiago.ramos@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-11", nome: "Júlia Prado", username: "julia.prado", avatarUrl: "https://i.pravatar.cc/150?img=24", email: "julia.prado@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-12", nome: "João Pedro Farias", username: "joaopedro.farias", avatarUrl: "https://i.pravatar.cc/150?img=56", email: "joaopedro.farias@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-13", nome: "Renata Lopes", username: "renata.gaiteira", avatarUrl: "https://i.pravatar.cc/150?img=26", email: "renata.lopes@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-14", nome: "Ana Beatriz Lima", username: "anabeatriz.lima", avatarUrl: "https://i.pravatar.cc/150?img=29", email: "anabeatriz.lima@atracoes.com", senha: "123456" },
+    { id: "usr-atracao-08", nome: "Maestro Henrique Albuquerque", username: "maestro.henrique", avatarUrl: "https://i.pravatar.cc/150?img=52", email: "henrique.albuquerque@atracoes.com", senha: "" },
+    { id: "usr-atracao-09", nome: "Lia Montenegro", username: "lia.montenegro", avatarUrl: "https://i.pravatar.cc/150?img=20", email: "lia.montenegro@atracoes.com", senha: "" },
+    { id: "usr-atracao-10", nome: "Tiago Ramos", username: "tiago.ramos", avatarUrl: "https://i.pravatar.cc/150?img=53", email: "tiago.ramos@atracoes.com", senha: "" },
+    { id: "usr-atracao-11", nome: "Júlia Prado", username: "julia.prado", avatarUrl: "https://i.pravatar.cc/150?img=24", email: "julia.prado@atracoes.com", senha: "" },
+    { id: "usr-atracao-12", nome: "João Pedro Farias", username: "joaopedro.farias", avatarUrl: "https://i.pravatar.cc/150?img=56", email: "joaopedro.farias@atracoes.com", senha: "" },
+    { id: "usr-atracao-13", nome: "Renata Lopes", username: "renata.gaiteira", avatarUrl: "https://i.pravatar.cc/150?img=26", email: "renata.lopes@atracoes.com", senha: "" },
+    { id: "usr-atracao-14", nome: "Ana Beatriz Lima", username: "anabeatriz.lima", avatarUrl: "https://i.pravatar.cc/150?img=29", email: "anabeatriz.lima@atracoes.com", senha: "" },
 
     // Educativos
-    { id: "usr-atracao-15", nome: "Gustavo Henrique", username: "gustavo.dev", avatarUrl: "https://i.pravatar.cc/150?img=59", email: "gustavo.henrique@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-16", nome: "Patrícia Alves", username: "patricia.financas", avatarUrl: "https://i.pravatar.cc/150?img=32", email: "patricia.alves@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-17", nome: "Dra. Camila Torres", username: "camila.torres", avatarUrl: "https://i.pravatar.cc/150?img=36", email: "camila.torres@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-18", nome: "Prof. Eduardo Martins", username: "eduardo.martins", avatarUrl: "https://i.pravatar.cc/150?img=60", email: "eduardo.martins@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-19", nome: "Rodrigo Saldanha", username: "rodrigo.astro", avatarUrl: "https://i.pravatar.cc/150?img=61", email: "rodrigo.saldanha@atracoes.com", senha: "123456" },
-    { id: "usr-atracao-20", nome: "Larissa Moura", username: "larissa.foto", avatarUrl: "https://i.pravatar.cc/150?img=38", email: "larissa.moura@atracoes.com", senha: "123456" }
+    { id: "usr-atracao-15", nome: "Gustavo Henrique", username: "gustavo.dev", avatarUrl: "https://i.pravatar.cc/150?img=59", email: "gustavo.henrique@atracoes.com", senha: "" },
+    { id: "usr-atracao-16", nome: "Patrícia Alves", username: "patricia.financas", avatarUrl: "https://i.pravatar.cc/150?img=32", email: "patricia.alves@atracoes.com", senha: "" },
+    { id: "usr-atracao-17", nome: "Dra. Camila Torres", username: "camila.torres", avatarUrl: "https://i.pravatar.cc/150?img=36", email: "camila.torres@atracoes.com", senha: "" },
+    { id: "usr-atracao-18", nome: "Prof. Eduardo Martins", username: "eduardo.martins", avatarUrl: "https://i.pravatar.cc/150?img=60", email: "eduardo.martins@atracoes.com", senha: "" },
+    { id: "usr-atracao-19", nome: "Rodrigo Saldanha", username: "rodrigo.astro", avatarUrl: "https://i.pravatar.cc/150?img=61", email: "rodrigo.saldanha@atracoes.com", senha: "" },
+    { id: "usr-atracao-20", nome: "Larissa Moura", username: "larissa.foto", avatarUrl: "https://i.pravatar.cc/150?img=38", email: "larissa.moura@atracoes.com", senha: "" }
 ];
 
 // Ligando as Atrações aos Eventos (id do evento -> ids dos usuários)
@@ -385,12 +386,23 @@ const lotes: Prisma.LoteCreateManyInput[] = [
     { eventoId: "evt-educativo-05", nome: "Geral", preco: 90.00, quantidade: 25 }
 ];
 
+// As contas do seed são de demonstração. A senha vem do ambiente (nunca fica no repositório) e é
+// gravada já com hash; sem hash o login recusa a conta.
+async function comSenhaComHash(lista: Prisma.UsuarioCreateManyInput[]): Promise<Prisma.UsuarioCreateManyInput[]> {
+    const senha = process.env.SEED_PASSWORD;
+    if (!senha || senha.length < MIN_PASSWORD_LENGTH) {
+        throw new Error(`Defina SEED_PASSWORD com pelo menos ${MIN_PASSWORD_LENGTH} caracteres antes de rodar o seed.`);
+    }
+    const hash = await hashPassword(senha);
+    return lista.map((usuario) => ({ ...usuario, senha: hash }));
+}
+
 async function main() {
     try {
-        await prisma.usuario.createMany({ data: usuarios, skipDuplicates: true });
+        await prisma.usuario.createMany({ data: await comSenhaComHash(usuarios), skipDuplicates: true });
         console.log(`${usuarios.length} Usuário(s) Cadastrado(s)...`);
 
-        await prisma.usuario.createMany({ data: atracoes, skipDuplicates: true });
+        await prisma.usuario.createMany({ data: await comSenhaComHash(atracoes), skipDuplicates: true });
         console.log(`${atracoes.length} Atrações Cadastradas...`);
 
         await prisma.grupo.createMany({ data: grupos, skipDuplicates: true });

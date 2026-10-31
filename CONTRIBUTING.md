@@ -141,3 +141,14 @@ npx prisma migrate dev --name descricao-da-mudanca
 Commite a pasta gerada em `backend/prisma/migrations/` junto com o schema.
 
 **Nunca apague a pasta `backend/prisma/migrations/` nem use `prisma db push` para mudar o banco compartilhado.** Em produção, quem altera o banco é o `prisma migrate deploy`, que só aplica as migrações versionadas: coluna ou tabela nova no schema sem migração não chega à produção, e o app passa a consultar algo que não existe (erro 500). A CI protege isso: ela aplica as migrações num Postgres vazio e falha se o resultado diferir do `schema.prisma`.
+
+### Dados de demonstração (seed)
+
+O `backend/prisma/seed.ts` cria usuários, eventos e lotes de exemplo. Rode só em banco de **desenvolvimento**, passando a senha das contas de demonstração pelo ambiente (ela não fica no repositório e é gravada com hash):
+
+```bash
+cd backend
+SEED_PASSWORD='uma-senha-de-teste' npx prisma db seed
+```
+
+Sem `SEED_PASSWORD` (mínimo de 8 caracteres) o seed se recusa a rodar. Nunca rode o seed no banco de produção.
