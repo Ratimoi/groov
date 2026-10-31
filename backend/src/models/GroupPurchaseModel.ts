@@ -2,6 +2,25 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import prisma from "../config/prisma";
 
 const groupPurchaseInclude = {
+  lote: {
+    select: {
+      id: true,
+      nome: true,
+      preco: true,
+      tamanhoGrupo: true,
+      descontoGrupo: true,
+      evento: {
+        select: {
+          id: true,
+          titulo: true,
+          imagemUrl: true,
+          comecaEm: true,
+          nomeLocal: true,
+          categoria: { select: { nome: true } },
+        },
+      },
+    },
+  },
   participantes: {
     include: {
       usuario: {
