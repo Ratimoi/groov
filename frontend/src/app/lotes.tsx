@@ -216,12 +216,7 @@ export default function Lotes() {
           className="rounded-full overflow-hidden"
           style={{ opacity: temItens && !processando ? 1 : 0.5, shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: temItens ? 10 : 0 }}
         >
-          <LinearGradient
-            colors={["#00eefa", "#bc13fe"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="px-8 py-3 flex-row items-center gap-2"
-          >
+          <View className="bg-primary-container px-8 py-3 flex-row items-center gap-2">
             {processando ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
@@ -230,7 +225,7 @@ export default function Lotes() {
                 <MaterialIcons name="arrow-forward" size={22} color="#ffffff" />
               </>
             )}
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
     </View>

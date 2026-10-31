@@ -245,15 +245,10 @@ export default function DetalhesEvento() {
           className="rounded-full overflow-hidden"
           style={{ shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 }}
         >
-          <LinearGradient
-            colors={["#00eefa", "#bc13fe"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="py-3 px-6 flex-row items-center gap-3"
-          >
+          <View className="bg-primary-container py-3 px-6 flex-row items-center gap-3">
             <MaterialIcons name="confirmation-number" size={18} color="#ffffff" />
             <Text className="text-white font-body-md font-bold">Ingressos</Text>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
