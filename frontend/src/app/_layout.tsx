@@ -15,9 +15,30 @@ import {
 import { Tabs } from "expo-router";
 import { NavBar } from "../components/NavBar";
 import { CarrinhoProvider } from "@/contexts/CarrinhoContext";
-import { UserProvider } from "@/contexts/UserContext";
+import { UserProvider, useUser } from "@/contexts/UserContext";
+import { TelaEntrar } from "../components/TelaEntrar";
 
 const queryClient = new QueryClient();
+
+// Sem login o app mostra só a tela de acesso; com login, as abas.
+function Conteudo() {
+  const { user, carregandoSessao } = useUser();
+
+  if (carregandoSessao) return <View className="flex-1 bg-background" />;
+  if (!user) return <TelaEntrar />;
+
+  return (
+    <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="busca" />
+      <Tabs.Screen name="grupos" />
+      <Tabs.Screen name="perfil" />
+      <Tabs.Screen name="detalhes" />
+      <Tabs.Screen name="lotes" />
+      <Tabs.Screen name="criar-grupo" />
+    </Tabs>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -36,14 +57,7 @@ export default function RootLayout() {
         <UserProvider>
           <CarrinhoProvider>
             <View className="flex-1 bg-background">
-              <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
-                <Tabs.Screen name="index" />
-                <Tabs.Screen name="busca" />
-                <Tabs.Screen name="grupos" />
-                <Tabs.Screen name="perfil" />
-                <Tabs.Screen name="detalhes" />
-                <Tabs.Screen name="lotes" />
-              </Tabs>
+              <Conteudo />
             </View>
           </CarrinhoProvider>
         </UserProvider>

@@ -40,3 +40,9 @@ export function calcularContagem(alvo: Date | string | null | undefined, agora =
     encerrado: restante === 0,
   };
 }
+
+// "04:15:32": horas somam os dias, para o prazo de uma compra em grupo (até 30 dias).
+export function formatarRestante(contagem: ReturnType<typeof calcularContagem>): string {
+  const horas = contagem.dias * 24 + contagem.horas;
+  return [horas, contagem.minutos, contagem.segundos].map((valor) => String(valor).padStart(2, "0")).join(":");
+}
