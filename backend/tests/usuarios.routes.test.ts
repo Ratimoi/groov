@@ -112,6 +112,39 @@ describe("/usuarios", () => {
     });
   });
 
+  describe("GET /:id/grupos", () => {
+    it("sem token responde 401 e não consulta grupos", async () => {
+      const res = await request(app).get("/usuarios/u1/grupos");
+
+      expect(res.status).toBe(401);
+      expect(prismaMock.grupo.findMany).not.toHaveBeenCalled();
+    });
+
+    it("CLIENTE não lista os grupos de outro usuário (403)", async () => {
+      const res = await request(app).get("/usuarios/u1/grupos").set(logadoComo("CLIENTE", "u2"));
+
+      expect(res.status).toBe(403);
+      expect(prismaMock.grupo.findMany).not.toHaveBeenCalled();
+    });
+
+    it("o próprio usuário lista seus grupos e vê se é o líder", async () => {
+      prismaMock.grupo.findMany.mockResolvedValue([{ id: "g1", nome: "Galera", liderId: "u1", membros: [] }]);
+
+      const res = await request(app).get("/usuarios/u1/grupos").set(logadoComo("CLIENTE", "u1"));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([{ id: "g1", nome: "Galera", liderId: "u1", membros: [], souLider: true }]);
+    });
+
+    it("ADMIN lista os grupos de qualquer usuário", async () => {
+      prismaMock.grupo.findMany.mockResolvedValue([]);
+
+      const res = await request(app).get("/usuarios/u1/grupos").set(logadoComo("ADMIN", "adm"));
+
+      expect(res.status).toBe(200);
+    });
+  });
+
   describe("GET /:id", () => {
     it("sem token responde 401", async () => {
       const res = await request(app).get("/usuarios/u1");

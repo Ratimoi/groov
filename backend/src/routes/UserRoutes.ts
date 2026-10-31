@@ -14,5 +14,5 @@ router.get("/", authenticate, requireRole("ADMIN"), userController.findAll);
 router.get("/:id", authenticate, authorizeSelfOrAdmin, userController.findById);
 router.put("/:id", authenticate, authorizeSelfOrAdmin, userController.update);
 router.delete("/:id", authenticate, authorizeSelfOrAdmin, userController.delete);
-router.get("/:id/grupos", groupController.findByUsuario);
+router.get("/:id/grupos", authenticate, authorizeSelfOrAdmin, groupController.findByUsuario);
 export default router;
