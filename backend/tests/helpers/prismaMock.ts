@@ -7,6 +7,8 @@ const delegate = () => ({
   update: vi.fn(),
   delete: vi.fn(),
   deleteMany: vi.fn(),
+  updateMany: vi.fn(),
+  createMany: vi.fn(),
   count: vi.fn(),
 });
 
@@ -18,6 +20,8 @@ export const prismaMock = {
   compraGrupo: delegate(),
   participanteCompra: delegate(),
   lote: delegate(),
+  pedido: delegate(),
+  ingresso: delegate(),
   evento: delegate(),
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),

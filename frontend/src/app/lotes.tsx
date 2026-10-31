@@ -5,10 +5,13 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
+import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { CardLote, CardPacoteGrupo } from "../components/CardLote";
 import { ALTURA_NAVBAR, MARGEM_INFERIOR_NAVBAR } from "../components/NavBar";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
+import { api, ApiError } from "../utils/api";
+import type { CompraGrupoApi, PedidoApi } from "../utils/compras";
 import { aceitaGrupo, calcularPedido, formatarReais, type LoteVenda } from "../utils/lote";
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -18,7 +21,9 @@ export default function Lotes() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const espacoNavBar = useEspacoNavBar();
-  const { carrinho, gruposPorLote } = useCarrinho();
+  const { user, token } = useUser();
+  const { carrinho, gruposPorLote, atualizaQuantidade, escolherGrupo, definirResultado } = useCarrinho();
+  const [processando, setProcessando] = useState(false);
   const [lotes, setLotes] = useState<LoteVenda[]>([]);
   const [tituloEvento, setTituloEvento] = useState("");
   const [carregando, setCarregando] = useState(true);
@@ -64,9 +69,47 @@ export default function Lotes() {
   const temItens = pedido.linhas.length > 0;
   const lotesDeGrupo = lotes.filter(aceitaGrupo);
 
-  const avancar = () => {
-    // O pagamento entra na etapa 4; por enquanto o pedido só é montado e conferido.
-    Alert.alert("Pedido montado", `Total de ${formatarReais(pedido.total)}. O pagamento será liberado em breve.`);
+  // Pagamento simulado: cada pedido já nasce pago. Vai item por item e, se algo falhar no meio,
+  // os itens já pagos saem do carrinho e o usuário é avisado do que ficou pendente.
+  const avancar = async () => {
+    if (!user) return;
+    setProcessando(true);
+    const pedidos: PedidoApi[] = [];
+    let compraGrupo: CompraGrupoApi | undefined;
+    let nomeGrupo: string | undefined;
+
+    try {
+      for (const lote of lotes) {
+        const quantidade = carrinho[lote.id] ?? 0;
+        if (quantidade < 1) continue;
+        pedidos.push(await api<PedidoApi>("/pedidos", { method: "POST", token, body: { loteId: lote.id, quantidade } }));
+        atualizaQuantidade(lote.id, 0);
+      }
+
+      for (const lote of lotes.filter(aceitaGrupo)) {
+        const grupo = gruposPorLote[lote.id];
+        if (!grupo) continue;
+        const dadosGrupo = await api<{ membros: { usuarioId: string }[] }>(`/grupos/${grupo.id}`, { token });
+        const participantesIds = dadosGrupo.membros.map((membro) => membro.usuarioId).filter((id) => id !== user.id);
+        const criada = await api<CompraGrupoApi>("/grupos/compras", {
+          method: "POST",
+          token,
+          body: { grupoId: grupo.id, loteId: lote.id, participantesIds },
+        });
+        compraGrupo = await api<CompraGrupoApi>(`/grupos/compras/${criada.id}/pagar`, { method: "POST", token });
+        nomeGrupo = grupo.nome;
+        escolherGrupo(lote.id, null);
+      }
+
+      definirResultado({ pedidos, compraGrupo, nomeGrupo });
+      router.push("/pagamento-confirmado");
+    } catch (error) {
+      const motivo = error instanceof ApiError ? error.message : "Tente de novo.";
+      const jaPagos = pedidos.length > 0 ? " Os ingressos que já foram pagos estão no seu Perfil." : "";
+      Alert.alert("Não foi possível concluir a compra", `${motivo}${jaPagos}`);
+    } finally {
+      setProcessando(false);
+    }
   };
 
   return (
@@ -168,10 +211,10 @@ export default function Lotes() {
       >
         <TouchableOpacity
           activeOpacity={0.8}
-          disabled={!temItens}
+          disabled={!temItens || processando}
           onPress={avancar}
           className="rounded-full overflow-hidden"
-          style={{ opacity: temItens ? 1 : 0.5, shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: temItens ? 10 : 0 }}
+          style={{ opacity: temItens && !processando ? 1 : 0.5, shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: temItens ? 10 : 0 }}
         >
           <LinearGradient
             colors={["#00eefa", "#bc13fe"]}
@@ -179,8 +222,14 @@ export default function Lotes() {
             end={{ x: 1, y: 0 }}
             className="px-8 py-3 flex-row items-center gap-2"
           >
-            <Text className="text-white font-headline-md text-[18px]">Avançar</Text>
-            <MaterialIcons name="arrow-forward" size={22} color="#ffffff" />
+            {processando ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <>
+                <Text className="text-white font-headline-md text-[18px]">Avançar</Text>
+                <MaterialIcons name="arrow-forward" size={22} color="#ffffff" />
+              </>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>

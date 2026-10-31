@@ -1,33 +1,21 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useContagem } from "../hooks/useContagem";
-import { api } from "../utils/api";
 import { formatarDataHora, formatarRestante } from "../utils/evento";
-
-type Pessoa = { id: string; nome: string; username: string; avatarUrl: string | null };
+import { api, ApiError } from "../utils/api";
+import type { CompraGrupoApi as CompraGrupo, ParticipanteApi as Participante, PessoaApi as Pessoa } from "../utils/compras";
 
 type Grupo = {
   id: string;
   nome: string;
   souLider: boolean;
   membros: { usuarioId: string; usuario: Pessoa }[];
-};
-
-type Participante = { id: string; usuarioId: string; status: "PENDENTE" | "PAGO" | "REEMBOLSADO"; usuario: Pessoa };
-
-type CompraGrupo = {
-  id: string;
-  grupoId: string;
-  iniciadorId: string;
-  status: "PENDENTE" | "CONFIRMADA" | "EXPIRADA";
-  expiraEm: string;
-  participantes: Participante[];
-  lote: { nome: string; evento: { id: string; titulo: string; comecaEm: string; nomeLocal: string | null; categoria: { nome: string } | null } };
 };
 
 const ROTULO_STATUS: Record<Participante["status"], string> = {
@@ -47,7 +35,21 @@ function Avatar({ pessoa, tamanho = 32 }: { pessoa: Pessoa; tamanho?: number }) 
   );
 }
 
-function CardCompra({ compra, meuId, nomeGrupo }: { compra: CompraGrupo; meuId: string; nomeGrupo?: string }) {
+function CardCompra({
+  compra,
+  meuId,
+  nomeGrupo,
+  onPagar,
+  pagando,
+  onVerIngresso,
+}: {
+  compra: CompraGrupo;
+  meuId: string;
+  nomeGrupo?: string;
+  onPagar: (compra: CompraGrupo) => void;
+  pagando: boolean;
+  onVerIngresso: () => void;
+}) {
   const contagem = useContagem(compra.expiraEm);
   const pagos = compra.participantes.filter((participante) => participante.status === "PAGO").length;
   const total = compra.participantes.length;
@@ -55,6 +57,8 @@ function CardCompra({ compra, meuId, nomeGrupo }: { compra: CompraGrupo; meuId: 
   const confirmada = compra.status === "CONFIRMADA";
   const expirada = compra.status === "EXPIRADA" || (compra.status === "PENDENTE" && contagem.encerrado);
   const evento = compra.lote.evento;
+  const minhaCota = compra.participantes.find((participante) => participante.usuarioId === meuId);
+  const possoPagar = compra.status === "PENDENTE" && !expirada && minhaCota?.status === "PENDENTE";
 
   return (
     <View className="bg-surface-container-low border border-white/10 rounded-xl p-4 gap-3">
@@ -146,6 +150,23 @@ function CardCompra({ compra, meuId, nomeGrupo }: { compra: CompraGrupo; meuId: 
           );
         })}
       </View>
+
+      {possoPagar && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          disabled={pagando}
+          onPress={() => onPagar(compra)}
+          className="rounded-xl bg-primary-container py-3 items-center"
+          style={{ opacity: pagando ? 0.6 : 1 }}
+        >
+          {pagando ? <ActivityIndicator color="#ffffff" /> : <Text className="font-label-caps text-label-caps text-white uppercase">Pagar minha cota</Text>}
+        </TouchableOpacity>
+      )}
+      {confirmada && (
+        <TouchableOpacity activeOpacity={0.8} onPress={onVerIngresso} className="self-center rounded-lg overflow-hidden bg-secondary-container px-6 py-2.5">
+          <Text className="font-label-caps text-label-caps text-on-secondary uppercase">Visualizar Ingresso</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -153,6 +174,8 @@ function CardCompra({ compra, meuId, nomeGrupo }: { compra: CompraGrupo; meuId: 
 export default function Grupos() {
   const router = useRouter();
   const { user, token } = useUser();
+  const { definirResultado } = useCarrinho();
+  const [pagandoId, setPagandoId] = useState<string | null>(null);
   const espacoNavBar = useEspacoNavBar();
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [compras, setCompras] = useState<CompraGrupo[]>([]);
@@ -185,6 +208,21 @@ export default function Grupos() {
       carregar();
     }, [carregar]),
   );
+
+  const pagarCota = async (compra: CompraGrupo) => {
+    setPagandoId(compra.id);
+    try {
+      const atualizada = await api<CompraGrupo>(`/grupos/compras/${compra.id}/pagar`, { method: "POST", token });
+      definirResultado({ pedidos: [], compraGrupo: atualizada, nomeGrupo: grupos.find((grupo) => grupo.id === compra.grupoId)?.nome });
+      await carregar();
+      router.push("/pagamento-confirmado");
+    } catch (error) {
+      Alert.alert("Não foi possível pagar", error instanceof ApiError ? error.message : "Tente de novo.");
+      await carregar();
+    } finally {
+      setPagandoId(null);
+    }
+  };
 
   const gruposSemCompra = grupos.filter((grupo) => !compras.some((compra) => compra.grupoId === grupo.id));
   const nomeDoGrupo = (grupoId: string) => grupos.find((grupo) => grupo.id === grupoId)?.nome;
@@ -241,7 +279,15 @@ export default function Grupos() {
         {!carregando && !erro && (
           <View className="gap-6">
             {compras.map((compra) => (
-              <CardCompra key={compra.id} compra={compra} meuId={user?.id ?? ""} nomeGrupo={nomeDoGrupo(compra.grupoId)} />
+              <CardCompra
+                key={compra.id}
+                compra={compra}
+                meuId={user?.id ?? ""}
+                nomeGrupo={nomeDoGrupo(compra.grupoId)}
+                onPagar={pagarCota}
+                pagando={pagandoId === compra.id}
+                onVerIngresso={() => router.push("/perfil")}
+              />
             ))}
 
             {gruposSemCompra.map((grupo) => (
