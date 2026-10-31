@@ -16,12 +16,14 @@ type GrupoDaApi = {
 type Props = {
   visivel: boolean;
   grupoAtual?: GrupoEscolhido;
+  // Pessoas que o pacote exige (você + convidados). Grupos de outro tamanho não podem ser usados.
+  tamanho?: number;
   onClose: () => void;
   onConfirmar: (grupo: GrupoEscolhido) => void;
   onCriarGrupo: () => void;
 };
 
-export function ModalGrupos({ visivel, grupoAtual, onClose, onConfirmar, onCriarGrupo }: Props) {
+export function ModalGrupos({ visivel, grupoAtual, tamanho, onClose, onConfirmar, onCriarGrupo }: Props) {
   const { user, token } = useUser();
   const [grupos, setGrupos] = useState<GrupoDaApi[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -112,14 +114,17 @@ export function ModalGrupos({ visivel, grupoAtual, onClose, onConfirmar, onCriar
             <View className="flex-col gap-2.5 mb-4">
               {grupos.map((grupo) => {
                 const ativo = selecionado === grupo.id;
+                const servePacote = !tamanho || grupo.membros.length === tamanho;
                 return (
                   <TouchableOpacity
                     key={grupo.id}
                     activeOpacity={0.8}
+                    disabled={!servePacote}
                     onPress={() => setSelecionado(grupo.id)}
                     className={`rounded-xl p-3.5 flex-row items-center justify-between overflow-hidden bg-surface-container ${
                       ativo ? "border-2 border-primary-container" : "border border-white/10"
                     }`}
+                    style={{ opacity: servePacote ? 1 : 0.45 }}
                   >
                     <View className="flex-1 gap-1">
                       <Text className="font-body-md text-body-md font-bold text-white" numberOfLines={1}>
@@ -131,6 +136,11 @@ export function ModalGrupos({ visivel, grupoAtual, onClose, onConfirmar, onCriar
                           {grupo.membros.length} participantes
                         </Text>
                       </View>
+                      {!servePacote && (
+                        <Text className="font-body-sm text-[11px] text-on-surface-variant">
+                          Este pacote exige {tamanho} pessoas
+                        </Text>
+                      )}
                     </View>
                     <View
                       className={`w-7 h-7 rounded-full items-center justify-center ${
@@ -160,7 +170,7 @@ export function ModalGrupos({ visivel, grupoAtual, onClose, onConfirmar, onCriar
           <View className="pt-4 border-t border-white/10 mt-2">
             <TouchableOpacity
               activeOpacity={0.8}
-              disabled={!selecionado}
+              disabled={!selecionado || !grupos.some((item) => item.id === selecionado)}
               onPress={confirmar}
               className="rounded-xl overflow-hidden"
               style={{ opacity: selecionado ? 1 : 0.5 }}

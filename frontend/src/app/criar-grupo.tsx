@@ -53,6 +53,9 @@ export default function CriarGrupo() {
   const voltar = () => (router.canGoBack() ? router.back() : router.replace("/grupos"));
   const idsSelecionados = new Set(selecionados.map((pessoa) => pessoa.id));
   const cheio = selecionados.length >= maxConvidados;
+  // Vindo de um pacote de grupo, o grupo precisa ter exatamente o tamanho do pacote.
+  const exigeTodos = !!tamanho && Number(tamanho) > 1;
+  const completo = !exigeTodos || selecionados.length === maxConvidados;
   // Quem já foi escolhido sempre aparece, mesmo fora do resultado da busca atual.
   const lista = busca.trim().length < 2 ? selecionados : [...selecionados, ...resultados.filter((p) => !idsSelecionados.has(p.id))];
 
@@ -178,14 +181,19 @@ export default function CriarGrupo() {
           })}
         </View>
 
+        {exigeTodos && !completo && (
+          <Text className="font-body-sm text-body-sm text-on-surface-variant mt-4 text-center">
+            O pacote é para {tamanho} pessoas: convide mais {maxConvidados - selecionados.length}.
+          </Text>
+        )}
         {!!erro && <Text className="font-body-sm text-body-sm text-error mt-4 text-center">{erro}</Text>}
 
         <TouchableOpacity
           activeOpacity={0.8}
-          disabled={!nome.trim() || criando}
+          disabled={!nome.trim() || !completo || criando}
           onPress={criar}
           className="mt-8 bg-primary-container rounded-xl py-4 flex-row items-center justify-center gap-2"
-          style={{ opacity: nome.trim() && !criando ? 1 : 0.5, shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: 6 }}
+          style={{ opacity: nome.trim() && completo && !criando ? 1 : 0.5, shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: 6 }}
         >
           {criando ? (
             <ActivityIndicator color="#ffffff" />

@@ -140,9 +140,10 @@ export function CardPacoteGrupo({ data }: { data: LoteVenda }) {
       <ModalGrupos
         visivel={modalVisivel}
         grupoAtual={grupo}
+        tamanho={tamanho}
         onClose={() => setModalVisivel(false)}
         onConfirmar={(escolhido) => escolherGrupo(data.id, escolhido)}
-        onCriarGrupo={() => router.push("/grupos")}
+        onCriarGrupo={() => router.push(`/criar-grupo?tamanho=${tamanho}`)}
       />
     </View>
   );
