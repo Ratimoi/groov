@@ -250,9 +250,44 @@ Resposta `201` (e `GET`):
 
 `status` da compra: `PENDENTE`, `CONFIRMADA`, `EXPIRADA`. `status` do participante: `PENDENTE`, `PAGO`, `REEMBOLSADO`.
 
-**O que ainda não existe na API:**
-- Não há pagamento, confirmação da compra nem expiração automática: a compra nasce `PENDENTE` e fica assim.
-- Categorias, pedidos e ingressos não têm rota.
+### `POST /grupos/compras/:id/pagar` (pagamento simulado da sua cota)
+
+Sem corpo. Cada participante paga a **própria** cota: o preço do lote com o desconto do grupo, mais a taxa de serviço (12,5%). A reserva do ingresso vira venda. Quando o **último** participante paga, a compra vira `CONFIRMADA` e os ingressos de todos são emitidos (antes disso ninguém recebe ingresso). Devolve a compra atualizada.
+
+- `404`: a compra não existe ou você não participa. `403`: ADMIN que não participa.
+- `409`: você já pagou, a compra já foi confirmada ou o prazo expirou.
+
+**Expiração:** não há tarefa agendada. Uma compra `PENDENTE` com `expiraEm` vencido expira na **primeira consulta** (`GET /grupos/compras`, `GET /grupos/compras/:id` ou uma tentativa de pagar): vira `EXPIRADA`, as reservas voltam ao lote, e quem já pagou fica `REEMBOLSADO` (pedido `CANCELADO`).
+
+O pagamento é **simulado**: não há cobrança real. A compra também traz `lote` com o `evento` (título, imagem, data, local, categoria).
+
+## Pedidos (compra individual)
+
+Exige login. `POST /pedidos`:
+
+```json
+// requisição: o comprador é você; preço e taxa vêm do lote, nunca do corpo
+{ "loteId": "clx...", "quantidade": 2 }
+```
+
+- `quantidade`: inteiro de 1 a 10. `404` se o lote não existir; `409` se faltar estoque.
+- O pagamento é simulado: o pedido já nasce `PAGO` e emite um ingresso por unidade.
+- Valores em texto com 2 casas: `subtotal`, `desconto`, `taxaServico` (12,5% do subtotal) e `valor` (total).
+
+Resposta `201`: o pedido com `ingressos` (`id`, `codigoQr`, `status`, `emitidoEm`), `evento` e `lote`.
+
+## Ingressos
+
+Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa dá `404`, até para ADMIN).
+
+| Rota | |
+|---|---|
+| `GET /ingressos` | seus ingressos, do mais novo para o mais antigo, com `evento`, `lote` e `dono` (`id`, `nome`, `username`) |
+| `GET /ingressos/:id` | um ingresso seu |
+
+`codigoQr` tem o formato `GRV-` + 12 caracteres (`GRV-K7M2QX9PD4TA`): é o conteúdo do QR code.
+
+**O que ainda não existe na API:** categorias, validação de ingresso na portaria, estorno manual e pagamento real.
 
 ## Tipos TypeScript (sugestão)
 

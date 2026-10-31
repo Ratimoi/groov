@@ -83,6 +83,10 @@ Rotas disponíveis:
 | `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | Remover alguém ou sair do grupo; o líder não pode ser removido |
 | `POST /grupos/compras` | logado | Inicia uma compra em grupo (o iniciador é você e precisa ser membro do grupo) |
 | `GET /grupos/compras`, `GET /grupos/compras/:id` | participantes da compra ou ADMIN | Lista só as suas; as demais respondem 404 |
+| `POST /grupos/compras/:id/pagar` | participante da compra | Paga a sua cota (pagamento simulado). O último a pagar confirma a compra e emite os ingressos. Compras vencidas expiram na primeira consulta |
+| `POST /pedidos` | logado | Compra individual (pagamento simulado): taxa de 12,5%, baixa o estoque e emite um ingresso por unidade |
+| `GET /ingressos`, `GET /ingressos/:id` | dono do ingresso | Só os seus; o de outra pessoa responde 404 |
+| `GET /usuarios/busca?q=` | logado | Busca por nome ou username (mínimo 2 caracteres) para convidar pessoas a um grupo |
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
 | `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
 | `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |

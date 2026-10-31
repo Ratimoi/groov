@@ -26,6 +26,14 @@ export class GroupPurchaseController {
     }
   };
 
+  pay = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.groupPurchaseService.pay(req.params.id, getAuthUser(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const purchase = await this.groupPurchaseService.findById(req.params.id, getAuthUser(req));

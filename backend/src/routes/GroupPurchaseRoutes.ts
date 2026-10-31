@@ -8,5 +8,6 @@ const groupPurchaseController = new GroupPurchaseController(new GroupPurchaseSer
 router.post("/", groupPurchaseController.create);
 router.get("/", groupPurchaseController.findAll);
 router.get("/:id", groupPurchaseController.findById);
+router.post("/:id/pagar", groupPurchaseController.pay);
 
 export default router;

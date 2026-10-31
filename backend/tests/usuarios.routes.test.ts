@@ -112,6 +112,97 @@ describe("/usuarios", () => {
     });
   });
 
+  describe("GET /busca", () => {
+    const resultado = { id: "u2", nome: "Beatriz", username: "biacosta", avatarUrl: null };
+
+    it("sem token responde 401 e não consulta usuários", async () => {
+      const res = await request(app).get("/usuarios/busca?q=bia");
+
+      expect(res.status).toBe(401);
+      expect(prismaMock.usuario.findMany).not.toHaveBeenCalled();
+    });
+
+    it("busca por nome ou username, sem diferenciar maiúsculas, excluindo quem busca", async () => {
+      const auth = logadoComo("CLIENTE", "u1");
+      prismaMock.usuario.findMany.mockResolvedValue([resultado]);
+
+      const res = await request(app).get("/usuarios/busca?q=%20Bia%20").set(auth);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([resultado]);
+      expect(prismaMock.usuario.findMany).toHaveBeenCalledWith({
+        where: {
+          id: { not: "u1" },
+          OR: [
+            { nome: { contains: "Bia", mode: "insensitive" } },
+            { username: { contains: "Bia", mode: "insensitive" } },
+          ],
+        },
+        select: { id: true, nome: true, username: true, avatarUrl: true },
+        orderBy: { nome: "asc" },
+        take: 20,
+      });
+    });
+
+    it("só seleciona campos públicos (nunca senha, e-mail ou papel)", async () => {
+      prismaMock.usuario.findMany.mockResolvedValue([]);
+
+      await request(app).get("/usuarios/busca?q=bia").set(logadoComo("CLIENTE", "u1"));
+
+      const { select } = prismaMock.usuario.findMany.mock.calls[0][0];
+      expect(Object.keys(select).sort()).toEqual(["avatarUrl", "id", "nome", "username"]);
+    });
+
+    it.each(["", "a", "%20%20", ""])("termo curto ou ausente (%j) responde 400", async (q) => {
+      const res = await request(app).get(`/usuarios/busca${q === "" ? "" : `?q=${q}`}`).set(logadoComo());
+
+      expect(res.status).toBe(400);
+      expect(prismaMock.usuario.findMany).not.toHaveBeenCalled();
+    });
+
+    it("não é capturada pela rota /:id", async () => {
+      prismaMock.usuario.findMany.mockResolvedValue([]);
+
+      const res = await request(app).get("/usuarios/busca?q=bia").set(logadoComo());
+
+      expect(res.status).toBe(200);
+      expect(prismaMock.usuario.findUnique).toHaveBeenCalledTimes(1); // só a do middleware
+    });
+  });
+
+  describe("GET /:id/grupos", () => {
+    it("sem token responde 401 e não consulta grupos", async () => {
+      const res = await request(app).get("/usuarios/u1/grupos");
+
+      expect(res.status).toBe(401);
+      expect(prismaMock.grupo.findMany).not.toHaveBeenCalled();
+    });
+
+    it("CLIENTE não lista os grupos de outro usuário (403)", async () => {
+      const res = await request(app).get("/usuarios/u1/grupos").set(logadoComo("CLIENTE", "u2"));
+
+      expect(res.status).toBe(403);
+      expect(prismaMock.grupo.findMany).not.toHaveBeenCalled();
+    });
+
+    it("o próprio usuário lista seus grupos e vê se é o líder", async () => {
+      prismaMock.grupo.findMany.mockResolvedValue([{ id: "g1", nome: "Galera", liderId: "u1", membros: [] }]);
+
+      const res = await request(app).get("/usuarios/u1/grupos").set(logadoComo("CLIENTE", "u1"));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([{ id: "g1", nome: "Galera", liderId: "u1", membros: [], souLider: true }]);
+    });
+
+    it("ADMIN lista os grupos de qualquer usuário", async () => {
+      prismaMock.grupo.findMany.mockResolvedValue([]);
+
+      const res = await request(app).get("/usuarios/u1/grupos").set(logadoComo("ADMIN", "adm"));
+
+      expect(res.status).toBe(200);
+    });
+  });
+
   describe("GET /:id", () => {
     it("sem token responde 401", async () => {
       const res = await request(app).get("/usuarios/u1");

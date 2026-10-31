@@ -90,4 +90,12 @@ export class GroupController {
       next(error);
     }
   };
+
+  findByUsuario = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.groupService.findByUsuario(req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  };
 }
