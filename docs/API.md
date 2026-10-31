@@ -294,8 +294,13 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 | `GET /ingressos` | seus ingressos, do mais novo para o mais antigo, com `evento`, `lote` e `dono` (`id`, `nome`, `username`) |
 | `GET /ingressos/:id` | um ingresso seu |
 | `POST /ingressos/validar` | **só ADMIN.** Valida o ingresso na portaria (veja abaixo) |
+| `POST /ingressos/:id/transferir` | o dono passa o ingresso para outra pessoa (veja abaixo) |
 
 `codigoQr` tem o formato `GRV-` + 12 caracteres (`GRV-K7M2QX9PD4TA`): é o conteúdo do QR code.
+
+### Transferir
+
+`POST /ingressos/:id/transferir` com `{ "username": "bia" }` (o `@` na frente é aceito; o username é exato). Devolve o ingresso já com o novo `donoId` e um **código novo**: o QR antigo deixa de valer. Só o dono transfere (`404` para os demais), só ingresso `VALIDO` (`409` se usado ou cancelado), destinatário inexistente dá `404` e transferir para si mesmo dá `400`.
 
 ### Validar na portaria
 

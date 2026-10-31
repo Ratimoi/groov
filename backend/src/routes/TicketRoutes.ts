@@ -9,5 +9,6 @@ const ticketController = new TicketController(new TicketService());
 router.post("/validar", requireRole("ADMIN"), ticketController.validate);
 router.get("/", ticketController.findAll);
 router.get("/:id", ticketController.findById);
+router.post("/:id/transferir", ticketController.transfer);
 
 export default router;

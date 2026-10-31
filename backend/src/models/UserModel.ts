@@ -47,6 +47,11 @@ export class UserModel {
   }
 
   // Único método que lê a senha (hash). Existe só para o login: não repassar o resultado à API.
+  async findIdByUsername(username: string): Promise<string | null> {
+    const usuario = await this.prismaClient.usuario.findUnique({ where: { username }, select: { id: true } });
+    return usuario?.id ?? null;
+  }
+
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
     return this.prismaClient.usuario.findUnique({
       where: { email },

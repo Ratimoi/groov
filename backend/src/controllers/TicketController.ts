@@ -20,6 +20,14 @@ export class TicketController {
     }
   };
 
+  transfer = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.ticketService.transfer(req.params.id, req.body, getAuthUser(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       res.status(200).json(await this.ticketService.findAll(getAuthUser(req)));
