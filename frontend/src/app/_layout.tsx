@@ -17,6 +17,12 @@ import { NavBar } from "../components/NavBar";
 import { CarrinhoProvider } from "@/contexts/CarrinhoContext";
 import { UserProvider, useUser } from "@/contexts/UserContext";
 import { TelaEntrar } from "../components/TelaEntrar";
+import { LinearGradient } from "expo-linear-gradient";
+import { cssInterop } from "nativewind";
+
+// Sem isto o NativeWind ignora o className do LinearGradient (padding, absolute, flex...)
+// e os botões com gradiente ficam sem altura.
+cssInterop(LinearGradient, { className: "style" });
 
 const queryClient = new QueryClient();
 
