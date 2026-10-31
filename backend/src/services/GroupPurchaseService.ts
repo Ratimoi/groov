@@ -9,6 +9,7 @@ import type {
   GroupPurchaseServiceContract,
 } from "../types/groupPurchase";
 import { AppError } from "../utils/AppError";
+import { serviceFeeCents, toCents } from "../utils/money";
 
 const HOUR_IN_MS = 60 * 60 * 1000;
 
@@ -94,14 +95,71 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
 
   // ADMIN vê todas; os demais, só as compras de que participam.
   async findAll(actor: AuthUser): Promise<GroupPurchase[]> {
-    return this.groupPurchaseModel.findAll(actor.papel === "ADMIN" ? undefined : actor.id);
+    const usuarioId = actor.papel === "ADMIN" ? undefined : actor.id;
+    const purchases = await this.groupPurchaseModel.findAll(usuarioId);
+
+    // Compras com prazo vencido expiram aqui, na primeira consulta (não há tarefa agendada).
+    const expirou = await this.expireDue(purchases);
+    return expirou ? this.groupPurchaseModel.findAll(usuarioId) : purchases;
   }
 
   async findById(id: string, actor: AuthUser): Promise<GroupPurchase | null> {
-    const purchase = await this.groupPurchaseModel.findById(id);
+    let purchase = await this.groupPurchaseModel.findById(id);
     if (!purchase) return null;
 
     const participates = purchase.participantes.some((participante) => participante.usuarioId === actor.id);
-    return actor.papel === "ADMIN" || participates ? purchase : null;
+    if (actor.papel !== "ADMIN" && !participates) return null;
+
+    if (await this.expireDue([purchase])) purchase = await this.groupPurchaseModel.findById(id);
+    return purchase;
+  }
+
+  // Pagamento simulado da cota do próprio usuário. Quando o último participante paga, a compra
+  // é confirmada e os ingressos de todos são emitidos.
+  async pay(id: string, actor: AuthUser): Promise<GroupPurchase> {
+    const purchase = await this.groupPurchaseModel.findById(id);
+    const participante = purchase?.participantes.find((item) => item.usuarioId === actor.id);
+    if (!purchase) throw new AppError("Compra em grupo não encontrada", 404);
+    if (!participante) {
+      throw new AppError(
+        actor.papel === "ADMIN" ? "Você não participa desta compra" : "Compra em grupo não encontrada",
+        actor.papel === "ADMIN" ? 403 : 404,
+      );
+    }
+
+    if (await this.expireDue([purchase])) throw new AppError("O prazo desta compra em grupo expirou", 409);
+    if (purchase.status === "EXPIRADA") throw new AppError("O prazo desta compra em grupo expirou", 409);
+    if (purchase.status === "CONFIRMADA") throw new AppError("Esta compra em grupo já foi confirmada", 409);
+    if (participante.status !== "PENDENTE") throw new AppError("Você já pagou a sua parte", 409);
+
+    const lote = await this.lotModel.findById(purchase.loteId);
+    if (!lote) throw new AppError("Lote não encontrado", 404);
+
+    // Cada participante paga o preço do lote com o desconto do grupo (o preço vem do banco).
+    const subtotalCents = toCents(lote.preco);
+    const cotaCents = Math.round(subtotalCents * (1 - Number(lote.descontoGrupo ?? 0)));
+    const paid = await this.groupPurchaseModel.payShare({
+      compraId: purchase.id,
+      usuarioId: actor.id,
+      eventoId: lote.eventoId,
+      loteId: lote.id,
+      subtotalCents,
+      descontoCents: subtotalCents - cotaCents,
+      taxaServicoCents: serviceFeeCents(cotaCents),
+    });
+    if (!paid) throw new AppError("Você já pagou a sua parte", 409);
+
+    return paid;
+  }
+
+  private async expireDue(purchases: GroupPurchase[]): Promise<boolean> {
+    const now = new Date();
+    let expirou = false;
+    for (const purchase of purchases) {
+      if (purchase.status === "PENDENTE" && purchase.expiraEm <= now) {
+        if (await this.groupPurchaseModel.expire(purchase.id, now)) expirou = true;
+      }
+    }
+    return expirou;
   }
 }

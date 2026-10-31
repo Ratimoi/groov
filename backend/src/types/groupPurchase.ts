@@ -17,4 +17,5 @@ export interface GroupPurchaseServiceContract {
   create(data: GroupPurchaseCreateBody, actor: AuthUser): Promise<GroupPurchase>;
   findAll(actor: AuthUser): Promise<GroupPurchase[]>;
   findById(id: string, actor: AuthUser): Promise<GroupPurchase | null>;
+  pay(id: string, actor: AuthUser): Promise<GroupPurchase>;
 }
