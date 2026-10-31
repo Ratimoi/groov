@@ -9,6 +9,7 @@ import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useContagem } from "../hooks/useContagem";
 import { formatarDataHora, formatarRestante } from "../utils/evento";
 import { api, ApiError } from "../utils/api";
+import { compartilharConvite } from "../utils/convite";
 import type { CompraGrupoApi as CompraGrupo, ParticipanteApi as Participante, PessoaApi as Pessoa } from "../utils/compras";
 
 type Grupo = {
@@ -225,6 +226,14 @@ export default function Grupos() {
   };
 
   const gruposSemCompra = grupos.filter((grupo) => !compras.some((compra) => compra.grupoId === grupo.id));
+  const convidar = async (grupo: Grupo) => {
+    try {
+      await compartilharConvite(grupo.id, grupo.nome, token);
+    } catch (error) {
+      Alert.alert("Convite", error instanceof ApiError ? error.message : "Não foi possível gerar o convite.");
+    }
+  };
+
   const nomeDoGrupo = (grupoId: string) => grupos.find((grupo) => grupo.id === grupoId)?.nome;
   const vazio = !carregando && !erro && grupos.length === 0;
 
@@ -246,6 +255,14 @@ export default function Grupos() {
         <Text className="font-body-md text-body-md text-on-surface-variant mt-1 mb-6">
           Gerencie suas compras coletivas ativas.
         </Text>
+        <TouchableOpacity
+          onPress={() => router.push("/entrar-grupo")}
+          activeOpacity={0.8}
+          className="self-start flex-row items-center gap-2 -mt-3 mb-6 px-4 py-2 rounded-full border border-white/15"
+        >
+          <MaterialIcons name="vpn-key" size={14} color="#ebb2ff" />
+          <Text className="font-label-caps text-label-caps text-primary uppercase">Entrar com código</Text>
+        </TouchableOpacity>
 
         {carregando && <ActivityIndicator color="#bc13fe" className="my-10" />}
 
@@ -312,12 +329,23 @@ export default function Grupos() {
                     {grupo.membros.length} {grupo.membros.length === 1 ? "participante" : "participantes"}
                   </Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => router.push("/")}
-                  className="self-start px-4 py-2 rounded-full border border-primary-container/50 bg-primary-container/10"
-                >
-                  <Text className="font-label-caps text-label-caps text-primary">ESCOLHER EVENTO</Text>
-                </TouchableOpacity>
+                <View className="flex-row flex-wrap gap-2">
+                  <TouchableOpacity
+                    onPress={() => router.push("/")}
+                    className="px-4 py-2 rounded-full border border-primary-container/50 bg-primary-container/10"
+                  >
+                    <Text className="font-label-caps text-label-caps text-primary">ESCOLHER EVENTO</Text>
+                  </TouchableOpacity>
+                  {grupo.souLider && (
+                    <TouchableOpacity
+                      onPress={() => convidar(grupo)}
+                      className="flex-row items-center gap-1.5 px-4 py-2 rounded-full border border-white/15"
+                    >
+                      <MaterialIcons name="share" size={14} color="#ebb2ff" />
+                      <Text className="font-label-caps text-label-caps text-primary">CONVIDAR</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             ))}
           </View>
