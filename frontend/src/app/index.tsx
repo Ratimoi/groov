@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { CardEventoDestaque } from "../components/CardEventoDestaque";
@@ -77,15 +76,9 @@ export default function HomeScreen() {
             return (
               <TouchableOpacity key={categoria} onPress={() => setFiltroCategoria(categoria)} activeOpacity={0.8}>
                 {ativa ? (
-                  <LinearGradient
-                    colors={["#00eefa", "#bc13fe"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{ borderRadius: 9999 }}
-                    className="px-4 py-2"
-                  >
+                  <View className="bg-primary-container px-4 py-2 rounded-full">
                     <Text className="font-label-caps text-label-caps text-white uppercase">{categoria}</Text>
-                  </LinearGradient>
+                  </View>
                 ) : (
                   <View className="px-4 py-2 rounded-full border border-glass-border bg-surface-container">
                     <Text className="font-label-caps text-label-caps text-on-surface uppercase">{categoria}</Text>

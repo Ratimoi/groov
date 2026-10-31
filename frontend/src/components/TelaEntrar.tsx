@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUser } from "@/contexts/UserContext";
 import { ApiError } from "../utils/api";
@@ -111,18 +110,13 @@ export function TelaEntrar() {
           className="rounded-xl overflow-hidden mt-6"
           style={{ opacity: preenchido && !enviando ? 1 : 0.5 }}
         >
-          <LinearGradient
-            colors={["#00eefa", "#bc13fe"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            className="py-4 items-center justify-center"
-          >
+          <View className="bg-primary-container py-4 items-center justify-center">
             {enviando ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
               <Text className="font-headline-md text-white text-[16px]">{modoCadastro ? "Criar conta" : "Entrar"}</Text>
             )}
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity

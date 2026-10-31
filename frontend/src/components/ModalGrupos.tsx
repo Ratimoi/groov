@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useUser } from "@/contexts/UserContext";
 import type { GrupoEscolhido } from "../utils/lote";
 
@@ -175,14 +174,9 @@ export function ModalGrupos({ visivel, grupoAtual, tamanho, onClose, onConfirmar
               className="rounded-xl overflow-hidden"
               style={{ opacity: selecionado ? 1 : 0.5 }}
             >
-              <LinearGradient
-                colors={["#00eefa", "#bc13fe"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="py-3 items-center justify-center"
-              >
+              <View className="bg-primary-container py-3 items-center justify-center">
                 <Text className="text-white font-label-caps text-label-caps text-center py-2">Confirmar Grupo</Text>
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         </Pressable>
