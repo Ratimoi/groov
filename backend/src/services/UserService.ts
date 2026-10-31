@@ -8,6 +8,7 @@ import type {
   UserUpdateRequest,
 } from "../types/user";
 import { AppError } from "../utils/AppError";
+import { normalizeCpf } from "../utils/cpf";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "../utils/password";
 
 // Só estes campos entram no banco; o resto do corpo (id, criadoEm, papel no cadastro...) é ignorado.
@@ -22,7 +23,7 @@ function pick<T extends object, K extends keyof T>(data: T, keys: readonly K[]):
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_LIMIT = 20;
 
-const PROFILE_FIELDS = ["nome", "username", "email", "avatarUrl"] as const;
+const PROFILE_FIELDS = ["nome", "username", "email", "avatarUrl", "cpf"] as const;
 
 export class UserService implements UserServiceContract {
   private userModel: UserModel;
@@ -32,8 +33,12 @@ export class UserService implements UserServiceContract {
   }
 
   async create(data: UserCreateRequest): Promise<PublicUser> {
+    const cpf = normalizeCpf(data.cpf);
+    if (data.cpf === undefined || data.cpf === null || data.cpf === "") throw new AppError("cpf é obrigatório", 400);
+    if (!cpf) throw new AppError("cpf inválido", 400);
+
     const senha = await this.hashValidPassword(data.senha);
-    return this.userModel.create({ ...pick(data, PROFILE_FIELDS), senha } as UserCreateRequest);
+    return this.userModel.create({ ...pick(data, PROFILE_FIELDS), cpf, senha } as UserCreateRequest);
   }
 
   async findAll(): Promise<PublicUser[]> {
@@ -58,6 +63,11 @@ export class UserService implements UserServiceContract {
 
     if (changes.papel !== undefined && !Object.values(Papel).includes(changes.papel)) {
       throw new AppError("papel inválido", 400);
+    }
+    if (data.cpf !== undefined) {
+      const cpf = normalizeCpf(data.cpf);
+      if (!cpf) throw new AppError("cpf inválido", 400);
+      changes.cpf = cpf;
     }
     if (data.senha !== undefined) {
       changes.senha = await this.hashValidPassword(data.senha);

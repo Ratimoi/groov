@@ -1,7 +1,7 @@
 import type { Papel, Usuario } from "@prisma/client";
 
-// Usuário como a API o expõe: nunca inclui a senha (nem o hash).
-export type PublicUser = Omit<Usuario, "senha">;
+// Usuário como a API o expõe: nunca inclui a senha (nem o hash) nem o CPF.
+export type PublicUser = Omit<Usuario, "senha" | "cpf">;
 
 // O papel não faz parte do cadastro: todo novo usuário é CLIENTE.
 export type UserCreateRequest = {
@@ -9,6 +9,7 @@ export type UserCreateRequest = {
   username: string;
   email: string;
   senha: string;
+  cpf: string;
   avatarUrl?: string | null;
 };
 

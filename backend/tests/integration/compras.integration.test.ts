@@ -17,11 +17,24 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   let prisma: PrismaClient;
   let app: App;
 
+  // CPF válido e único por usuário: 9 dígitos a partir de um contador + os 2 verificadores.
+  let proximoCpf = Number(run.replace(/\D/g, "").slice(0, 6) || "1") * 1000;
+  const gerarCpf = () => {
+    const base = String(++proximoCpf).padStart(9, "1").slice(0, 9);
+    const dv = (digitos: string) => {
+      const soma = digitos.split("").reduce((total, d, i) => total + Number(d) * (digitos.length + 1 - i), 0);
+      const resto = (soma * 10) % 11;
+      return resto === 10 ? 0 : resto;
+    };
+    const d1 = dv(base);
+    return `${base}${d1}${dv(`${base}${d1}`)}`;
+  };
+
   const auth = (usuario: Usuario) => ({ Authorization: `Bearer ${usuario.token}` });
 
   async function criarUsuario(nome: string): Promise<Usuario> {
     const email = `${nome}-${run}@integracao.test`;
-    const cadastro = await request(app).post("/usuarios").send({ nome, username: `${nome}-${run}`, email, senha: SENHA });
+    const cadastro = await request(app).post("/usuarios").send({ nome, username: `${nome}-${run}`, email, senha: SENHA, cpf: gerarCpf() });
     expect(cadastro.status).toBe(201);
     const login = await request(app).post("/auth/login").send({ email, senha: SENHA });
     expect(login.status).toBe(200);

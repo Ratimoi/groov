@@ -79,11 +79,12 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 
 ```json
 // requisição: todos os campos de texto, avatarUrl opcional
-{ "nome": "Ana", "username": "ana", "email": "ana@example.com", "senha": "minha-senha-123" }
+{ "nome": "Ana", "username": "ana", "email": "ana@example.com", "senha": "minha-senha-123", "cpf": "529.982.247-25" }
 // 201 → o usuário (sem senha)
 ```
 
 - `senha`: mínimo **8 caracteres**.
+- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`.
 - `username` e `email` são únicos: repetido dá `409` com `"fields": ["username"]` (ou `"email"`).
 - Todo novo usuário é `CLIENTE`. Não dá para escolher o papel no cadastro.
 - Depois do cadastro, faça o login (o cadastro não devolve token).
@@ -93,7 +94,7 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 | Rota | Quem acessa |
 |---|---|
 | `GET /usuarios/:id` | o próprio usuário ou ADMIN |
-| `PUT /usuarios/:id` | o próprio usuário ou ADMIN. Aceita `nome`, `username`, `email`, `avatarUrl`, `senha`; só ADMIN altera `papel` |
+| `PUT /usuarios/:id` | o próprio usuário ou ADMIN. Aceita `nome`, `username`, `email`, `avatarUrl`, `cpf`, `senha`; só ADMIN altera `papel` |
 | `DELETE /usuarios/:id` | o próprio usuário ou ADMIN → `204` |
 | `GET /usuarios` | só ADMIN |
 
