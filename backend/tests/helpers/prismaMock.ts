@@ -22,6 +22,7 @@ export const prismaMock = {
   lote: delegate(),
   pedido: delegate(),
   ingresso: delegate(),
+  validacaoIngresso: delegate(),
   evento: delegate(),
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),

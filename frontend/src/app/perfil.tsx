@@ -115,10 +115,21 @@ export default function Perfil() {
           ))}
         </View>
 
+        {user?.papel === "ADMIN" && (
+          <TouchableOpacity
+            onPress={() => router.push("/escanear")}
+            activeOpacity={0.8}
+            className="mt-8 self-center flex-row items-center gap-2 px-6 py-3 rounded-xl bg-primary-container"
+          >
+            <MaterialIcons name="qr-code-scanner" size={20} color="#ffffff" />
+            <Text className="font-label-caps text-label-caps text-white uppercase">Validar ingressos</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           onPress={sair}
           activeOpacity={0.8}
-          className="mt-8 self-center flex-row items-center gap-2 px-6 py-3 rounded-full border border-primary-container/50 bg-primary-container/10"
+          className="mt-4 self-center flex-row items-center gap-2 px-6 py-3 rounded-full border border-primary-container/50 bg-primary-container/10"
         >
           <MaterialIcons name="logout" size={18} color="#ebb2ff" />
           <Text className="font-label-caps text-label-caps text-primary uppercase">Sair</Text>

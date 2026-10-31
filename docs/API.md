@@ -284,10 +284,24 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 |---|---|
 | `GET /ingressos` | seus ingressos, do mais novo para o mais antigo, com `evento`, `lote` e `dono` (`id`, `nome`, `username`) |
 | `GET /ingressos/:id` | um ingresso seu |
+| `POST /ingressos/validar` | **só ADMIN.** Valida o ingresso na portaria (veja abaixo) |
 
 `codigoQr` tem o formato `GRV-` + 12 caracteres (`GRV-K7M2QX9PD4TA`): é o conteúdo do QR code.
 
-**O que ainda não existe na API:** categorias, validação de ingresso na portaria, estorno manual e pagamento real.
+### Validar na portaria
+
+`POST /ingressos/validar` com `{ "codigo": "GRV-K7M2QX9PD4TA", "eventoId": "clx..." }` (`eventoId` é opcional; quando vem, ingresso de outro evento é recusado). O código ignora espaços e maiúsculas. Resposta: `{ "resultado", "mensagem", "ingresso" }`.
+
+| Situação | HTTP | `resultado` |
+|---|---|---|
+| Entrada liberada (o ingresso passa a `USADO`, com `usadoEm`) | `200` | `VALIDO` |
+| Ingresso já utilizado | `409` | `JA_UTILIZADO` |
+| Ingresso cancelado, ou de outro evento | `409` | `INVALIDO` |
+| Código inexistente (`ingresso: null`) | `404` | `INVALIDO` |
+
+A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). `CLIENTE` e `PRODUTOR` recebem `403`.
+
+**O que ainda não existe na API:** categorias, estorno manual e pagamento real.
 
 ## Tipos TypeScript (sugestão)
 
