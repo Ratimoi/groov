@@ -29,7 +29,8 @@ model Usuario {
   participacoes       MembroGrupo[]
   comprasIniciadas    CompraGrupo[]        @relation("IniciadorCompra")
   participacoesCompra ParticipanteCompra[]
-  eventosComoAtracao  Evento[]  @relation("AtracoesEvento")
+  eventosComoAtracao  Evento[]             @relation("AtracoesEvento")
+  avaliacoes          AvaliacaoEvento[]
 }
 
 model Categoria {
@@ -45,10 +46,12 @@ model Evento {
   imagemUrl String?
   comecaEm  DateTime
   terminaEm DateTime?
-  horario   DateTime?   @db.Time
+  horario   DateTime? @db.Time
   nomeLocal String?
   cidade    String
-  destaque  Boolean? @default(false)
+  destaque  Boolean?  @default(false)
+  // Selos de classificação do evento (ex.: "18+", "open bar"), definidos por quem cria o evento.
+  tags      String[]  @default([])
   atracoes  Usuario[] @relation("AtracoesEvento")
 
   categoriaId String?
@@ -64,6 +67,7 @@ model Evento {
   pedidos    Pedido[]
   ingressos  Ingresso[]
   validacoes ValidacaoIngresso[]
+  avaliacoes AvaliacaoEvento[]
 
   @@index([cidade])
 }
@@ -278,4 +282,22 @@ enum ResultadoValidacao {
   VALIDO
   JA_UTILIZADO
   INVALIDO
+}
+
+// Nota de 1 a 5 de quem foi ao evento (tinha ingresso USADO). A nota do organizador é a média dos eventos dele.
+model AvaliacaoEvento {
+  id String @id @default(cuid())
+
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  nota       Int
+  comentario String?
+  criadoEm   DateTime @default(now())
+
+  @@unique([eventoId, usuarioId])
+  @@index([eventoId])
 }

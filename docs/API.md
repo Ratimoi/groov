@@ -144,6 +144,12 @@ Só `PRODUTOR` ou `ADMIN`; editar e apagar exigem ser o criador do evento (ADMIN
 - No `PUT`, envie só o que mudou; `null` limpa um campo opcional.
 - `DELETE` devolve `204`. Evento que já tem lotes ou pedidos dá `409`.
 
+### Tags e avaliações do evento
+
+- **`tags`** (lista de textos, até 8, cada uma com até 24 caracteres, sem repetição) são selos de classificação como `"18+"` ou `"Open bar"`. Quem cria ou edita o evento envia `tags` no `POST`/`PUT /eventos`; `[]` limpa. Vêm em todo evento (`[]` quando não há).
+- **`GET /eventos/:id/avaliacoes`** (público) devolve `{ "evento": { "media": 4.3, "total": 3 }, "organizador": { "id", "nome", "username", "avatarUrl", "media": 3.9, "total": 10 } }`. A **nota do organizador** é a média de todos os eventos dele. `media` é `null` quando ainda não há avaliações; `organizador` é `null` se o evento não tem criador.
+- **`POST /eventos/:id/avaliacoes`** (logado) com `{ "nota": 5, "comentario": "opcional, até 500" }`. A nota é um inteiro de 1 a 5. Só quem **foi ao evento** (tem ingresso `USADO`, validado na portaria) avalia: `403` para os demais e para o próprio organizador. Cada pessoa tem uma nota por evento: avaliar de novo **substitui**.
+
 ## Lotes (ingressos de um evento)
 
 Um evento vende ingressos por **lotes** ("1º lote", "Pista", "VIP"...), cada um com preço e quantidade próprios. O preço do ingresso está no lote, não no evento.

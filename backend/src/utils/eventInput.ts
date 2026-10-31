@@ -9,6 +9,7 @@ export type EventData = {
   nomeLocal: string | null;
   cidade: string;
   categoriaId: string | null;
+  tags: string[];
 };
 
 export type EventCreateData = Partial<EventData> & Pick<EventData, "titulo" | "comecaEm" | "cidade">;
@@ -55,6 +56,23 @@ function isoDate(value: unknown, name: string): Date {
   return date;
 }
 
+const MAX_TAGS = 8;
+const MAX_TAG_LENGTH = 24;
+
+// Selos do evento: até 8 textos curtos, sem repetição (maiúsculas não contam).
+function tagList(value: unknown): string[] {
+  if (!Array.isArray(value)) fail("tags deve ser uma lista de textos");
+  const tags: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string" || item.trim() === "") fail("cada tag deve ser um texto não vazio");
+    const tag = item.trim();
+    if (tag.length > MAX_TAG_LENGTH) fail(`cada tag deve ter no máximo ${MAX_TAG_LENGTH} caracteres`);
+    if (!tags.some((existente) => existente.toLowerCase() === tag.toLowerCase())) tags.push(tag);
+  }
+  if (tags.length > MAX_TAGS) fail(`no máximo ${MAX_TAGS} tags`);
+  return tags;
+}
+
 // Converte e valida os campos presentes. Campos desconhecidos (id, criadoPorId, criadoEm...) são ignorados.
 function parseFields(body: Record<string, unknown>): EventUpdateData {
   const data: EventUpdateData = {};
@@ -64,6 +82,7 @@ function parseFields(body: Record<string, unknown>): EventUpdateData {
   if (body.nomeLocal !== undefined) data.nomeLocal = optionalText(body.nomeLocal, "nomeLocal");
   if (body.categoriaId !== undefined) data.categoriaId = optionalText(body.categoriaId, "categoriaId");
   if (body.imagemUrl !== undefined) data.imagemUrl = imageUrl(body.imagemUrl);
+  if (body.tags !== undefined) data.tags = tagList(body.tags);
   if (body.comecaEm !== undefined) data.comecaEm = isoDate(body.comecaEm, "comecaEm");
   if (body.terminaEm !== undefined) data.terminaEm = body.terminaEm === null ? null : isoDate(body.terminaEm, "terminaEm");
   return data;

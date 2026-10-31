@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EventoType } from "@/utils";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useContagem } from "../hooks/useContagem";
+import { AvaliacoesEvento } from "../components/AvaliacoesEvento";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { formatarIntervalo } from "../utils/evento";
 import { ALTURA_NAVBAR, MARGEM_INFERIOR_NAVBAR } from "../components/NavBar";
@@ -136,6 +137,15 @@ export default function DetalhesEvento() {
                 </Text>
               </View>
             )}
+            {!!evento.tags?.length && (
+              <View className="flex-row flex-wrap gap-2">
+                {evento.tags.map((tag) => (
+                  <View key={tag} className="px-3 py-1 rounded-full border border-white/25 bg-black/40">
+                    <Text className="font-label-caps text-label-caps text-white">{tag.toUpperCase()}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
             <Text className="font-headline-lg-mobile text-headline-lg-mobile text-white">{evento.titulo}</Text>
             <View className="flex-row items-center gap-2">
               <MaterialIcons name="calendar-month" size={16} color="#00eefa" />
@@ -185,6 +195,8 @@ export default function DetalhesEvento() {
             </View>
           </View>
         )}
+
+        <AvaliacoesEvento eventoId={evento.id} />
 
         {atracoes.length > 0 && (
           <View className="px-margin-mobile pb-8">

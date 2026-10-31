@@ -256,4 +256,42 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
       expect((await request(app).post(`/ingressos/${segundo.id}/transferir`).set(auth(de)).send({ username: `rita-${run}` })).status).toBe(409);
     });
   });
+
+  describe("avaliações", () => {
+    it("só quem foi ao evento avalia, uma nota por pessoa, e a média do organizador soma os eventos dele", async () => {
+      const [adm, org, a, b] = [await criarUsuario("sol"), await criarUsuario("tito"), await criarUsuario("uma"), await criarUsuario("vera")];
+      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
+      const evento1 = await prisma.evento.create({ data: { titulo: `Av1 ${run}`, cidade: "Recife", comecaEm: new Date(Date.now() + 86_400_000), criadoPorId: org.id } });
+      const evento2 = await prisma.evento.create({ data: { titulo: `Av2 ${run}`, cidade: "Recife", comecaEm: new Date(Date.now() + 86_400_000), criadoPorId: org.id } });
+      const lote1 = await prisma.lote.create({ data: { eventoId: evento1.id, nome: "Pista", preco: "10.00", quantidade: 5 } });
+      const lote2 = await prisma.lote.create({ data: { eventoId: evento2.id, nome: "Pista", preco: "10.00", quantidade: 5 } });
+
+      const compra = async (usuario: Usuario, loteId: string) =>
+        (await request(app).post("/pedidos").set(auth(usuario)).send({ loteId, quantidade: 1 })).body.ingressos[0].codigoQr as string;
+      const codigoA1 = await compra(a, lote1.id);
+      const codigoB2 = await compra(b, lote2.id);
+
+      // Com o ingresso ainda não usado, não pode avaliar.
+      expect((await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(a)).send({ nota: 5 })).status).toBe(403);
+
+      await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: codigoA1 });
+      await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: codigoB2 });
+
+      expect((await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(a)).send({ nota: 5 })).status).toBe(200);
+      expect((await request(app).post(`/eventos/${evento2.id}/avaliacoes`).set(auth(b)).send({ nota: 2, comentario: "ok" })).status).toBe(200);
+      // Quem foi ao evento 2 não avalia o 1; o organizador não avalia o próprio evento.
+      expect((await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(b)).send({ nota: 1 })).status).toBe(403);
+      expect((await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(org)).send({ nota: 5 })).status).toBe(403);
+
+      const resumo = await request(app).get(`/eventos/${evento1.id}/avaliacoes`);
+      expect(resumo.body.evento).toEqual({ media: 5, total: 1 });
+      expect(resumo.body.organizador).toMatchObject({ id: org.id, media: 3.5, total: 2 });
+
+      // Avaliar de novo substitui a nota (não duplica).
+      await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(a)).send({ nota: 3 });
+      const depois = await request(app).get(`/eventos/${evento1.id}/avaliacoes`);
+      expect(depois.body.evento).toEqual({ media: 3, total: 1 });
+      expect(await prisma.avaliacaoEvento.count({ where: { eventoId: evento1.id } })).toBe(1);
+    });
+  });
 });
