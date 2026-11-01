@@ -14,7 +14,7 @@ export type LoteVenda = {
 
 export type GrupoEscolhido = { id: string; nome: string };
 
-export type LinhaPedido = { chave: string; descricao: string; valor: number };
+export type LinhaPedido = { chave: string; descricao: string; valor: number; desconto?: boolean };
 
 export function arredondar(valor: number): number {
   return Math.round(valor * 100) / 100;
@@ -22,6 +22,10 @@ export function arredondar(valor: number): number {
 
 export function formatarReais(valor: number): string {
   return `R$ ${valor.toFixed(2).replace(".", ",")}`;
+}
+
+export function formatarDesconto(valor: number): string {
+  return `- ${formatarReais(Math.abs(valor))}`;
 }
 
 export function aceitaGrupo(lote: LoteVenda): boolean {
@@ -66,11 +70,16 @@ export function calcularPedido(
 
     const grupo = gruposPorLote[lote.id];
     if (grupo && aceitaGrupo(lote)) {
-      linhas.push({
-        chave: `grupo-${lote.id}`,
-        descricao: `1x ${lote.nome} (grupo ${grupo.nome})`,
-        valor: precoNoGrupo(lote),
-      });
+      const preco = arredondar(Number(lote.preco));
+      linhas.push(
+        { chave: `grupo-${lote.id}`, descricao: `${lote.nome} · Pacote de grupo`, valor: preco },
+        {
+          chave: `desconto-${lote.id}`,
+          descricao: `Desconto de grupo (${Math.round(Number(lote.descontoGrupo ?? 0) * 100)}%)`,
+          valor: arredondar(precoNoGrupo(lote) - preco),
+          desconto: true,
+        },
+      );
     }
   }
 
