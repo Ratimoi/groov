@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
+import { BarraSegmentada } from "../components/BarraSegmentada";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { formatarDataHora } from "../utils/evento";
 import { arredondar, formatarReais, precoNoGrupo, TAXA_SERVICO } from "../utils/lote";
@@ -142,9 +143,7 @@ export default function PagamentoConfirmado() {
                 </Text>
               </View>
             </View>
-            <View className="h-2 rounded-full bg-surface-container-high overflow-hidden">
-              <View className="h-full rounded-full bg-primary-container" style={{ width: `${totalGrupo ? (pagos / totalGrupo) * 100 : 0}%` }} />
-            </View>
+            <BarraSegmentada total={totalGrupo} pagos={pagos} />
             {!grupoConfirmado ? (
               <>
                 <Text className="font-body-sm text-body-sm text-on-surface-variant">

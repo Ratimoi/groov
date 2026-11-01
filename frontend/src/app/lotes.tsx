@@ -9,7 +9,7 @@ import { CardLote, CardPacoteGrupo } from "../components/CardLote";
 import { ALTURA_NAVBAR, MARGEM_INFERIOR_NAVBAR } from "../components/NavBar";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useLotesEvento } from "../hooks/useLotesEvento";
-import { aceitaGrupo, calcularPedido, formatarReais } from "../utils/lote";
+import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais } from "../utils/lote";
 
 export default function Lotes() {
   const { eventoId } = useLocalSearchParams<{ eventoId: string }>();
@@ -92,8 +92,12 @@ export default function Lotes() {
                 <View className="border-b border-white/10 pb-stack-md mb-stack-md gap-2">
                   {pedido.linhas.map((linha) => (
                     <View key={linha.chave} className="flex-row justify-between items-center">
-                      <Text className="flex-1 font-body-sm text-body-sm text-white/90 pr-3">{linha.descricao}</Text>
-                      <Text className="font-body-sm text-body-sm text-white">{formatarReais(linha.valor)}</Text>
+                      <Text className={`flex-1 font-body-sm text-body-sm pr-3 ${linha.desconto ? "text-secondary-container" : "text-white/90"}`}>
+                        {linha.descricao}
+                      </Text>
+                      <Text className={`font-body-sm text-body-sm ${linha.desconto ? "text-secondary-container" : "text-white"}`}>
+                        {linha.desconto ? formatarDesconto(linha.valor) : formatarReais(linha.valor)}
+                      </Text>
                     </View>
                   ))}
                   <View className="flex-row justify-between items-center">
