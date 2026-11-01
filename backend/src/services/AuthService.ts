@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { UserModel } from "../models/UserModel";
-import type { AuthServiceContract, LoginRequest, LoginResponse } from "../types/auth";
-import type { PublicUser } from "../types/user";
+import type { AuthServiceContract, LoginRequest, LoginResponse, SessionUser } from "../types/auth";
 import { AppError } from "../utils/AppError";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { signToken } from "../utils/token";
@@ -32,11 +31,14 @@ export class AuthService implements AuthServiceContract {
       throw new AppError("Credenciais inválidas", 401);
     }
 
-    const { senha: _senha, cpf: _cpf, ...usuario } = user;
-    return { token: signToken(user.id), usuario };
+    const { senha: _senha, cpf, ...usuario } = user;
+    return { token: signToken(user.id), usuario: { ...usuario, temCpf: cpf != null } };
   }
 
-  async me(userId: string): Promise<PublicUser | null> {
-    return this.userModel.findById(userId);
+  async me(userId: string): Promise<SessionUser | null> {
+    const user = await this.userModel.findSelf(userId);
+    if (!user) return null;
+    const { cpf, ...usuario } = user;
+    return { ...usuario, temCpf: cpf != null };
   }
 }

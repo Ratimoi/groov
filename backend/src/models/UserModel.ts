@@ -31,6 +31,11 @@ export class UserModel {
     });
   }
 
+  // Só para o próprio usuário (/auth/me): traz o CPF para o service reduzir a um "tem ou não tem".
+  async findSelf(id: string): Promise<(PublicUser & { cpf: string | null }) | null> {
+    return this.prismaClient.usuario.findUnique({ where: { id }, omit: { senha: true } });
+  }
+
   async search(termo: string, excluirId: string, limite: number): Promise<UserSearchResult[]> {
     return this.prismaClient.usuario.findMany({
       where: {

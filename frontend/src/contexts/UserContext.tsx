@@ -9,6 +9,8 @@ export type Usuario = {
   avatarUrl?: string | null;
   email: string;
   papel: "CLIENTE" | "PRODUTOR" | "ADMIN";
+  // false em contas anteriores à exigência do CPF; ausente se a API for antiga.
+  temCpf?: boolean;
 };
 
 export type DadosCadastro = { nome: string; username: string; email: string; senha: string; cpf: string };
@@ -20,6 +22,7 @@ type UserContextData = {
   carregandoSessao: boolean;
   entrar: (email: string, senha: string) => Promise<void>;
   cadastrar: (dados: DadosCadastro) => Promise<void>;
+  informarCpf: (cpf: string) => Promise<void>;
   sair: () => void;
 };
 
@@ -75,6 +78,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     [entrar],
   );
 
+  // Conta antiga que ainda não tem CPF: manda o CPF e libera o app.
+  const informarCpf = useCallback(
+    async (cpf: string) => {
+      if (!user) return;
+      await api(`/usuarios/${user.id}`, { method: "PUT", token, body: { cpf } });
+      setUser({ ...user, temCpf: true });
+    },
+    [user, token],
+  );
+
   const sair = useCallback(() => {
     apagarToken();
     setToken(null);
@@ -82,8 +95,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const valor = useMemo(
-    () => ({ user, token, carregandoSessao, entrar, cadastrar, sair }),
-    [user, token, carregandoSessao, entrar, cadastrar, sair],
+    () => ({ user, token, carregandoSessao, entrar, cadastrar, informarCpf, sair }),
+    [user, token, carregandoSessao, entrar, cadastrar, informarCpf, sair],
   );
 
   return <UserContext.Provider value={valor}>{children}</UserContext.Provider>;

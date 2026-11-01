@@ -33,10 +33,19 @@ describe("autenticação", () => {
       const res = await request(app).post("/auth/login").send({ email: "ana@example.com", senha: SENHA });
 
       expect(res.status).toBe(200);
-      expect(res.body.usuario).toEqual(publico);
+      expect(res.body.usuario).toEqual({ ...publico, temCpf: false });
       expect(JSON.stringify(res.body)).not.toContain(usuarioComSenha.senha);
       expect(verifyToken(res.body.token)).toBe("u1");
       expect(prismaMock.usuario.findUnique).toHaveBeenCalledWith({ where: { email: "ana@example.com" } });
+    });
+
+    it("avisa que a conta tem CPF sem nunca devolver o número", async () => {
+      prismaMock.usuario.findUnique.mockResolvedValue({ ...usuarioComSenha, cpf: "52998224725" });
+
+      const res = await request(app).post("/auth/login").send({ email: "ana@example.com", senha: SENHA });
+
+      expect(res.body.usuario.temCpf).toBe(true);
+      expect(JSON.stringify(res.body)).not.toContain("52998224725");
     });
 
     it("o token expira no prazo configurado (padrão 1 dia)", async () => {
@@ -101,7 +110,16 @@ describe("autenticação", () => {
       const res = await request(app).get("/auth/me").set(bearer("u1"));
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual(publico);
+      expect(res.body).toEqual({ ...publico, temCpf: false });
+    });
+
+    it("informa temCpf sem expor o CPF", async () => {
+      prismaMock.usuario.findUnique.mockResolvedValue({ ...publico, cpf: "52998224725" });
+
+      const res = await request(app).get("/auth/me").set(bearer("u1"));
+
+      expect(res.body.temCpf).toBe(true);
+      expect(res.body).not.toHaveProperty("cpf");
     });
 
     it("aceita o esquema Bearer em qualquer caixa", async () => {
