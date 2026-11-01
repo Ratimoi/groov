@@ -18,17 +18,22 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   let prisma: PrismaClient;
   let app: App;
 
-  // CPF válido e único por usuário: 9 dígitos a partir de um contador + os 2 verificadores.
-  let proximoCpf = Number(run.replace(/\D/g, "").slice(0, 6) || "1") * 1000;
+  // CPF válido e único por usuário: 9 dígitos aleatórios (nunca todos iguais) + os 2 verificadores.
+  const usados = new Set<string>();
   const gerarCpf = () => {
-    const base = String(++proximoCpf).padStart(9, "1").slice(0, 9);
     const dv = (digitos: string) => {
       const soma = digitos.split("").reduce((total, d, i) => total + Number(d) * (digitos.length + 1 - i), 0);
       const resto = (soma * 10) % 11;
       return resto === 10 ? 0 : resto;
     };
-    const d1 = dv(base);
-    return `${base}${d1}${dv(`${base}${d1}`)}`;
+    for (;;) {
+      const base = String(Math.floor(Math.random() * 1e9)).padStart(9, "0");
+      const d1 = dv(base);
+      const cpf = `${base}${d1}${dv(`${base}${d1}`)}`;
+      if (/^(\d)\1{10}$/.test(cpf) || usados.has(cpf)) continue;
+      usados.add(cpf);
+      return cpf;
+    }
   };
 
   const auth = (usuario: Usuario) => ({ Authorization: `Bearer ${usuario.token}` });
