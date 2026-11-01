@@ -60,7 +60,7 @@ jobs:
       # ...e o resultado precisa ser idêntico ao schema.prisma. Falha se alguém mudar o schema sem
       # criar a migração, ou apagar migrações (o banco de produção nunca receberia a mudança).
       - name: Confere que o schema não tem alterações sem migração
-        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+        run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
         env:
           DATABASE_URL: ${{ env.MIGRATIONS_DATABASE_URL }}
 

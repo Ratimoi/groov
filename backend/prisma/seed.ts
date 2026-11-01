@@ -1,8 +1,9 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import process from "process";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "../src/utils/password";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
 const hora = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
 
