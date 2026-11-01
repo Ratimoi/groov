@@ -13,6 +13,8 @@ export type Usuario = {
   temCpf?: boolean;
 };
 
+export type DadosEditaveis = Partial<{ nome: string; username: string; email: string; cpf: string }>;
+
 export type DadosCadastro = { nome: string; username: string; email: string; senha: string; cpf: string };
 
 type UserContextData = {
@@ -23,6 +25,7 @@ type UserContextData = {
   entrar: (email: string, senha: string) => Promise<void>;
   cadastrar: (dados: DadosCadastro) => Promise<void>;
   informarCpf: (cpf: string) => Promise<void>;
+  atualizarDados: (dados: DadosEditaveis) => Promise<void>;
   sair: () => void;
 };
 
@@ -78,15 +81,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     [entrar],
   );
 
-  // Conta antiga que ainda não tem CPF: manda o CPF e libera o app.
-  const informarCpf = useCallback(
-    async (cpf: string) => {
+  // Salva só os campos enviados (PUT /usuarios/:id) e atualiza o usuário da sessão.
+  const atualizarDados = useCallback(
+    async (dados: DadosEditaveis) => {
       if (!user) return;
-      await api(`/usuarios/${user.id}`, { method: "PUT", token, body: { cpf } });
-      setUser({ ...user, temCpf: true });
+      const salvo = await api<Usuario>(`/usuarios/${user.id}`, { method: "PUT", token, body: dados });
+      setUser({ ...user, ...salvo, temCpf: dados.cpf ? true : user.temCpf });
     },
     [user, token],
   );
+
+  // Conta antiga que ainda não tem CPF: manda o CPF e libera o app.
+  const informarCpf = useCallback((cpf: string) => atualizarDados({ cpf }), [atualizarDados]);
 
   const sair = useCallback(() => {
     apagarToken();
@@ -95,8 +101,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const valor = useMemo(
-    () => ({ user, token, carregandoSessao, entrar, cadastrar, informarCpf, sair }),
-    [user, token, carregandoSessao, entrar, cadastrar, informarCpf, sair],
+    () => ({ user, token, carregandoSessao, entrar, cadastrar, informarCpf, atualizarDados, sair }),
+    [user, token, carregandoSessao, entrar, cadastrar, informarCpf, atualizarDados, sair],
   );
 
   return <UserContext.Provider value={valor}>{children}</UserContext.Provider>;
