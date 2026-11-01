@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
@@ -24,6 +25,36 @@ const ROTULO_STATUS: Record<Participante["status"], string> = {
   PENDENTE: "PENDENTE",
   REEMBOLSADO: "REEMBOLSADO",
 };
+
+const ROXO: [number, number, number] = [0xbc, 0x13, 0xfe];
+const CIANO: [number, number, number] = [0x00, 0xdc, 0xe7];
+
+// Cor do gradiente roxo→ciano na posição t (0 a 1), para o gradiente atravessar a barra
+// inteira em vez de recomeçar em cada segmento.
+function corNoGradiente(t: number) {
+  const [r, g, b] = ROXO.map((canal, i) => Math.round(canal + (CIANO[i] - canal) * t));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function BarraSegmentada({ total, pagos }: { total: number; pagos: number }) {
+  return (
+    <View className="flex-row gap-1">
+      {Array.from({ length: total }, (_, indice) =>
+        indice < pagos ? (
+          <LinearGradient
+            key={indice}
+            colors={[corNoGradiente(indice / total), corNoGradiente((indice + 1) / total)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            className="flex-1 h-2 rounded-full"
+          />
+        ) : (
+          <View key={indice} className="flex-1 h-2 rounded-full bg-surface-container-high" />
+        ),
+      )}
+    </View>
+  );
+}
 
 function Avatar({ pessoa, tamanho = 32 }: { pessoa: Pessoa; tamanho?: number }) {
   return (
@@ -62,12 +93,21 @@ function CardCompra({
   const possoPagar = compra.status === "PENDENTE" && !expirada && minhaCota?.status === "PENDENTE";
 
   return (
-    <View className="bg-surface-container-low border border-white/10 rounded-xl p-4 gap-3">
+    <View className="bg-[rgba(26,26,26,0.6)] border border-white/10 rounded-xl overflow-hidden p-4 gap-3">
+      {evento.imagemUrl && (
+        <Image
+          source={{ uri: evento.imagemUrl }}
+          blurRadius={6}
+          resizeMode="cover"
+          className="absolute inset-0"
+          style={{ opacity: 0.2 }}
+        />
+      )}
       <View className="flex-row justify-between items-start">
         <View className="flex-1 pr-3 gap-1">
           {evento.categoria?.nome && (
-            <View className="self-start px-2 py-0.5 rounded bg-primary-container/20 border border-primary-container/40">
-              <Text className="font-label-caps text-[10px] text-primary uppercase">{evento.categoria.nome}</Text>
+            <View className="self-start px-[9px] py-[3px] rounded-full bg-primary-container/20 border border-primary-container/30">
+              <Text className="font-label-caps text-[10px] text-primary-container uppercase">{evento.categoria.nome}</Text>
             </View>
           )}
           <Text className="font-headline-md text-headline-md text-primary" numberOfLines={2}>
@@ -93,19 +133,16 @@ function CardCompra({
             <Text className="font-label-caps text-label-caps text-error">EXPIRADA</Text>
           ) : (
             <>
-              <View className="flex-row items-center gap-1">
-                <MaterialIcons name="timer" size={18} color="#bc13fe" />
-                <Text className="font-ticket-data text-primary-container" style={{ fontSize: 18 }}>
-                  {formatarRestante(contagem)}
-                </Text>
-              </View>
-              <Text className="font-label-caps text-[10px] text-on-surface-variant">EXPIRA EM</Text>
+              <Text className="font-label-caps text-[10px] text-on-surface-variant">RESERVA EXPIRA EM</Text>
+              <Text className="font-ticket-data text-primary-container" style={{ fontSize: 20, lineHeight: 24 }}>
+                {formatarRestante(contagem)}
+              </Text>
             </>
           )}
         </View>
       </View>
 
-      <View className="rounded-lg border border-white/10 p-3 gap-2">
+      <View className="rounded-lg border border-white/10 bg-[rgba(19,19,19,0.8)] p-3 gap-2">
         <View className="flex-row justify-between items-end">
           <Text className="font-body-sm text-body-sm text-on-surface-variant">Progresso do Lote</Text>
           <Text className="font-body-sm text-body-sm text-on-surface-variant">
@@ -115,12 +152,7 @@ function CardCompra({
             Membros
           </Text>
         </View>
-        <View className="h-2 rounded-full bg-surface-container-high overflow-hidden">
-          <View
-            className="h-full rounded-full bg-primary-container"
-            style={{ width: `${total === 0 ? 0 : (pagos / total) * 100}%` }}
-          />
-        </View>
+        <BarraSegmentada total={total} pagos={pagos} />
         {!confirmada && !expirada && faltam > 0 && (
           <Text className="font-body-sm text-[11px] text-primary text-right">
             Faltam {faltam} {faltam === 1 ? "compra" : "compras"} para confirmar desconto
@@ -140,7 +172,7 @@ function CardCompra({
               </Text>
               <View
                 className={`px-3 py-1 rounded-full border ${
-                  pago ? "border-secondary-container/50 bg-secondary-container/10" : "border-white/15 bg-white/5"
+                  pago ? "border-secondary-container/30 bg-secondary-container/10" : "border-white/15 bg-white/5"
                 }`}
               >
                 <Text className={`font-label-caps text-[10px] ${pago ? "text-secondary-container" : "text-on-surface-variant"}`}>
@@ -164,8 +196,20 @@ function CardCompra({
         </TouchableOpacity>
       )}
       {confirmada && (
-        <TouchableOpacity activeOpacity={0.8} onPress={onVerIngresso} className="self-center rounded-lg overflow-hidden bg-secondary-container px-6 py-2.5">
-          <Text className="font-label-caps text-label-caps text-on-secondary uppercase">Visualizar Ingresso</Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onVerIngresso}
+          className="self-center rounded-lg"
+          style={{ shadowColor: "#bc13fe", shadowOpacity: 0.4, shadowRadius: 7.5, shadowOffset: { width: 0, height: 0 }, elevation: 6 }}
+        >
+          <LinearGradient
+            colors={["#00dce7", "#bc13fe"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            className="rounded-lg px-6 py-2.5"
+          >
+            <Text className="font-label-caps text-[12px] tracking-[1.2px] text-white">Visualizar Ingresso</Text>
+          </LinearGradient>
         </TouchableOpacity>
       )}
     </View>
