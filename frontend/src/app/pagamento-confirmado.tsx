@@ -47,7 +47,7 @@ export default function PagamentoConfirmado() {
     );
   }
 
-  const { pedidos, compraGrupo, nomeGrupo } = resultado;
+  const { pedidos, compraGrupo, nomeGrupo, metodo } = resultado;
   const meuParticipante = compraGrupo?.participantes.find((participante) => participante.usuarioId === user?.id);
   const evento = pedidos[0]?.evento ?? compraGrupo?.lote.evento;
 
@@ -125,7 +125,7 @@ export default function PagamentoConfirmado() {
             <Linha key={pedido.id} rotulo={`${pedido.quantidade}x ${pedido.lote.nome}`} valor={formatarReais(Number(pedido.valor))} />
           ))}
           {compraGrupo && <Linha rotulo={`Sua cota (${nomeGrupo})`} valor={formatarReais(cotaGrupo)} />}
-          <Linha rotulo="Método de cobrança" valor="Simulado" />
+          <Linha rotulo="Método de cobrança" valor={metodo ? `${metodo} (simulado)` : "Simulado"} />
           <Linha rotulo="Total pago" valor={formatarReais(totalPago)} destaque />
         </View>
 
