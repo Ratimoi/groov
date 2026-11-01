@@ -44,6 +44,8 @@ function Conteudo() {
       <Tabs.Screen name="criar-grupo" />
       <Tabs.Screen name="pagamento-confirmado" />
       <Tabs.Screen name="ingresso" />
+      <Tabs.Screen name="escanear" />
+      <Tabs.Screen name="entrar-grupo" />
     </Tabs>
   );
 }

@@ -60,6 +60,13 @@ export type IngressoApi = {
   dono: { id: string; nome: string; username: string };
 };
 
+// Resposta de POST /ingressos/validar (200, 404 e 409 trazem o mesmo formato).
+export type ValidacaoApi = {
+  resultado: "VALIDO" | "JA_UTILIZADO" | "INVALIDO";
+  mensagem: string;
+  ingresso: IngressoApi | null;
+};
+
 // O que a tela "Pagamento Confirmado" mostra: o que acabou de ser pago.
 export type ResultadoCompra = {
   pedidos: PedidoApi[];

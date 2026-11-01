@@ -18,6 +18,22 @@ export class GroupController {
     }
   };
 
+  createInvite = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.groupService.createInvite(req.params.id, getAuthUser(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  join = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.groupService.join(req.body, getAuthUser(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       res.status(200).json(await this.groupService.findAll(getAuthUser(req)));

@@ -6,6 +6,7 @@ import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
+import { compartilharConvite } from "../utils/convite";
 
 type PessoaBusca = { id: string; nome: string; username: string; avatarUrl: string | null };
 
@@ -69,7 +70,7 @@ export default function CriarGrupo() {
     );
   };
 
-  const criar = async () => {
+  const criar = async (compartilhar = false) => {
     setCriando(true);
     setErro("");
     let grupoId: string | null = null;
@@ -79,6 +80,9 @@ export default function CriarGrupo() {
       for (const pessoa of selecionados) {
         await api(`/grupos/${grupo.id}/members`, { method: "POST", token, body: { usuarioId: pessoa.id } });
       }
+      // O link só existe depois do grupo: cria e já abre o compartilhamento. Se o usuário
+      // cancelar a folha, o grupo continua criado e ele segue para a lista.
+      if (compartilhar) await compartilharConvite(grupo.id, nome.trim(), token).catch(() => undefined);
       router.replace("/grupos");
     } catch (error) {
       // O grupo já existe: segue para a lista (os convites faltantes se refazem lá) em vez de
@@ -190,8 +194,21 @@ export default function CriarGrupo() {
 
         <TouchableOpacity
           activeOpacity={0.8}
+          disabled={!nome.trim() || criando}
+          onPress={() => criar(true)}
+          className="mt-6 flex-row items-center justify-center gap-2 rounded-xl bg-surface-container py-3.5 px-4"
+          style={{ opacity: nome.trim() && !criando ? 1 : 0.5 }}
+        >
+          <MaterialIcons name="share" size={18} color="#ebb2ff" />
+          <Text className="font-body-md text-body-md font-bold text-primary text-center flex-shrink">
+            Criar e Compartilhar Link do Grupo
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
           disabled={!nome.trim() || !completo || criando}
-          onPress={criar}
+          onPress={() => criar()}
           className="mt-8 bg-primary-container rounded-xl py-4 flex-row items-center justify-center gap-2"
           style={{ opacity: nome.trim() && completo && !criando ? 1 : 0.5, shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: 6 }}
         >

@@ -10,7 +10,7 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 const { default: app } = await import("../src/app");
 
 const SENHA = "senha-segura-123";
-const omit = { senha: true };
+const omit = { senha: true, cpf: true };
 
 const usuario = {
   id: "u1",
@@ -24,7 +24,7 @@ describe("/usuarios", () => {
   beforeEach(resetPrismaMock);
 
   describe("POST (cadastro público)", () => {
-    const body = { nome: "Ana", username: "ana", email: "ana@example.com", senha: SENHA };
+    const body = { nome: "Ana", username: "ana", email: "ana@example.com", senha: SENHA, cpf: "529.982.247-25" };
 
     it("cria o usuário sem exigir login e sem devolver a senha", async () => {
       prismaMock.usuario.create.mockResolvedValue(usuario);
@@ -35,7 +35,7 @@ describe("/usuarios", () => {
       expect(res.body).toMatchObject({ id: "u1", username: "ana" });
       expect(res.body).not.toHaveProperty("senha");
       expect(prismaMock.usuario.create).toHaveBeenCalledWith({
-        data: { nome: "Ana", username: "ana", email: "ana@example.com", senha: expect.any(String) },
+        data: { nome: "Ana", username: "ana", email: "ana@example.com", cpf: "52998224725", senha: expect.any(String) },
         omit,
       });
     });
@@ -74,6 +74,50 @@ describe("/usuarios", () => {
       expect(res.status).toBe(400);
       expect(res.body.message).toContain("pelo menos 8 caracteres");
       expect(prismaMock.usuario.create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["ausente", undefined],
+      ["vazio", ""],
+    ])("cpf %s responde 400 (obrigatório) e não grava", async (_nome, cpf) => {
+      const res = await request(app).post("/usuarios").send({ ...body, cpf });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("cpf é obrigatório");
+      expect(prismaMock.usuario.create).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["dígito verificador errado", "529.982.247-26"],
+      ["todos os dígitos iguais", "111.111.111-11"],
+      ["curto demais", "5299822472"],
+      ["com letras", "5299822472a"],
+      ["que não é texto", 52998224725],
+    ])("cpf %s responde 400 (inválido) e não grava", async (_nome, cpf) => {
+      const res = await request(app).post("/usuarios").send({ ...body, cpf });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("cpf inválido");
+      expect(prismaMock.usuario.create).not.toHaveBeenCalled();
+    });
+
+    it("cpf sem máscara também é aceito e a resposta nunca traz o cpf", async () => {
+      prismaMock.usuario.create.mockResolvedValue(usuario);
+
+      const res = await request(app).post("/usuarios").send({ ...body, cpf: "52998224725" });
+
+      expect(res.status).toBe(201);
+      expect(res.body).not.toHaveProperty("cpf");
+      expect(prismaMock.usuario.create.mock.calls[0][0].data.cpf).toBe("52998224725");
+    });
+
+    it("cpf repetido responde 409", async () => {
+      prismaMock.usuario.create.mockRejectedValue(prismaError("P2002", { target: ["cpf"] }));
+
+      const res = await request(app).post("/usuarios").send(body);
+
+      expect(res.status).toBe(409);
+      expect(res.body.fields).toEqual(["cpf"]);
     });
 
     it("username ou email repetido responde 409", async () => {

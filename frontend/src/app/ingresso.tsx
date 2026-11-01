@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { QrCode } from "../components/QrCode";
+import { TransferirIngresso } from "../components/TransferirIngresso";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api } from "../utils/api";
 import { formatarCodigo, type IngressoApi } from "../utils/compras";
@@ -148,6 +149,8 @@ export default function Ingresso() {
             <MaterialIcons name="place" size={18} color="#00eefa" />
             <Text className="font-body-md text-body-md font-bold text-white">Como Chegar</Text>
           </TouchableOpacity>
+
+          {valido && <TransferirIngresso ingresso={ingresso} aoTransferir={() => router.replace("/perfil")} />}
         </ScrollView>
       )}
     </View>

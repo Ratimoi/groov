@@ -79,11 +79,12 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 
 ```json
 // requisição: todos os campos de texto, avatarUrl opcional
-{ "nome": "Ana", "username": "ana", "email": "ana@example.com", "senha": "minha-senha-123" }
+{ "nome": "Ana", "username": "ana", "email": "ana@example.com", "senha": "minha-senha-123", "cpf": "529.982.247-25" }
 // 201 → o usuário (sem senha)
 ```
 
 - `senha`: mínimo **8 caracteres**.
+- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`.
 - `username` e `email` são únicos: repetido dá `409` com `"fields": ["username"]` (ou `"email"`).
 - Todo novo usuário é `CLIENTE`. Não dá para escolher o papel no cadastro.
 - Depois do cadastro, faça o login (o cadastro não devolve token).
@@ -93,7 +94,7 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 | Rota | Quem acessa |
 |---|---|
 | `GET /usuarios/:id` | o próprio usuário ou ADMIN |
-| `PUT /usuarios/:id` | o próprio usuário ou ADMIN. Aceita `nome`, `username`, `email`, `avatarUrl`, `senha`; só ADMIN altera `papel` |
+| `PUT /usuarios/:id` | o próprio usuário ou ADMIN. Aceita `nome`, `username`, `email`, `avatarUrl`, `cpf`, `senha`; só ADMIN altera `papel` |
 | `DELETE /usuarios/:id` | o próprio usuário ou ADMIN → `204` |
 | `GET /usuarios` | só ADMIN |
 
@@ -142,6 +143,12 @@ Só `PRODUTOR` ou `ADMIN`; editar e apagar exigem ser o criador do evento (ADMIN
 - `terminaEm` não pode ser antes de `comecaEm`.
 - No `PUT`, envie só o que mudou; `null` limpa um campo opcional.
 - `DELETE` devolve `204`. Evento que já tem lotes ou pedidos dá `409`.
+
+### Tags e avaliações do evento
+
+- **`tags`** (lista de textos, até 8, cada uma com até 24 caracteres, sem repetição) são selos de classificação como `"18+"` ou `"Open bar"`. Quem cria ou edita o evento envia `tags` no `POST`/`PUT /eventos`; `[]` limpa. Vêm em todo evento (`[]` quando não há).
+- **`GET /eventos/:id/avaliacoes`** (público) devolve `{ "evento": { "media": 4.3, "total": 3 }, "organizador": { "id", "nome", "username", "avatarUrl", "media": 3.9, "total": 10 } }`. A **nota do organizador** é a média de todos os eventos dele. `media` é `null` quando ainda não há avaliações; `organizador` é `null` se o evento não tem criador.
+- **`POST /eventos/:id/avaliacoes`** (logado) com `{ "nota": 5, "comentario": "opcional, até 500" }`. A nota é um inteiro de 1 a 5. Só quem **foi ao evento** (tem ingresso `USADO`, validado na portaria) avalia: `403` para os demais e para o próprio organizador. Cada pessoa tem uma nota por evento: avaliar de novo **substitui**.
 
 ## Lotes (ingressos de um evento)
 
@@ -200,6 +207,15 @@ Todas as rotas exigem login. Quem **não participa** de um grupo recebe `404`, c
 | `GET /grupos/:id/members` | membros e ADMIN | |
 | `POST /grupos/:id/members` | líder ou ADMIN | corpo `{ "usuarioId": "..." }`. Quem já é membro dá `409` |
 | `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | `204`. Um membro pode **sair sozinho**. O líder não pode ser removido (`400`) |
+
+### Convite por link
+
+O líder compartilha um **código** (8 caracteres, ex.: `K7M2QX9P`). Quem tem o código entra no grupo; o app monta o link `groov://entrar-grupo?codigo=K7M2QX9P`.
+
+| Rota | Quem | Observação |
+|---|---|---|
+| `POST /grupos/:id/convite` | líder ou ADMIN | devolve `{ "codigo": "K7M2QX9P" }`. O código do grupo é sempre o mesmo |
+| `POST /grupos/entrar` | qualquer logado | corpo `{ "codigo": "..." }` (maiúsculas e espaços não importam). Devolve `{ "grupo": { "id", "nome" }, "jaEraMembro": false }`. Código inexistente dá `404`; quem já é membro recebe `jaEraMembro: true` e não duplica |
 
 Membro (`GET /grupos/:id/members`):
 
@@ -284,10 +300,29 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 |---|---|
 | `GET /ingressos` | seus ingressos, do mais novo para o mais antigo, com `evento`, `lote` e `dono` (`id`, `nome`, `username`) |
 | `GET /ingressos/:id` | um ingresso seu |
+| `POST /ingressos/validar` | **só ADMIN.** Valida o ingresso na portaria (veja abaixo) |
+| `POST /ingressos/:id/transferir` | o dono passa o ingresso para outra pessoa (veja abaixo) |
 
 `codigoQr` tem o formato `GRV-` + 12 caracteres (`GRV-K7M2QX9PD4TA`): é o conteúdo do QR code.
 
-**O que ainda não existe na API:** categorias, validação de ingresso na portaria, estorno manual e pagamento real.
+### Transferir
+
+`POST /ingressos/:id/transferir` com `{ "username": "bia" }` (o `@` na frente é aceito; o username é exato). Devolve o ingresso já com o novo `donoId` e um **código novo**: o QR antigo deixa de valer. Só o dono transfere (`404` para os demais), só ingresso `VALIDO` (`409` se usado ou cancelado), destinatário inexistente dá `404` e transferir para si mesmo dá `400`.
+
+### Validar na portaria
+
+`POST /ingressos/validar` com `{ "codigo": "GRV-K7M2QX9PD4TA", "eventoId": "clx..." }` (`eventoId` é opcional; quando vem, ingresso de outro evento é recusado). O código ignora espaços e maiúsculas. Resposta: `{ "resultado", "mensagem", "ingresso" }`.
+
+| Situação | HTTP | `resultado` |
+|---|---|---|
+| Entrada liberada (o ingresso passa a `USADO`, com `usadoEm`) | `200` | `VALIDO` |
+| Ingresso já utilizado | `409` | `JA_UTILIZADO` |
+| Ingresso cancelado, ou de outro evento | `409` | `INVALIDO` |
+| Código inexistente (`ingresso: null`) | `404` | `INVALIDO` |
+
+A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). `CLIENTE` e `PRODUTOR` recebem `403`.
+
+**O que ainda não existe na API:** categorias, estorno manual e pagamento real.
 
 ## Tipos TypeScript (sugestão)
 

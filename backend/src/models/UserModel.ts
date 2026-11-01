@@ -3,8 +3,8 @@ import prisma from "../config/prisma";
 import { isNotFoundError } from "../utils/prismaErrors";
 import type { PublicUser, UserCreateRequest, UserSearchResult, UserUpdateRequest } from "../types/user";
 
-// A senha nunca é lida do banco para as respostas da API.
-const omitPassword = { senha: true } as const;
+// A senha e o CPF nunca são lidos do banco para as respostas da API.
+const omitPassword = { senha: true, cpf: true } as const;
 
 export class UserModel {
   private prismaClient: PrismaClient;
@@ -47,6 +47,11 @@ export class UserModel {
   }
 
   // Único método que lê a senha (hash). Existe só para o login: não repassar o resultado à API.
+  async findIdByUsername(username: string): Promise<string | null> {
+    const usuario = await this.prismaClient.usuario.findUnique({ where: { username }, select: { id: true } });
+    return usuario?.id ?? null;
+  }
+
   async findByEmailWithPassword(email: string): Promise<Usuario | null> {
     return this.prismaClient.usuario.findUnique({
       where: { email },

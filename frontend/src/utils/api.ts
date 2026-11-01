@@ -2,10 +2,12 @@ const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 
 export class ApiError extends Error {
   status: number;
+  corpo: unknown;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, corpo: unknown = null) {
     super(message);
     this.status = status;
+    this.corpo = corpo;
   }
 }
 
@@ -35,7 +37,7 @@ export async function api<T = unknown>(caminho: string, { token, method = "GET",
 
   const dados = await resposta.json().catch(() => null);
   if (!resposta.ok) {
-    throw new ApiError(dados?.message ?? `Erro ${resposta.status}`, resposta.status);
+    throw new ApiError(dados?.message ?? `Erro ${resposta.status}`, resposta.status, dados);
   }
   return dados as T;
 }

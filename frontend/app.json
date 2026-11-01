@@ -2,7 +2,7 @@
   "expo": {
     "name": "Groov",
     "slug": "groov",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "groov",
@@ -35,7 +35,14 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O Groov usa a câmera para ler o QR code dos ingressos na portaria.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -32,7 +32,7 @@ export class AuthService implements AuthServiceContract {
       throw new AppError("Credenciais inválidas", 401);
     }
 
-    const { senha: _senha, ...usuario } = user;
+    const { senha: _senha, cpf: _cpf, ...usuario } = user;
     return { token: signToken(user.id), usuario };
   }
 

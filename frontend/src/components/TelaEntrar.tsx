@@ -3,6 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, Te
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUser } from "@/contexts/UserContext";
 import { ApiError } from "../utils/api";
+import { cpfValido, mascararCpf } from "../utils/cpf";
 
 const MIN_SENHA = 8;
 
@@ -12,7 +13,7 @@ type CampoProps = {
   onChange: (texto: string) => void;
   placeholder?: string;
   segredo?: boolean;
-  teclado?: "default" | "email-address";
+  teclado?: "default" | "email-address" | "numeric";
 };
 
 function Campo({ rotulo, valor, onChange, placeholder, segredo, teclado = "default" }: CampoProps) {
@@ -42,15 +43,20 @@ export function TelaEntrar() {
   const [nome, setNome] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [senha, setSenha] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
 
   const preenchido = modoCadastro
-    ? nome.trim() && username.trim() && email.trim() && senha
+    ? nome.trim() && username.trim() && email.trim() && cpf && senha
     : email.trim() && senha;
 
   const enviar = async () => {
+    if (modoCadastro && !cpfValido(cpf)) {
+      setErro("Informe um CPF válido.");
+      return;
+    }
     if (modoCadastro && senha.length < MIN_SENHA) {
       setErro(`A senha precisa ter pelo menos ${MIN_SENHA} caracteres.`);
       return;
@@ -58,7 +64,7 @@ export function TelaEntrar() {
     setEnviando(true);
     setErro("");
     try {
-      if (modoCadastro) await cadastrar({ nome, username, email, senha });
+      if (modoCadastro) await cadastrar({ nome, username, email, senha, cpf });
       else await entrar(email, senha);
     } catch (error) {
       setErro(error instanceof ApiError ? error.message : "Algo deu errado. Tente de novo.");
@@ -93,6 +99,15 @@ export function TelaEntrar() {
             </>
           )}
           <Campo rotulo="E-mail" valor={email} onChange={setEmail} placeholder="voce@email.com" teclado="email-address" />
+          {modoCadastro && (
+            <Campo
+              rotulo="CPF"
+              valor={cpf}
+              onChange={(texto) => setCpf(mascararCpf(texto))}
+              placeholder="000.000.000-00"
+              teclado="numeric"
+            />
+          )}
           <Campo
             rotulo={modoCadastro ? `Senha (mínimo ${MIN_SENHA} caracteres)` : "Senha"}
             valor={senha}
