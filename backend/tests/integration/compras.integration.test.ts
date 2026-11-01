@@ -1,3 +1,4 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -64,7 +65,7 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
 
   beforeAll(async () => {
     process.env.DATABASE_URL = url;
-    prisma = new PrismaClient({ datasourceUrl: url });
+    prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
     app = (await import("../../src/app")).default;
   });
 

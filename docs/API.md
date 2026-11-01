@@ -84,7 +84,7 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 ```
 
 - `senha`: mínimo **8 caracteres**.
-- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`.
+- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`. `POST /auth/login` e `GET /auth/me` trazem `temCpf` (boolean) no usuário: o app usa `temCpf: false` para pedir o CPF antes de liberar o resto.
 - `username` e `email` são únicos: repetido dá `409` com `"fields": ["username"]` (ou `"email"`).
 - Todo novo usuário é `CLIENTE`. Não dá para escolher o papel no cadastro.
 - Depois do cadastro, faça o login (o cadastro não devolve token).

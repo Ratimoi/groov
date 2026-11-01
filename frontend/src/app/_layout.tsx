@@ -16,6 +16,7 @@ import { Tabs } from "expo-router";
 import { NavBar } from "../components/NavBar";
 import { CarrinhoProvider } from "@/contexts/CarrinhoContext";
 import { UserProvider, useUser } from "@/contexts/UserContext";
+import { TelaCpf } from "../components/TelaCpf";
 import { TelaEntrar } from "../components/TelaEntrar";
 import { LinearGradient } from "expo-linear-gradient";
 import { cssInterop } from "nativewind";
@@ -32,6 +33,7 @@ function Conteudo() {
 
   if (carregandoSessao) return <View className="flex-1 bg-background" />;
   if (!user) return <TelaEntrar />;
+  if (user.temCpf === false) return <TelaCpf />;
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
@@ -45,6 +47,7 @@ function Conteudo() {
       <Tabs.Screen name="pagamento-confirmado" />
       <Tabs.Screen name="ingresso" />
       <Tabs.Screen name="escanear" />
+      <Tabs.Screen name="meus-dados" />
       <Tabs.Screen name="entrar-grupo" />
     </Tabs>
   );
