@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
@@ -15,9 +16,12 @@ const ESPERA_BUSCA_MS = 400;
 
 export default function CriarGrupo() {
   // `tamanho` vem do pacote de grupo do lote (você + convidados); sem ele não há limite além do máximo.
-  const { tamanho } = useLocalSearchParams<{ tamanho?: string }>();
+  // `loteId` e `eventoId` indicam que a criação começou na compra: ao terminar, volta para os lotes.
+  const { tamanho, loteId, eventoId } = useLocalSearchParams<{ tamanho?: string; loteId?: string; eventoId?: string }>();
   const router = useRouter();
   const { token } = useUser();
+  const { escolherGrupo } = useCarrinho();
+  const vindoDaCompra = !!loteId && !!eventoId;
   const espacoNavBar = useEspacoNavBar();
   const maxConvidados = tamanho && Number(tamanho) > 1 ? Number(tamanho) - 1 : MAX_CONVIDADOS_PADRAO;
 
@@ -51,7 +55,23 @@ export default function CriarGrupo() {
     };
   }, [busca, token]);
 
-  const voltar = () => (router.canGoBack() ? router.back() : router.replace("/grupos"));
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        setNome("");
+        setBusca("");
+        setResultados([]);
+        setSelecionados([]);
+        setCriando(false);
+        setErro("");
+      },
+      [],
+    ),
+  );
+
+  const voltarParaLotes = () => router.replace({ pathname: "/lotes", params: { eventoId } });
+  const voltar = () =>
+    vindoDaCompra ? voltarParaLotes() : router.canGoBack() ? router.back() : router.replace("/grupos");
   const idsSelecionados = new Set(selecionados.map((pessoa) => pessoa.id));
   const cheio = selecionados.length >= maxConvidados;
   // Vindo de um pacote de grupo, o grupo precisa ter exatamente o tamanho do pacote.
@@ -83,12 +103,18 @@ export default function CriarGrupo() {
       // O link só existe depois do grupo: cria e já abre o compartilhamento. Se o usuário
       // cancelar a folha, o grupo continua criado e ele segue para a lista.
       if (compartilhar) await compartilharConvite(grupo.id, nome.trim(), token).catch(() => undefined);
-      router.replace("/grupos");
+      if (!vindoDaCompra) {
+        router.replace("/grupos");
+        return;
+      }
+      if (completo && loteId) escolherGrupo(loteId, { id: grupo.id, nome: nome.trim() });
+      voltarParaLotes();
     } catch (error) {
       // O grupo já existe: segue para a lista (os convites faltantes se refazem lá) em vez de
       // deixar o usuário criar um segundo grupo igual.
       if (grupoId) {
-        router.replace("/grupos");
+        if (vindoDaCompra) voltarParaLotes();
+        else router.replace("/grupos");
         return;
       }
       setErro(error instanceof ApiError ? error.message : "Não foi possível criar o grupo.");
