@@ -72,6 +72,7 @@ export type ResultadoCompra = {
   pedidos: PedidoApi[];
   compraGrupo?: CompraGrupoApi;
   nomeGrupo?: string;
+  metodo?: string;
 };
 
 // "GRV-ABCDEFGHJKLM" -> "GRV-ABCD-EFGH-JKLM"
