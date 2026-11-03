@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { ModalGrupos } from "./ModalGrupos";
 import { disponiveis, formatarReais, resumoGrupo, type LoteVenda } from "../utils/lote";
@@ -69,6 +69,7 @@ export function CardLote({ data }: { data: LoteVenda }) {
 // Pacote de grupo: o usuário escolhe o grupo e paga a própria cota com desconto.
 export function CardPacoteGrupo({ data }: { data: LoteVenda }) {
   const router = useRouter();
+  const { eventoId } = useLocalSearchParams<{ eventoId: string }>();
   const { gruposPorLote, escolherGrupo } = useCarrinho();
   const [modalVisivel, setModalVisivel] = useState(false);
   const grupo = gruposPorLote[data.id];
@@ -143,7 +144,9 @@ export function CardPacoteGrupo({ data }: { data: LoteVenda }) {
         tamanho={tamanho}
         onClose={() => setModalVisivel(false)}
         onConfirmar={(escolhido) => escolherGrupo(data.id, escolhido)}
-        onCriarGrupo={() => router.push(`/criar-grupo?tamanho=${tamanho}`)}
+        onCriarGrupo={() =>
+          router.push({ pathname: "/criar-grupo", params: { tamanho, loteId: data.id, eventoId } })
+        }
       />
     </View>
   );
