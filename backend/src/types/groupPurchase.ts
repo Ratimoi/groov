@@ -13,9 +13,12 @@ export type GroupPurchaseCreateRequest = {
 // O iniciador é sempre o usuário logado, nunca vem do corpo da requisição.
 export type GroupPurchaseCreateBody = Omit<GroupPurchaseCreateRequest, "iniciadorId">;
 
+// `todos: true` = o iniciador paga a cota de todos os participantes ainda pendentes.
+export type GroupPurchasePayBody = { todos?: boolean };
+
 export interface GroupPurchaseServiceContract {
   create(data: GroupPurchaseCreateBody, actor: AuthUser): Promise<GroupPurchase>;
   findAll(actor: AuthUser): Promise<GroupPurchase[]>;
   findById(id: string, actor: AuthUser): Promise<GroupPurchase | null>;
-  pay(id: string, actor: AuthUser): Promise<GroupPurchase>;
+  pay(id: string, actor: AuthUser, body?: GroupPurchasePayBody): Promise<GroupPurchase>;
 }

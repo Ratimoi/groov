@@ -268,7 +268,7 @@ Resposta `201` (e `GET`):
 
 ### `POST /grupos/compras/:id/pagar` (pagamento simulado da sua cota)
 
-Sem corpo. Cada participante paga a **própria** cota: o preço do lote com o desconto do grupo, mais a taxa de serviço (12,5%). A reserva do ingresso vira venda. Quando o **último** participante paga, a compra vira `CONFIRMADA` e os ingressos de todos são emitidos (antes disso ninguém recebe ingresso). Devolve a compra atualizada.
+Corpo opcional `{ "todos": true }`: o **iniciador** da compra paga também as cotas ainda pendentes dos demais participantes (cada ingresso sai no nome do seu dono; `403` para quem não iniciou, `409` se não há cota pendente). Sem corpo, cada participante paga a **própria** cota: o preço do lote com o desconto do grupo, mais a taxa de serviço (12,5%). A reserva do ingresso vira venda. Quando o **último** participante paga, a compra vira `CONFIRMADA` e os ingressos de todos são emitidos (antes disso ninguém recebe ingresso). Devolve a compra atualizada.
 
 - `404`: a compra não existe ou você não participa. `403`: ADMIN que não participa.
 - `409`: você já pagou, a compra já foi confirmada ou o prazo expirou.
