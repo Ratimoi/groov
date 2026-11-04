@@ -49,12 +49,25 @@ export function resumoGrupo(lote: LoteVenda) {
   return { tamanho, unitario, total, totalCheio, economia: arredondar(totalCheio - total) };
 }
 
-// Monta o resumo do pedido: quem paga individual leva `quantidade` ingressos;
-// quem escolheu o pacote de grupo paga a própria cota pelo preço com desconto.
+// Quanto o pacote de grupo custa conforme quem paga: só a cota de quem compra ou a de todo o grupo.
+export type CoberturaGrupo = "meu" | "todos";
+
+export function totalDoGrupo(lote: LoteVenda, cobertura: CoberturaGrupo) {
+  const pessoas = cobertura === "todos" ? (lote.tamanhoGrupo ?? 1) : 1;
+  const cheio = arredondar(Number(lote.preco) * pessoas);
+  const liquido = arredondar(precoNoGrupo(lote) * pessoas);
+  const taxa = arredondar(liquido * TAXA_SERVICO);
+  return { pessoas, cheio, liquido, taxa, total: arredondar(liquido + taxa) };
+}
+
+// Monta o resumo do pedido: quem paga individual leva `quantidade` ingressos; quem escolheu o
+// pacote de grupo paga a própria cota pelo preço com desconto, ou a de todo o grupo quando a
+// cobertura do lote é "todos".
 export function calcularPedido(
   lotes: LoteVenda[],
   quantidades: Record<string, number>,
   gruposPorLote: Record<string, GrupoEscolhido | undefined>,
+  coberturas: Record<string, CoberturaGrupo | undefined> = {},
 ) {
   const linhas: LinhaPedido[] = [];
 
@@ -70,13 +83,17 @@ export function calcularPedido(
 
     const grupo = gruposPorLote[lote.id];
     if (grupo && aceitaGrupo(lote)) {
-      const preco = arredondar(Number(lote.preco));
+      const { pessoas, cheio, liquido } = totalDoGrupo(lote, coberturas[lote.id] ?? "meu");
       linhas.push(
-        { chave: `grupo-${lote.id}`, descricao: `${lote.nome} · Pacote de grupo`, valor: preco },
+        {
+          chave: `grupo-${lote.id}`,
+          descricao: pessoas > 1 ? `${pessoas}x ${lote.nome} · Pacote de grupo` : `${lote.nome} · Pacote de grupo`,
+          valor: cheio,
+        },
         {
           chave: `desconto-${lote.id}`,
           descricao: `Desconto de grupo (${Math.round(Number(lote.descontoGrupo ?? 0) * 100)}%)`,
-          valor: arredondar(precoNoGrupo(lote) - preco),
+          valor: arredondar(liquido - cheio),
           desconto: true,
         },
       );
