@@ -157,6 +157,9 @@ export default function DetalhesEvento() {
         </View>
 
         <View className="px-margin-mobile py-6">
+          <Text className="font-label-caps text-label-caps text-on-surface-variant uppercase text-center mb-2">
+            {contagem.encerrado ? "O evento já começou" : "Tempo restante para o evento começar"}
+          </Text>
           <View className="bg-surface-container-high border border-primary-container/30 rounded-xl flex-row justify-between items-center p-stack-md">
             {blocoContagem(contagem.dias, "DIAS")}
             <Text className="text-primary-container font-bold">:</Text>
