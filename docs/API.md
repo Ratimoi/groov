@@ -383,3 +383,11 @@ const { data: eventos } = await api<Pagina<Evento>>("/eventos?page=1&limit=20");
 ```
 
 Na `HomeScreen`, a chamada atual a `${apiUrl}/filmes` deve virar `/eventos`, e o resultado é lido de `.data`. Trate também o estado inicial vazio (`eventos[0]` não existe antes da resposta chegar).
+
+## Admin
+
+| Rota | O que faz |
+|---|---|
+| `POST /admin/resetar-seed` | **só ADMIN.** Apaga todos os dados, menos a conta de quem pediu, e recria o seed de demonstração |
+
+Responde `200 { "mensagem" }`. Recusado com `403` quando `NODE_ENV=production` (o banco real nunca é zerado pela API) e com `500` se `SEED_PASSWORD` não estiver definida no servidor, pois é a senha das contas do seed. Os dados são apagados e recriados numa única transação: se algo falhar, nada muda.
