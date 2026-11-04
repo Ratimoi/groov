@@ -37,10 +37,14 @@ feature/xxx ──PR──▶ dev ──PR──▶ main
 2. Commitar seguindo [Conventional Commits](https://www.conventionalcommits.org/):
    `feat: `, `fix: `, `test: `, `chore: `, `docs: `, `refactor: `.
 3. Abrir Pull Request para `dev`. A CI roda automaticamente.
-4. Após aprovação e CI verde, fazer o merge em `dev` e apagar a branch.
+4. Após aprovação e CI verde, fazer o merge em `dev`. A branch é apagada automaticamente depois do merge.
 5. Periodicamente, abrir PR de `dev` para `main`. A CI roda de novo antes do merge.
 
 O deploy é disparado pelo push (merge) em `main`, depois que os jobs de backend e frontend passam. Veja a seção [Deploy](#deploy).
+
+## Proteção das branches e merge
+
+`main` e `dev` são protegidas: não aceitam force push nem exclusão, e só recebem mudança por Pull Request com os checks **Backend** e **Frontend** verdes. O repositório aceita apenas **merge commit** (squash e rebase estão desligados) e apaga a branch de trabalho depois do merge.
 
 ## Hotfix
 
@@ -108,13 +112,7 @@ As versões seguem o [versionamento semântico](https://semver.org/lang/pt-BR/) 
 - **`version` do app:** no `frontend/app.json` fica **sem o V** (`"version": "1.0.0"`), porque o Android e o EAS exigem número puro. Quem escreve `V` é só a tag, a release e a comunicação.
 - **Atualizações OTA:** o `runtimeVersion` do app segue a `version`. Mudou dependência nativa? Suba a versão (ao menos a minor) e gere um build novo; só mudanças em JS/TS vão por EAS Update.
 
-Para marcar uma versão, depois do merge em `main`:
-
-```bash
-git checkout main && git pull
-git tag -a V1.0.0 -m "V1.0.0"
-git push origin V1.0.0
-```
+**A tag e a release saem sozinhas.** Depois que o deploy da `main` termina com sucesso, o job *Release* da CI cria a tag e a release `V` + `version` do `frontend/app.json` (`1.4.0` → `V1.4.0`), com as notas geradas a partir dos PRs. Para lançar uma versão nova, basta subir a `version` no `app.json` antes do PR `dev → main`; se ela não mudou, a release já existe e o job só avisa. Só marque a tag à mão (`git tag -a V1.0.0 -m "V1.0.0" && git push origin V1.0.0`) se a CI estiver fora do ar.
 
 ## Gerar o APK (Android)
 
