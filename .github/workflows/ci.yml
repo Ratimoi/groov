@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [dev, main]
 
+# Um novo push no mesmo PR cancela a CI anterior dele. Pushes em dev/main têm grupo próprio (o
+# SHA), então nunca cancelam um deploy em andamento.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   backend:
     name: Backend
@@ -159,3 +165,76 @@ jobs:
 
       - run: npm ci
       - run: eas update --branch production --message "${{ github.sha }}" --non-interactive
+
+  release:
+    name: Release (tag e notas)
+    needs: [deploy-database, deploy-backend, deploy-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # A tag segue a versão do app (frontend/app.json): 1.4.0 -> V1.4.0. Só cria depois que o
+      # deploy inteiro passou. Se a versão não foi alterada, a release já existe e nada acontece.
+      - name: Cria a release da versão do app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          versao=$(node -p "require('./frontend/app.json').expo.version")
+          tag="V${versao}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::A release $tag já existe; suba a versão em frontend/app.json para gerar outra."
+            exit 0
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes
+
+  deploy-preview:
+    name: Deploy - OTA preview (dev)
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment: dev - groov-api
+    concurrency:
+      group: deploy-preview
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Confere o EXPO_TOKEN
+        id: token
+        # Roda antes do checkout, então a pasta frontend/ (default do job) ainda não existe.
+        working-directory: .
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::notice::EXPO_TOKEN não está no environment 'dev - groov-api'; o OTA de preview foi pulado."
+            echo "disponivel=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "disponivel=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.disponivel == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.token.outputs.disponivel == 'true'
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        if: steps.token.outputs.disponivel == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # O runtime do OTA vem da `version` do app.json: só chega ao APK dessa mesma versão.
+      - run: npm ci
+        if: steps.token.outputs.disponivel == 'true'
+      - run: eas update --branch preview --environment preview --message "${{ github.sha }}" --non-interactive
+        if: steps.token.outputs.disponivel == 'true'
