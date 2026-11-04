@@ -159,3 +159,27 @@ jobs:
 
       - run: npm ci
       - run: eas update --branch production --message "${{ github.sha }}" --non-interactive
+
+  release:
+    name: Release (tag e notas)
+    needs: [deploy-database, deploy-backend, deploy-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # A tag segue a versão do app (frontend/app.json): 1.4.0 -> V1.4.0. Só cria depois que o
+      # deploy inteiro passou. Se a versão não foi alterada, a release já existe e nada acontece.
+      - name: Cria a release da versão do app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          versao=$(node -p "require('./frontend/app.json').expo.version")
+          tag="V${versao}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::A release $tag já existe; suba a versão em frontend/app.json para gerar outra."
+            exit 0
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes
