@@ -11,7 +11,7 @@ import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useLotesEvento } from "../hooks/useLotesEvento";
 import { api, ApiError } from "../utils/api";
 import type { CompraGrupoApi, PedidoApi } from "../utils/compras";
-import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais } from "../utils/lote";
+import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais, totalDoGrupo, type CoberturaGrupo } from "../utils/lote";
 
 const METODOS = [
   { id: "PIX", rotulo: "Pix", detalhe: "Aprovação imediata", icone: "pix" },
@@ -81,9 +81,10 @@ export default function Pagamento() {
   const { lotes, carregando, erro, tentarDeNovo } = useLotesEvento(eventoId);
   const [metodo, setMetodo] = useState<MetodoId>("PIX");
   const [processando, setProcessando] = useState(false);
+  const [coberturas, setCoberturas] = useState<Record<string, CoberturaGrupo>>({});
 
   const voltar = () => (router.canGoBack() ? router.back() : router.replace("/"));
-  const pedido = calcularPedido(lotes, carrinho, gruposPorLote);
+  const pedido = calcularPedido(lotes, carrinho, gruposPorLote, coberturas);
   const temItens = pedido.linhas.length > 0;
   const lotesComGrupo = lotes.filter((lote) => aceitaGrupo(lote) && gruposPorLote[lote.id]);
   const podePagar = temItens && !processando;
@@ -115,7 +116,12 @@ export default function Pagamento() {
           token,
           body: { grupoId: grupo.id, loteId: lote.id, participantesIds },
         });
-        compraGrupo = await api<CompraGrupoApi>(`/grupos/compras/${criada.id}/pagar`, { method: "POST", token });
+        // "todos": quem iniciou a compra paga também a cota dos outros participantes.
+        compraGrupo = await api<CompraGrupoApi>(`/grupos/compras/${criada.id}/pagar`, {
+          method: "POST",
+          token,
+          body: coberturas[lote.id] === "todos" ? { todos: true } : undefined,
+        });
         nomeGrupo = grupo.nome;
         escolherGrupo(lote.id, null);
       }
@@ -211,6 +217,49 @@ export default function Pagamento() {
                 <Text className="font-display-lg text-[20px] text-white">{formatarReais(pedido.total)}</Text>
               </View>
             </View>
+
+            {lotesComGrupo.map((lote) => (
+              <View key={`cobertura-${lote.id}`} className="gap-3">
+                <Text className="font-headline-md text-[18px] text-white">Quem você vai pagar?</Text>
+                <Text className="font-body-md text-[14px] text-on-surface-variant">
+                  {lote.nome} · {gruposPorLote[lote.id]?.nome}
+                </Text>
+                <View className="gap-3" accessibilityRole="radiogroup">
+                  {(["meu", "todos"] as const).map((opcao) => {
+                    const ativo = (coberturas[lote.id] ?? "meu") === opcao;
+                    const { pessoas, total } = totalDoGrupo(lote, opcao);
+                    return (
+                      <Pressable
+                        key={opcao}
+                        onPress={() => setCoberturas((atual) => ({ ...atual, [lote.id]: opcao }))}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: ativo }}
+                        className={`flex-row items-center justify-between p-4 rounded-xl ${
+                          ativo ? "bg-[#0d0c0c] border-2 border-primary-container/40" : "bg-surface-container border-2 border-transparent"
+                        }`}
+                      >
+                        <View className="flex-1 gap-1">
+                          <Text className="font-headline-md text-[16px] text-white">
+                            {opcao === "meu" ? "Só o meu ingresso" : `Todo o grupo (${pessoas} ingressos)`}
+                          </Text>
+                          <Text className="font-body-md text-[13px] text-on-surface-variant">
+                            {opcao === "meu" ? "Cada pessoa paga a própria cota" : "Você paga a cota de todos e os ingressos saem na hora"}
+                            {` · ${formatarReais(total)}`}
+                          </Text>
+                        </View>
+                        <View
+                          className={`h-[22px] w-[22px] rounded-full border-2 items-center justify-center ${
+                            ativo ? "bg-primary-container border-primary-container" : "border-white/[0.12]"
+                          }`}
+                        >
+                          {ativo && <MaterialIcons name="check" size={14} color="#ffffff" />}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
 
             <View className="gap-[6px]">
               <Text className="font-headline-md text-[18px] text-white">Selecione o método de pagamento</Text>

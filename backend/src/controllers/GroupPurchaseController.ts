@@ -28,7 +28,7 @@ export class GroupPurchaseController {
 
   pay = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.status(200).json(await this.groupPurchaseService.pay(req.params.id, getAuthUser(req)));
+      res.status(200).json(await this.groupPurchaseService.pay(req.params.id, getAuthUser(req), req.body));
     } catch (error) {
       next(error);
     }
