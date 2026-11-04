@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { QrCode } from "../components/QrCode";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
-import { api } from "../utils/api";
+import { api, ApiError } from "../utils/api";
 import { formatarCodigo, type IngressoApi } from "../utils/compras";
 import { formatarDataHora } from "../utils/evento";
 
@@ -68,6 +68,7 @@ export default function Perfil() {
   const espacoNavBar = useEspacoNavBar();
   const { user, token, sair } = useUser();
   const [aba, setAba] = useState<Aba>("perfil");
+  const [resetando, setResetando] = useState(false);
   const [ingressos, setIngressos] = useState<IngressoApi[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
@@ -99,6 +100,31 @@ export default function Perfil() {
     { id: "perfil", rotulo: "Perfil" },
     { id: "ingressos", rotulo: "Ingressos" },
   ];
+
+  // Só ADMIN. A API recusa em produção; aqui apenas confirma e mostra o resultado.
+  const confirmarReset = () =>
+    Alert.alert(
+      "Resetar para o seed?",
+      "Apaga TODOS os dados (usuários, grupos, pedidos e ingressos), menos a sua conta, e recria os dados de demonstração.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Resetar",
+          style: "destructive",
+          onPress: async () => {
+            setResetando(true);
+            try {
+              await api("/admin/resetar-seed", { method: "POST", token });
+              Alert.alert("Pronto", "Banco resetado com os dados do seed.");
+            } catch (error) {
+              Alert.alert("Não foi possível resetar", error instanceof ApiError ? error.message : "Tente de novo.");
+            } finally {
+              setResetando(false);
+            }
+          },
+        },
+      ],
+    );
 
   return (
     <View className="flex-1 bg-background">
@@ -167,6 +193,23 @@ export default function Perfil() {
               >
                 <MaterialIcons name="qr-code-scanner" size={20} color="#ffffff" />
                 <Text className="font-label-caps text-label-caps text-white uppercase">Validar ingressos</Text>
+              </TouchableOpacity>
+            )}
+
+            {user?.papel === "ADMIN" && (
+              <TouchableOpacity
+                onPress={confirmarReset}
+                disabled={resetando}
+                activeOpacity={0.8}
+                className="mt-3 self-center flex-row items-center gap-2 px-6 py-3 rounded-xl border border-error/60 bg-error/10"
+                style={{ opacity: resetando ? 0.5 : 1 }}
+              >
+                {resetando ? (
+                  <ActivityIndicator color="#ffb4ab" />
+                ) : (
+                  <MaterialIcons name="restart-alt" size={20} color="#ffb4ab" />
+                )}
+                <Text className="font-label-caps text-label-caps text-error uppercase">Resetar para o seed</Text>
               </TouchableOpacity>
             )}
 

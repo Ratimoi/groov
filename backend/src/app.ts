@@ -10,6 +10,7 @@ import eventRoutes from './routes/EventRoutes'
 import lotRoutes from './routes/LotRoutes';
 import orderRoutes from './routes/OrderRoutes';
 import ticketRoutes from './routes/TicketRoutes';
+import adminRoutes from './routes/AdminRoutes';
 import { authenticate } from './middlewares/auth';
 import { errorHandler } from './middlewares/errorHandler';
 
@@ -43,6 +44,7 @@ app.use('/eventos', eventRoutes)
 app.use('/lotes', lotRoutes);
 app.use('/pedidos', authenticate, orderRoutes);
 app.use('/ingressos', authenticate, ticketRoutes);
+app.use('/admin', authenticate, adminRoutes);
 
 app.use(errorHandler);
 
