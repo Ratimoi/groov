@@ -203,7 +203,7 @@ export default function DetalhesEvento() {
 
         {atracoes.length > 0 && (
           <View className="px-margin-mobile pb-8">
-            <Text className="font-headline-md text-headline-md text-white mb-4">Lineup</Text>
+            <Text className="font-headline-md text-headline-md text-white mb-4">Atrações</Text>
             <View className="flex-row gap-stack-md">
               {atracoesVisiveis.map((atracao) => (
                 <View
