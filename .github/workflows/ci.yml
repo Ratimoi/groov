@@ -205,6 +205,8 @@ jobs:
     steps:
       - name: Confere o EXPO_TOKEN
         id: token
+        # Roda antes do checkout, então a pasta frontend/ (default do job) ainda não existe.
+        working-directory: .
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
