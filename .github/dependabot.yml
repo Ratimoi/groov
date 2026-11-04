@@ -1,0 +1,53 @@
+# Atualizações semanais de dependências, sempre via PR para a dev. O Expo/React Native ficam de
+# fora: eles sobem junto, com `npx expo install`, numa troca de SDK.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    target-branch: dev
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies, backend]
+    commit-message:
+      prefix: "chore"
+    groups:
+      minor-e-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Prisma 7 e TypeScript 6 foram escolhas deliberadas; majors novos pedem migração manual.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    target-branch: dev
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies, frontend]
+    commit-message:
+      prefix: "chore"
+    groups:
+      minor-e-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "@types/react"
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: "chore"

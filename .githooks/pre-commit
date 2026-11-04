@@ -1,0 +1,14 @@
+#!/bin/sh
+# Roda lint e typecheck só nas áreas que têm arquivo no commit. Para ativar:
+#   git config core.hooksPath .githooks
+staged=$(git diff --cached --name-only)
+
+if echo "$staged" | grep -q '^backend/'; then
+  echo "pre-commit: backend (lint + typecheck)"
+  (cd backend && npm run lint --silent && npm run typecheck --silent) || exit 1
+fi
+
+if echo "$staged" | grep -q '^frontend/'; then
+  echo "pre-commit: frontend (lint + typecheck)"
+  (cd frontend && npm run lint --silent && npm run typecheck --silent) || exit 1
+fi

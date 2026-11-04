@@ -46,6 +46,27 @@ O deploy é disparado pelo push (merge) em `main`, depois que os jobs de backend
 
 `main` e `dev` são protegidas: não aceitam force push nem exclusão, e só recebem mudança por Pull Request com os checks **Backend** e **Frontend** verdes. O repositório aceita apenas **merge commit** (squash e rebase estão desligados) e apaga a branch de trabalho depois do merge.
 
+## Automações
+
+| O quê | Como funciona |
+|---|---|
+| **Checagens de PR** (`pr-checks.yml`) | O título do PR precisa seguir Conventional Commits (`feat: ...`, `fix: ...`, `release: V1.4.1`) e a branch precisa começar com `feature/`, `fix/`, `test/`, `chore/`, `docs/` ou `hotfix/`. PRs para a `main` só saem da `dev` ou de `hotfix/*`. Não bloqueiam o merge, mas aparecem em vermelho. |
+| **Rótulos** | O PR recebe `backend`, `frontend`, `ci` e `docs` conforme os arquivos alterados. |
+| **CI repetida** | Um push novo no mesmo PR cancela a CI anterior dele. |
+| **Dependabot** | Toda semana abre PRs para a `dev` com as atualizações minor/patch (backend, frontend e GitHub Actions). Majors, Expo e React Native ficam de fora: sobem com `npx expo install` numa troca de SDK. |
+| **OTA de preview** | Todo merge na `dev` publica um EAS Update no canal `preview`, no runtime da `version` do `app.json` (só chega ao APK dessa versão). Exige o secret `EXPO_TOKEN` no environment `dev - groov-api`; sem ele o job apenas avisa e pula. |
+| **Release** | Ver [Versões](#versões). |
+
+### Hooks locais (opcional, recomendado)
+
+Rodam lint e typecheck antes do commit e validam a mensagem. Ative uma vez por clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+O `pre-commit` só roda nas áreas (`backend/`, `frontend/`) que têm arquivo no commit. O `.editorconfig` padroniza charset, quebra de linha e indentação nos editores.
+
 ## Hotfix
 
 Para correções urgentes, criar `hotfix/nome` a partir de `main`, abrir PR direto para `main` e, depois do merge, sincronizar `dev` com `main`.
@@ -56,6 +77,7 @@ O workflow (`.github/workflows/ci.yml`) roda em todo PR e push para `dev` e `mai
 
 **Backend** (`backend/`)
 - `npm ci`
+- `npm run lint` (ESLint)
 - `npm run typecheck` (código e testes)
 - `npm test` (Vitest + Supertest; o Prisma é substituído por um mock, então não precisa de banco)
 - `npm run build` (compila o TypeScript)
