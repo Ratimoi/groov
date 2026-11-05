@@ -35,6 +35,7 @@ export const prismaMock = {
   curtidaEvento: delegate(),
   eventoSalvo: delegate(),
   seguidor: delegate(),
+  pagamento: delegate(),
   categoria: delegate(),
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),
