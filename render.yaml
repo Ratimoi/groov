@@ -16,5 +16,10 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false # preencher no painel do Render
+      # Pagamentos reais (Mercado Pago). Sem o token, o pagamento é simulado. Preencher no painel.
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: PUBLIC_API_URL
+        sync: false # ex.: https://groov-api.onrender.com
       - key: JWT_SECRET
         generateValue: true # o Render gera um valor aleatório na criação

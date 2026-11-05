@@ -99,6 +99,8 @@ Rotas disponíveis:
 
 O login devolve um token JWT, que deve ser enviado nas rotas protegidas no cabeçalho `Authorization: Bearer <token>`. O token vale 1 dia (`JWT_EXPIRES_IN`) e carrega só o id do usuário: o papel é lido do banco a cada requisição, então apagar ou rebaixar um usuário vale na hora. Rotas protegidas sem token válido respondem 401; sem permissão, 403. O login é limitado a 10 tentativas por IP a cada 15 minutos (429).
 
+Pagamentos reais usam `MERCADOPAGO_ACCESS_TOKEN` e `PUBLIC_API_URL` (veja `docs/API.md`, seção Pagamentos); sem eles o pagamento é simulado.
+
 A API **não sobe** sem `JWT_SECRET` (mínimo 32 caracteres). Gere um com:
 
 ```bash

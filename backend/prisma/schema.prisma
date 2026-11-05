@@ -32,6 +32,7 @@ model Usuario {
   avaliacoes          AvaliacaoEvento[]
   cargosEvento        EventoMembro[]
   pedidosIndicados    Pedido[]             @relation("PromotorPedido")
+  pagamentos          Pagamento[]
   curtidas            CurtidaEvento[]
   eventosSalvos       EventoSalvo[]
   seguindo            Seguidor[]           @relation("QuemSegue")
@@ -404,5 +405,48 @@ model Seguidor {
 
   @@id([seguidorId, seguidoId])
   @@index([seguidoId])
+}
+
+enum MetodoPagamento {
+  PIX
+  CARTAO
+}
+
+enum StatusPagamento {
+  PENDENTE
+  APROVADO
+  RECUSADO
+  EXPIRADO
+}
+
+// Uma cobrança do checkout. `itens` guarda o que será emitido quando o provedor aprovar (pedidos
+// individuais e cotas de compras em grupo); só então os ingressos nascem.
+model Pagamento {
+  id        String          @id @default(cuid())
+  usuarioId String
+  usuario   Usuario         @relation(fields: [usuarioId], references: [id])
+  metodo    MetodoPagamento
+  status    StatusPagamento @default(PENDENTE)
+  // SIMULADO (sem credenciais) ou MERCADOPAGO.
+  provedor  String
+  valor     Decimal         @db.Decimal(10, 2)
+  itens     Json
+
+  externoId       String?
+  pixCopiaECola   String?
+  pixQrCodeBase64 String?
+  checkoutUrl     String?
+
+  // Ids dos pedidos e das compras em grupo gerados na aprovação; erroEmissao guarda o motivo se
+  // algo não pôde ser emitido (o dinheiro entrou, então precisa de atenção manual/estorno).
+  resultado   Json?
+  erroEmissao String?
+
+  expiraEm   DateTime
+  criadoEm   DateTime  @default(now())
+  aprovadoEm DateTime?
+
+  @@index([usuarioId])
+  @@index([status, expiraEm])
 }
 

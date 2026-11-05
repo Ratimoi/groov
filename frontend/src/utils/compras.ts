@@ -73,6 +73,8 @@ export type ResultadoCompra = {
   compraGrupo?: CompraGrupoApi;
   nomeGrupo?: string;
   metodo?: string;
+  // Pagamento sem cobrança real (API sem Mercado Pago).
+  simulado?: boolean;
 };
 
 // "GRV-ABCDEFGHJKLM" -> "GRV-ABCD-EFGH-JKLM"

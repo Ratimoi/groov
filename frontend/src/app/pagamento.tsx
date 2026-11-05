@@ -1,87 +1,36 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { FontAwesome6, MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
+import { MetodosPagamento } from "../components/MetodosPagamento";
 import { ALTURA_NAVBAR, MARGEM_INFERIOR_NAVBAR } from "../components/NavBar";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useLotesEvento } from "../hooks/useLotesEvento";
 import { api, ApiError } from "../utils/api";
-import type { CompraGrupoApi, PedidoApi } from "../utils/compras";
+import type { CompraGrupoApi } from "../utils/compras";
+import { definirEmAndamento, type MetodoPagamento, type PagamentoApi } from "../utils/pagamentos";
 import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais, totalDoGrupo, type CoberturaGrupo } from "../utils/lote";
-
-const METODOS = [
-  { id: "PIX", rotulo: "Pix", detalhe: "Aprovação imediata", icone: "pix" },
-  { id: "CREDITO", rotulo: "Cartão de Crédito", detalhe: "Em até 10x sem juros", icone: "credit-card" },
-  { id: "GPAY", rotulo: "Google Pay", detalhe: "Pague com o Google", icone: "google-pay" },
-] as const;
-
-type MetodoId = (typeof METODOS)[number]["id"];
 
 // Altura do rodapé com o botão "Finalizar Compra", para o fim da lista não ficar atrás dele.
 const ALTURA_RODAPE = 96;
 
-function OpcaoPagamento({
-  metodo,
-  ativo,
-  onPress,
-}: {
-  metodo: (typeof METODOS)[number];
-  ativo: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: ativo }}
-      accessibilityLabel={metodo.rotulo}
-      className={`flex-row items-center justify-between p-4 rounded-xl ${
-        ativo ? "bg-[#0d0c0c] border-2 border-primary-container/40" : "bg-surface-container border-2 border-transparent"
-      }`}
-      style={ativo ? { shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 2, shadowOffset: { width: 0, height: 4 }, elevation: 3 } : undefined}
-    >
-      <View className="flex-row items-center gap-[14px] flex-1">
-        <View className="h-10 w-10 items-center justify-center bg-primary-container/10 rounded-lg">
-          {/* O MaterialIcons não tem Google Pay; o FontAwesome6 tem a logo no estilo "brand". */}
-          {metodo.icone === "google-pay" ? (
-            <FontAwesome6 name="google-pay" brand size={20} color="#ebb2ff" />
-          ) : (
-            <MaterialIcons name={metodo.icone} size={20} color="#ebb2ff" />
-          )}
-        </View>
-        <View className="flex-1 gap-1">
-          <Text className="font-headline-md text-[16px] text-white">{metodo.rotulo}</Text>
-          <Text className="font-body-md text-[13px] text-on-surface-variant">{metodo.detalhe}</Text>
-        </View>
-      </View>
-      <View
-        className={`h-[22px] w-[22px] rounded-full border-2 items-center justify-center ${
-          ativo ? "bg-primary-container border-primary-container" : "border-white/[0.12]"
-        }`}
-      >
-        {ativo && <MaterialIcons name="check" size={14} color="#ffffff" />}
-      </View>
-    </Pressable>
-  );
-}
-
-// Segunda etapa da compra: revisa o pedido, escolhe como pagar e conclui. O pagamento é simulado:
-// nenhum dado de cartão é pedido nem cobrado, e a API só registra o pedido como pago.
+// Segunda etapa da compra: revisa o pedido, escolhe como pagar (Pix ou cartão) e segue para a espera
+// da confirmação. Nenhum dado de cartão passa pelo app: o cartão é pago na página do Mercado Pago.
 export default function Pagamento() {
   const { eventoId } = useLocalSearchParams<{ eventoId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const espacoNavBar = useEspacoNavBar();
   const { user, token } = useUser();
-  const { carrinho, gruposPorLote, atualizaQuantidade, escolherGrupo, definirResultado, afiliado: afiliadoSalvo } = useCarrinho();
+  const { carrinho, gruposPorLote, afiliado: afiliadoSalvo } = useCarrinho();
   // O código de promotor vale só para o evento em que foi conferido.
   const afiliado = afiliadoSalvo && afiliadoSalvo.eventoId === eventoId ? afiliadoSalvo : null;
   const { lotes, carregando, erro, tentarDeNovo } = useLotesEvento(eventoId);
-  const [metodo, setMetodo] = useState<MetodoId>("PIX");
+  const [metodo, setMetodo] = useState<MetodoPagamento>("PIX");
   const [processando, setProcessando] = useState(false);
   const [coberturas, setCoberturas] = useState<Record<string, CoberturaGrupo>>({});
 
@@ -91,49 +40,46 @@ export default function Pagamento() {
   const lotesComGrupo = lotes.filter((lote) => aceitaGrupo(lote) && gruposPorLote[lote.id]);
   const podePagar = temItens && !processando;
 
-  // Vai item por item e, se algo falhar no meio, os itens já pagos saem do carrinho e o usuário é
-  // avisado do que ficou pendente.
+  // Monta os itens (pedidos individuais e cotas de grupo) e cria um único pagamento. Os ingressos só
+  // são emitidos quando o Mercado Pago aprova; o carrinho só é esvaziado nesse momento.
   const pagar = async () => {
     if (!user) return;
     setProcessando(true);
-    const pedidos: PedidoApi[] = [];
-    let compraGrupo: CompraGrupoApi | undefined;
-    let nomeGrupo: string | undefined;
 
     try {
+      const itens: object[] = [];
       for (const lote of lotes) {
         const quantidade = carrinho[lote.id] ?? 0;
         if (quantidade < 1) continue;
-        pedidos.push(await api<PedidoApi>("/pedidos", { method: "POST", token, body: { loteId: lote.id, quantidade, ...(afiliado ? { codigoAfiliado: afiliado.codigo } : {}) } }));
-        atualizaQuantidade(lote.id, 0);
+        itens.push({ tipo: "PEDIDO", loteId: lote.id, quantidade, ...(afiliado ? { codigoAfiliado: afiliado.codigo } : {}) });
       }
 
+      let nomeGrupo: string | undefined;
+      const pendentes = await api<CompraGrupoApi[]>("/grupos/compras", { token });
       for (const lote of lotes.filter(aceitaGrupo)) {
         const grupo = gruposPorLote[lote.id];
         if (!grupo) continue;
-        const membros = await api<{ usuarioId: string }[]>(`/grupos/${grupo.id}/members`, { token });
-        const participantesIds = membros.map((membro) => membro.usuarioId).filter((id) => id !== user.id);
-        const criada = await api<CompraGrupoApi>("/grupos/compras", {
-          method: "POST",
-          token,
-          body: { grupoId: grupo.id, loteId: lote.id, participantesIds, ...(afiliado ? { codigoAfiliado: afiliado.codigo } : {}) },
-        });
+        // Numa nova tentativa a compra em grupo da tentativa anterior ainda está pendente: reaproveita.
+        let compra = pendentes.find((c) => c.status === "PENDENTE" && c.lote.id === lote.id && c.grupoId === grupo.id);
+        if (!compra) {
+          const membros = await api<{ usuarioId: string }[]>(`/grupos/${grupo.id}/members`, { token });
+          const participantesIds = membros.map((membro) => membro.usuarioId).filter((id) => id !== user.id);
+          compra = await api<CompraGrupoApi>("/grupos/compras", {
+            method: "POST",
+            token,
+            body: { grupoId: grupo.id, loteId: lote.id, participantesIds, ...(afiliado ? { codigoAfiliado: afiliado.codigo } : {}) },
+          });
+        }
         // "todos": quem iniciou a compra paga também a cota dos outros participantes.
-        compraGrupo = await api<CompraGrupoApi>(`/grupos/compras/${criada.id}/pagar`, {
-          method: "POST",
-          token,
-          body: coberturas[lote.id] === "todos" ? { todos: true } : undefined,
-        });
+        itens.push({ tipo: "COTA", compraId: compra.id, ...(coberturas[lote.id] === "todos" ? { todos: true } : {}) });
         nomeGrupo = grupo.nome;
-        escolherGrupo(lote.id, null);
       }
 
-      definirResultado({ pedidos, compraGrupo, nomeGrupo, metodo: METODOS.find((item) => item.id === metodo)?.rotulo });
-      router.replace("/pagamento-confirmado");
+      const criado = await api<PagamentoApi>("/pagamentos", { method: "POST", token, body: { metodo, itens } });
+      definirEmAndamento({ id: criado.id, lotesDoCarrinho: lotes.map((l) => l.id), nomeGrupo });
+      router.replace({ pathname: "/aguardando-pagamento", params: { id: criado.id } });
     } catch (error) {
-      const motivo = error instanceof ApiError ? error.message : "Tente de novo.";
-      const jaPagos = pedidos.length > 0 ? " Os ingressos que já foram pagos estão no seu Perfil." : "";
-      Alert.alert("Não foi possível concluir a compra", `${motivo}${jaPagos}`);
+      Alert.alert("Não foi possível iniciar o pagamento", error instanceof ApiError ? error.message : "Tente de novo.");
     } finally {
       setProcessando(false);
     }
@@ -270,11 +216,7 @@ export default function Pagamento() {
               </Text>
             </View>
 
-            <View className="gap-6" accessibilityRole="radiogroup">
-              {METODOS.map((item) => (
-                <OpcaoPagamento key={item.id} metodo={item} ativo={item.id === metodo} onPress={() => setMetodo(item.id)} />
-              ))}
-            </View>
+            <MetodosPagamento valor={metodo} onChange={setMetodo} />
           </>
         )}
       </ScrollView>
