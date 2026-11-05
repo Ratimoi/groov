@@ -11,8 +11,7 @@ export class EventController {
 
   findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { page, limit } = req.query;
-      res.status(200).json(await this.eventService.findAll({ page, limit }));
+      res.status(200).json(await this.eventService.findAll(req.query));
     } catch (error) {
       next(error);
     }
