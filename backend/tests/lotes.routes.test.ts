@@ -29,8 +29,8 @@ const lote = {
 // Lote com compra em grupo configurada e sem reservas.
 const loteGrupo = { ...lote, quantidadeReservada: 0, tamanhoGrupo: 4, prazoGrupoHoras: 48, descontoGrupo: "0.1500" };
 
-const criador = () => logadoComo("PRODUTOR", "p1");
-const outroProdutor = () => logadoComo("PRODUTOR", "p2");
+const criador = () => logadoComo("CLIENTE", "p1");
+const outroProdutor = () => logadoComo("CLIENTE", "p2");
 const admin = () => logadoComo("ADMIN", "adm");
 const cliente = () => logadoComo("CLIENTE", "c1");
 
@@ -165,24 +165,23 @@ describe("lotes", () => {
       });
     });
 
-    it("ADMIN cria lote em evento de outro criador", async () => {
+    it("ADMIN não cria lote em evento de outro criador", async () => {
       const res = await request(app).post("/eventos/e1/lotes").set(admin()).send(valido);
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(403);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é gravado", async () => {
+    it("outro usuário recebe 403 e nada é gravado", async () => {
       const res = await request(app).post("/eventos/e1/lotes").set(outroProdutor()).send(valido);
 
       expect(res.status).toBe(403);
       expect(prismaMock.lote.create).not.toHaveBeenCalled();
     });
 
-    it("CLIENTE recebe 403 sem consultar o evento", async () => {
+    it("quem não é o gerente recebe 403", async () => {
       const res = await request(app).post("/eventos/e1/lotes").set(cliente()).send(valido);
 
       expect(res.status).toBe(403);
-      expect(prismaMock.evento.findUnique).not.toHaveBeenCalled();
     });
 
     it("sem token responde 401", async () => {
@@ -280,13 +279,13 @@ describe("lotes", () => {
       });
     });
 
-    it("ADMIN atualiza lote de evento de outro criador", async () => {
+    it("ADMIN não atualiza lote de evento de outro criador", async () => {
       const res = await request(app).put("/lotes/l1").set(admin()).send({ nome: "Novo nome" });
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é alterado", async () => {
+    it("outro usuário recebe 403 e nada é alterado", async () => {
       const res = await request(app).put("/lotes/l1").set(outroProdutor()).send({ preco: 1 });
 
       expect(res.status).toBe(403);
@@ -479,13 +478,13 @@ describe("lotes", () => {
       expect(prismaMock.lote.delete).toHaveBeenCalledWith({ where: { id: "l1" } });
     });
 
-    it("ADMIN apaga lote de evento de outro criador", async () => {
+    it("ADMIN não apaga lote de evento de outro criador", async () => {
       const res = await request(app).delete("/lotes/l1").set(admin());
 
-      expect(res.status).toBe(204);
+      expect(res.status).toBe(403);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é apagado", async () => {
+    it("outro usuário recebe 403 e nada é apagado", async () => {
       const res = await request(app).delete("/lotes/l1").set(outroProdutor());
 
       expect(res.status).toBe(403);

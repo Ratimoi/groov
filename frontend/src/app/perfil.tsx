@@ -185,7 +185,7 @@ export default function Perfil() {
               <MaterialIcons name="chevron-right" size={22} color="#9d8ba0" />
             </TouchableOpacity>
 
-            {user?.papel === "ADMIN" && (
+            {(user?.podeValidar ?? user?.papel === "ADMIN") && (
               <TouchableOpacity
                 onPress={() => router.push("/escanear")}
                 activeOpacity={0.8}

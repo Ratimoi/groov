@@ -20,7 +20,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         avatarUrl: "https://i.pravatar.cc/150?img=47",
         email: "fernanda.rocha@eventos.com",
         senha: "",
-        papel: "PRODUTOR"
+        papel: "CLIENTE"
     },
     {
         id: "usr-cliente-01",

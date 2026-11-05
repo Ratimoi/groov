@@ -47,9 +47,9 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
     return { id: cadastro.body.id, token: login.body.token };
   }
 
-  async function criarEventoComLote(lote: Record<string, unknown>) {
+  async function criarEventoComLote(lote: Record<string, unknown>, criadoPorId?: string) {
     const evento = await prisma.evento.create({
-      data: { titulo: `Evento ${run}`, cidade: "Porto Alegre", comecaEm: new Date(Date.now() + 7 * 86_400_000) },
+      data: { titulo: `Evento ${run}`, cidade: "Porto Alegre", comecaEm: new Date(Date.now() + 7 * 86_400_000), criadoPorId },
     });
     const criado = await prisma.lote.create({ data: { eventoId: evento.id, nome: "Pista", ...lote } as never });
     return { evento, lote: criado };
@@ -196,8 +196,8 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   describe("validação na portaria", () => {
     it("dá baixa uma única vez, mesmo com leituras simultâneas do mesmo código", async () => {
       const [adm, u] = [await criarUsuario("jade"), await criarUsuario("kau")];
-      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
-      const { lote, evento } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      // Quem publicou o evento (gerente) valida os ingressos dele.
+      const { lote, evento } = await criarEventoComLote({ preco: "10.00", quantidade: 5 }, adm.id);
       const pedido = await request(app).post("/pedidos").set(auth(u)).send({ loteId: lote.id, quantidade: 1 });
       const codigo = pedido.body.ingressos[0].codigoQr as string;
 
@@ -241,8 +241,7 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   describe("transferência de ingresso", () => {
     it("troca o dono e o código; o QR antigo deixa de valer e ingresso usado não transfere", async () => {
       const [adm, de, para] = [await criarUsuario("olga"), await criarUsuario("pedro"), await criarUsuario("rita")];
-      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
-      const { lote } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      const { lote } = await criarEventoComLote({ preco: "10.00", quantidade: 5 }, adm.id);
       const pedido = await request(app).post("/pedidos").set(auth(de)).send({ loteId: lote.id, quantidade: 2 });
       const [primeiro, segundo] = pedido.body.ingressos as { id: string; codigoQr: string }[];
 
@@ -266,9 +265,12 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   describe("avaliações", () => {
     it("só quem foi ao evento avalia, uma nota por pessoa, e a média do organizador soma os eventos dele", async () => {
       const [adm, org, a, b] = [await criarUsuario("sol"), await criarUsuario("tito"), await criarUsuario("uma"), await criarUsuario("vera")];
-      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
       const evento1 = await prisma.evento.create({ data: { titulo: `Av1 ${run}`, cidade: "Recife", comecaEm: new Date(Date.now() + 86_400_000), criadoPorId: org.id } });
       const evento2 = await prisma.evento.create({ data: { titulo: `Av2 ${run}`, cidade: "Recife", comecaEm: new Date(Date.now() + 86_400_000), criadoPorId: org.id } });
+      // O gerente escala "adm" como VALIDADOR dos dois eventos.
+      await prisma.eventoMembro.createMany({
+        data: [evento1.id, evento2.id].map((eventoId) => ({ eventoId, usuarioId: adm.id, cargo: "VALIDADOR" as const })),
+      });
       const lote1 = await prisma.lote.create({ data: { eventoId: evento1.id, nome: "Pista", preco: "10.00", quantidade: 5 } });
       const lote2 = await prisma.lote.create({ data: { eventoId: evento2.id, nome: "Pista", preco: "10.00", quantidade: 5 } });
 
