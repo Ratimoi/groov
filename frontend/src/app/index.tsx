@@ -7,6 +7,7 @@ import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { CardEventoDestaque } from "../components/CardEventoDestaque";
 import { CardEvento } from "../components/CardEvento";
 import { MapaEventos } from "../components/Mapa";
+import { coluna } from "../utils/layout";
 import { obterPosicao } from "../utils/localizacao";
 import { formatarDataHora } from "../utils/evento";
 import type { CentroMapa, PontoMapa } from "../utils/mapa";
@@ -165,7 +166,7 @@ export default function HomeScreen() {
       />
       <ScrollView
         contentContainerClassName="pt-4 flex-col gap-4"
-        contentContainerStyle={{ paddingBottom: espacoNavBar }}
+        contentContainerStyle={{ ...coluna, paddingBottom: espacoNavBar }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

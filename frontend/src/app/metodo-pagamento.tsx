@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
-import { CabecalhoGroov } from "../components/CabecalhoGroov";
+import { Tela } from "../components/Tela";
 import { MetodosPagamento } from "../components/MetodosPagamento";
-import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { definirEmAndamento, type MetodoPagamento, type PagamentoApi } from "../utils/pagamentos";
 
@@ -13,7 +12,6 @@ import { definirEmAndamento, type MetodoPagamento, type PagamentoApi } from "../
 export default function MetodoPagamentoTela() {
   const { compraId, nomeGrupo, evento } = useLocalSearchParams<{ compraId: string; nomeGrupo?: string; evento?: string }>();
   const router = useRouter();
-  const espacoNavBar = useEspacoNavBar();
   const { token } = useUser();
   const [metodo, setMetodo] = useState<MetodoPagamento>("PIX");
   const [processando, setProcessando] = useState(false);
@@ -38,12 +36,7 @@ export default function MetodoPagamentoTela() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: voltar, rotulo: "Voltar" }} />
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 16, gap: 20 }}
-        showsVerticalScrollIndicator={false}
-      >
+    <Tela cabecalho={{ esquerda: { icone: "arrow-back", onPress: voltar, rotulo: "Voltar" } }} gap={20}>
         <View className="gap-1">
           <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Pagar minha cota</Text>
           {!!evento && <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={2}>{evento}{nomeGrupo ? ` • ${nomeGrupo}` : ""}</Text>}
@@ -58,7 +51,6 @@ export default function MetodoPagamentoTela() {
         >
           {processando ? <ActivityIndicator color="#ffffff" /> : <Text className="font-headline-md text-white text-[16px]">Continuar</Text>}
         </TouchableOpacity>
-      </ScrollView>
-    </View>
+      </Tela>
   );
 }

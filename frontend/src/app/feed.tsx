@@ -7,6 +7,7 @@ import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { formatarDataHora } from "../utils/evento";
+import { coluna } from "../utils/layout";
 import { formatarReais } from "../utils/lote";
 
 type Aba = "todos" | "seguindo" | "salvos";
@@ -257,7 +258,7 @@ export default function Feed() {
           renderItem={({ item }) => (
             <Cartao item={item} meuId={user?.id} onAtualizar={atualizar} onAbrir={(id) => router.push({ pathname: "/detalhes", params: { id } })} />
           )}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: espacoNavBar + 16 }}
+          contentContainerStyle={{ ...coluna, paddingTop: 8, paddingBottom: espacoNavBar + 16 }}
           showsVerticalScrollIndicator={false}
           refreshing={recarregando}
           onRefresh={() => {

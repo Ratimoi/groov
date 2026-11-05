@@ -9,6 +9,7 @@ import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { formatarCodigo, type IngressoApi } from "../utils/compras";
 import { formatarDataHora } from "../utils/evento";
+import { conteudo } from "../utils/layout";
 
 const ROTULO_STATUS = { VALIDO: "VÁLIDO", USADO: "USADO", CANCELADO: "CANCELADO" } as const;
 type Aba = "perfil" | "ingressos";
@@ -148,7 +149,7 @@ export default function Perfil() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
+        contentContainerStyle={conteudo(espacoNavBar)}
         showsVerticalScrollIndicator={false}
       >
         {aba === "perfil" && (
