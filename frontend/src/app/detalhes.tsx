@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EventoType } from "@/utils";
+import { coluna } from "../utils/layout";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useContagem } from "../hooks/useContagem";
 import { AvaliacoesEvento } from "../components/AvaliacoesEvento";
@@ -118,7 +119,7 @@ export default function DetalhesEvento() {
     <View className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: espacoNavBar + 64 }}
+        contentContainerStyle={{ ...coluna, paddingBottom: espacoNavBar + 64 }}
         showsVerticalScrollIndicator={false}
       >
         <View className="relative w-full aspect-[4/5] overflow-hidden">

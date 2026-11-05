@@ -17,6 +17,7 @@ import { Campo } from "../components/Campo";
 import { SeletorPonto } from "../components/Mapa";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
+import { conteudo } from "../utils/layout";
 import { obterPosicao } from "../utils/localizacao";
 import { formatarReais } from "../utils/lote";
 import {
@@ -205,7 +206,7 @@ export default function Publicar() {
       {cabecalho}
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 16 }}
+        contentContainerStyle={conteudo(espacoNavBar, { extra: 16 })}
         showsVerticalScrollIndicator={false}
       >
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">

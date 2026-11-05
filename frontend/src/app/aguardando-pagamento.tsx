@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, AppState, Image, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
-import { CabecalhoGroov } from "../components/CabecalhoGroov";
-import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
+import { Tela } from "../components/Tela";
 import { api } from "../utils/api";
 import { formatarReais } from "../utils/lote";
 import { abrirCheckout, copiar, definirEmAndamento, NOME_METODO, obterEmAndamento, type PagamentoApi } from "../utils/pagamentos";
@@ -22,7 +21,6 @@ function restante(expiraEm: string, agora: number): string {
 export default function AguardandoPagamento() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const espacoNavBar = useEspacoNavBar();
   const { token } = useUser();
   const { definirResultado, atualizaQuantidade, escolherGrupo } = useCarrinho();
   const [pagamento, setPagamento] = useState<PagamentoApi | null>(null);
@@ -102,12 +100,7 @@ export default function AguardandoPagamento() {
   const encerrado = pagamento?.status === "RECUSADO" || pagamento?.status === "EXPIRADO";
 
   return (
-    <View className="flex-1 bg-background">
-      <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: () => router.replace("/"), rotulo: "Início" }} />
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 16, gap: 16 }}
-        showsVerticalScrollIndicator={false}
-      >
+    <Tela cabecalho={{ esquerda: { icone: "arrow-back", onPress: () => router.replace("/"), rotulo: "Início" } }} gap={16}>
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">
           {encerrado ? "Pagamento não concluído" : "Aguardando pagamento"}
         </Text>
@@ -183,7 +176,6 @@ export default function AguardandoPagamento() {
             </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
-    </View>
+      </Tela>
   );
 }

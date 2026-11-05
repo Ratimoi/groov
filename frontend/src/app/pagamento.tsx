@@ -14,6 +14,7 @@ import { api, ApiError } from "../utils/api";
 import type { CompraGrupoApi } from "../utils/compras";
 import { definirEmAndamento, type MetodoPagamento, type PagamentoApi } from "../utils/pagamentos";
 import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais, totalDoGrupo, type CoberturaGrupo } from "../utils/lote";
+import { conteudo } from "../utils/layout";
 
 // Altura do rodapé com o botão "Finalizar Compra", para o fim da lista não ficar atrás dele.
 const ALTURA_RODAPE = 96;
@@ -104,7 +105,7 @@ export default function Pagamento() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + ALTURA_RODAPE, gap: 24 }}
+        contentContainerStyle={conteudo(espacoNavBar, { extra: ALTURA_RODAPE, gap: 24 })}
         showsVerticalScrollIndicator={false}
       >
         {carregando && <ActivityIndicator color="#bc13fe" className="my-10" />}

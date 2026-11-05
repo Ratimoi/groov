@@ -41,7 +41,7 @@ groov/
         │   ├── busca.tsx    # busca
         │   ├── grupos.tsx   # grupos
         │   └── perfil.tsx   # perfil
-        ├── components/      # componentes reutilizáveis (ex.: NavBar)
+        ├── components/      # componentes reutilizáveis (ex.: NavBar, Tela: casca padrão das telas rolláveis, que reserva o espaço da NavBar flutuante e centraliza a coluna em tablets)
         ├── constants/       # tema, cores e outras constantes
         ├── contexts/        # contextos React
         ├── hooks/           # hooks customizados

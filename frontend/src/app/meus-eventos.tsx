@@ -7,6 +7,7 @@ import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { formatarDataHora } from "../utils/evento";
+import { conteudo } from "../utils/layout";
 
 type Cargo = "GERENTE" | "PROMOTOR" | "VALIDADOR";
 
@@ -91,7 +92,7 @@ export default function MeusEventos() {
     <View className="flex-1 bg-background">
       <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: voltar, rotulo: "Voltar" }} />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 16 }}
+        contentContainerStyle={conteudo(espacoNavBar, { extra: 16 })}
         showsVerticalScrollIndicator={false}
       >
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Meus eventos</Text>

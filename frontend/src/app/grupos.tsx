@@ -25,6 +25,7 @@ import { formatarDataHora, formatarRestante } from "../utils/evento";
 import { api, ApiError } from "../utils/api";
 import { compartilharConvite } from "../utils/convite";
 import type { CompraGrupoApi as CompraGrupo, ParticipanteApi as Participante, PessoaApi as Pessoa } from "../utils/compras";
+import { conteudo } from "../utils/layout";
 
 type Grupo = {
   id: string;
@@ -299,7 +300,7 @@ export default function Grupos() {
         direita={{ icone: "group-add", onPress: () => router.push("/criar-grupo"), rotulo: "Criar grupo" }}
       />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
+        contentContainerStyle={conteudo(espacoNavBar)}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={atualizando} onRefresh={() => {
               setAtualizando(true);

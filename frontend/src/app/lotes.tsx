@@ -11,6 +11,7 @@ import { ALTURA_NAVBAR, MARGEM_INFERIOR_NAVBAR } from "../components/NavBar";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useLotesEvento } from "../hooks/useLotesEvento";
 import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais } from "../utils/lote";
+import { conteudo } from "../utils/layout";
 
 export default function Lotes() {
   const { eventoId, ref: codigoLink } = useLocalSearchParams<{ eventoId: string; ref?: string }>();
@@ -41,7 +42,7 @@ export default function Lotes() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 72 }}
+        contentContainerStyle={conteudo(espacoNavBar, { extra: 72 })}
         showsVerticalScrollIndicator={false}
       >
         <View className="mb-stack-lg">

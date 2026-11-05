@@ -1,16 +1,18 @@
-import { Text, TouchableOpacity, View, Image } from "react-native";
+import { Text, TouchableOpacity, View, Image, useWindowDimensions } from "react-native";
 import type { EventoType } from "../utils/index";
 import { formatarDataHora, formatarPreco, menorPreco } from "../utils/evento";
 import { router } from "expo-router";
 
 export function CardEvento({ data }: { data: EventoType }) {
+  const { width: largura } = useWindowDimensions();
   const preco = formatarPreco(menorPreco(data.lotes));
 
   return (
     <TouchableOpacity
       onPress={() => router.push({ pathname: "/detalhes", params: { id: data.id } })}
       activeOpacity={0.8}
-      className="w-72 bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col"
+      style={{ width: Math.min(288, largura - 56) }}
+      className="bg-surface-container-high rounded-xl border border-glass-border overflow-hidden flex-col"
     >
       <View className="h-32 w-full relative">
         {data.imagemUrl && (
