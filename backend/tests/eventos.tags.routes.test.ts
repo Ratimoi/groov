@@ -21,7 +21,7 @@ describe("tags dos eventos", () => {
   it("POST grava as tags sem espaços sobrando e sem repetição (maiúsculas não contam)", async () => {
     const res = await request(app)
       .post("/eventos")
-      .set(logadoComo("CLIENTE", "p1"))
+      .set(logadoComo("PRODUTOR", "p1"))
       .send({ ...valido, tags: [" 18+ ", "Open Bar", "open bar", "18+"] });
 
     expect(res.status).toBe(201);
@@ -29,7 +29,7 @@ describe("tags dos eventos", () => {
   });
 
   it("PUT troca as tags e [] limpa", async () => {
-    const res = await request(app).put("/eventos/e1").set(logadoComo("CLIENTE", "p1")).send({ tags: [] });
+    const res = await request(app).put("/eventos/e1").set(logadoComo("PRODUTOR", "p1")).send({ tags: [] });
 
     expect(res.status).toBe(200);
     expect(prismaMock.evento.update.mock.calls[0][0].data).toEqual({ tags: [] });
@@ -42,7 +42,7 @@ describe("tags dos eventos", () => {
     ["com item longo demais", ["a".repeat(25)]],
     ["com mais de 8 itens", Array.from({ length: 9 }, (_, i) => `t${i}`)],
   ])("tags %s responde 400 e não grava", async (_nome, tags) => {
-    const res = await request(app).post("/eventos").set(logadoComo("CLIENTE", "p1")).send({ ...valido, tags });
+    const res = await request(app).post("/eventos").set(logadoComo("PRODUTOR", "p1")).send({ ...valido, tags });
 
     expect(res.status).toBe(400);
     expect(prismaMock.evento.create).not.toHaveBeenCalled();

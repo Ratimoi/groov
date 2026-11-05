@@ -9,7 +9,6 @@ import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { formatarCodigo, type IngressoApi } from "../utils/compras";
 import { formatarDataHora } from "../utils/evento";
-import { conteudo } from "../utils/layout";
 
 const ROTULO_STATUS = { VALIDO: "VÁLIDO", USADO: "USADO", CANCELADO: "CANCELADO" } as const;
 type Aba = "perfil" | "ingressos";
@@ -149,7 +148,7 @@ export default function Perfil() {
       </View>
 
       <ScrollView
-        contentContainerStyle={conteudo(espacoNavBar)}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
         showsVerticalScrollIndicator={false}
       >
         {aba === "perfil" && (
@@ -175,18 +174,6 @@ export default function Perfil() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.push("/meus-eventos")}
-              activeOpacity={0.8}
-              className="mt-3 flex-row items-center justify-between bg-surface-container-low border border-white/10 rounded-xl p-4"
-            >
-              <View className="flex-row items-center gap-3">
-                <MaterialIcons name="event" size={22} color="#ebb2ff" />
-                <Text className="font-body-md text-body-md font-bold text-white">Meus eventos</Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={22} color="#9d8ba0" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
               onPress={() => router.push("/meus-dados")}
               activeOpacity={0.8}
               className="mt-3 flex-row items-center justify-between bg-surface-container-low border border-white/10 rounded-xl p-4"
@@ -198,7 +185,7 @@ export default function Perfil() {
               <MaterialIcons name="chevron-right" size={22} color="#9d8ba0" />
             </TouchableOpacity>
 
-            {(user?.podeValidar ?? user?.papel === "ADMIN") && (
+            {user?.papel === "ADMIN" && (
               <TouchableOpacity
                 onPress={() => router.push("/escanear")}
                 activeOpacity={0.8}

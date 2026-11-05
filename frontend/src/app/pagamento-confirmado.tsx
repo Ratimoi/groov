@@ -8,7 +8,6 @@ import { BarraSegmentada } from "../components/BarraSegmentada";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { formatarDataHora } from "../utils/evento";
 import { arredondar, formatarReais, precoNoGrupo, TAXA_SERVICO } from "../utils/lote";
-import { conteudo } from "../utils/layout";
 
 function Linha({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
   return (
@@ -49,7 +48,7 @@ export default function PagamentoConfirmado() {
     );
   }
 
-  const { pedidos, compraGrupo, nomeGrupo, metodo, simulado } = resultado;
+  const { pedidos, compraGrupo, nomeGrupo, metodo } = resultado;
   const meuParticipante = compraGrupo?.participantes.find((participante) => participante.usuarioId === user?.id);
   const evento = pedidos[0]?.evento ?? compraGrupo?.lote.evento;
 
@@ -77,7 +76,7 @@ export default function PagamentoConfirmado() {
     <View className="flex-1 bg-background">
       <CabecalhoGroov esquerda={{ icone: "close", onPress: () => sair("/"), rotulo: "Fechar" }} />
       <ScrollView
-        contentContainerStyle={conteudo(espacoNavBar)}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center">
@@ -127,7 +126,7 @@ export default function PagamentoConfirmado() {
             <Linha key={pedido.id} rotulo={`${pedido.quantidade}x ${pedido.lote.nome}`} valor={formatarReais(Number(pedido.valor))} />
           ))}
           {compraGrupo && <Linha rotulo={`Sua cota (${nomeGrupo})`} valor={formatarReais(cotaGrupo)} />}
-          <Linha rotulo="Método de cobrança" valor={`${metodo ?? "Pagamento"}${simulado ? " (simulado)" : ""}`} />
+          <Linha rotulo="Método de cobrança" valor={metodo ? `${metodo} (simulado)` : "Simulado"} />
           <Linha rotulo="Total pago" valor={formatarReais(totalPago)} destaque />
         </View>
 

@@ -10,7 +10,6 @@ import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api } from "../utils/api";
 import { formatarCodigo, type IngressoApi } from "../utils/compras";
 import { formatarIntervalo } from "../utils/evento";
-import { conteudo } from "../utils/layout";
 
 const mesmoDia = (data: string) => new Date(data).toDateString() === new Date().toDateString();
 
@@ -89,7 +88,7 @@ export default function Ingresso() {
 
       {!carregando && ingresso && (
         <ScrollView
-          contentContainerStyle={conteudo(espacoNavBar, { topo: 20 })}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: espacoNavBar }}
           showsVerticalScrollIndicator={false}
         >
           <View className="flex-row items-center gap-2 mb-3">

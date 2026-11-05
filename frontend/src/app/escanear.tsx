@@ -4,7 +4,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
-import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import type { ValidacaoApi } from "../utils/compras";
 
@@ -22,7 +21,6 @@ const COR = { VALIDO: "#10b981", JA_UTILIZADO: "#f59e0b", INVALIDO: "#ef4444" } 
 const ICONE = { VALIDO: "check-circle", JA_UTILIZADO: "history", INVALIDO: "cancel" } as const;
 
 export default function Escanear() {
-  const espacoNavBar = useEspacoNavBar();
   const router = useRouter();
   const { token, user } = useUser();
   const [permissao, pedirPermissao] = Camera?.useCameraPermissions() ?? [null, async () => null];
@@ -70,9 +68,7 @@ export default function Escanear() {
     </View>
   );
 
-  if (!(user?.podeValidar ?? user?.papel === "ADMIN")) {
-    return aviso("Só o gerente do evento e os validadores da equipe podem validar ingressos.");
-  }
+  if (user?.papel !== "ADMIN") return aviso("Só administradores podem validar ingressos.");
   if (!Camera) return aviso("Esta versão do app não tem leitor de QR code. Instale a versão mais recente do Groov.");
   if (!permissao) return <View className="flex-1 bg-background" />;
   if (!permissao.granted) {
@@ -114,8 +110,7 @@ export default function Escanear() {
         )}
 
         {(resultado || falha) && (
-          <View className="absolute inset-x-0 bottom-0 p-5 rounded-t-3xl bg-surface-container-low border-t border-white/10 gap-3"
-            style={{ paddingBottom: espacoNavBar }}>
+          <View className="absolute inset-x-0 bottom-0 p-5 pb-10 rounded-t-3xl bg-surface-container-low border-t border-white/10 gap-3">
             <View className="flex-row items-center gap-3">
               <MaterialIcons
                 name={resultado ? ICONE[resultado.resultado] : "error"}

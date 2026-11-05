@@ -9,10 +9,7 @@ const usuarioPublico = { select: { id: true, nome: true, username: true, avatarU
 export const eventoInclude = {
   categoria: true,
   lotes: { orderBy: { preco: "asc" } },
-  atracoes: {
-    orderBy: [{ ordem: "asc" }, { criadoEm: "asc" }],
-    select: { id: true, nome: true, fotoUrl: true, usuario: usuarioPublico },
-  },
+  atracoes: usuarioPublico,
   criadoPor: usuarioPublico,
 } satisfies Prisma.EventoInclude;
 

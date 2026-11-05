@@ -6,16 +6,15 @@ import { eventoInclude } from "../src/types/event";
 const CAMPOS_PUBLICOS = ["avatarUrl", "id", "nome", "username"];
 
 describe("eventoInclude (rotas públicas de eventos)", () => {
-  it.each([
-    ["criadoPor", eventoInclude.criadoPor],
-    ["atracoes[].usuario", eventoInclude.atracoes.select.usuario],
-  ] as const)("%s só expõe os campos públicos do usuário", (_relacao, config) => {
+  it.each(["criadoPor", "atracoes"] as const)("%s só expõe os campos públicos do usuário", (relacao) => {
+    const config = eventoInclude[relacao];
+
     expect(config).not.toBe(true);
     expect(Object.keys((config as { select: object }).select).sort()).toEqual(CAMPOS_PUBLICOS);
   });
 
   it("nenhum campo sensível do usuário é selecionado", () => {
-    const selecionados = [eventoInclude.criadoPor, eventoInclude.atracoes.select.usuario].flatMap((config) =>
+    const selecionados = [eventoInclude.criadoPor, eventoInclude.atracoes].flatMap((config) =>
       Object.keys((config as { select: object }).select),
     );
 

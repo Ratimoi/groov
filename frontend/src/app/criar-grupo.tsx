@@ -8,7 +8,6 @@ import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { compartilharConvite } from "../utils/convite";
-import { conteudo } from "../utils/layout";
 
 type PessoaBusca = { id: string; nome: string; username: string; avatarUrl: string | null };
 
@@ -128,7 +127,7 @@ export default function CriarGrupo() {
       <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: voltar, rotulo: "Voltar" }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={conteudo(espacoNavBar)}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
         showsVerticalScrollIndicator={false}
       >
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Criar Grupo</Text>

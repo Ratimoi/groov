@@ -1,6 +1,5 @@
 import { TicketModel } from "../models/TicketModel";
 import { UserModel } from "../models/UserModel";
-import { TeamService } from "./TeamService";
 import type { AuthUser } from "../types/auth";
 import type { Ticket, TicketServiceContract, TicketTransferBody, TicketValidateBody, TicketValidation, ValidationReason } from "../types/ticket";
 import { AppError } from "../utils/AppError";
@@ -18,20 +17,12 @@ export class TicketService implements TicketServiceContract {
   private ticketModel: TicketModel;
   private userModel: UserModel;
 
-  private teamService: TeamService;
-
-  constructor(
-    ticketModel: TicketModel = new TicketModel(),
-    userModel: UserModel = new UserModel(),
-    teamService: TeamService = new TeamService(),
-  ) {
+  constructor(ticketModel: TicketModel = new TicketModel(), userModel: UserModel = new UserModel()) {
     this.ticketModel = ticketModel;
     this.userModel = userModel;
-    this.teamService = teamService;
   }
 
-  // Valida quem é gerente do evento do ingresso ou VALIDADOR dele. Código desconhecido só é
-  // respondido a quem valida em algum evento. `eventoId` é opcional: quando vem, ingresso de outro
+  // Só ADMIN valida (a rota exige o papel). `eventoId` é opcional: quando vem, ingresso de outro
   // evento é recusado.
   async validate(body: TicketValidateBody, actor: AuthUser): Promise<TicketValidation> {
     const { codigo, eventoId } = asObject(body);
@@ -39,15 +30,8 @@ export class TicketService implements TicketServiceContract {
     if (typeof codigo !== "string" || codigo.trim() === "" || codigo.length > 64) fail("codigo é obrigatório");
     if (eventoId !== undefined && (typeof eventoId !== "string" || eventoId.trim() === "")) fail("eventoId inválido");
 
-    const codigoNormalizado = codigo.trim().toUpperCase();
-    const alvo = await this.ticketModel.findEventByCode(codigoNormalizado);
-    const permitido = alvo
-      ? await this.teamService.canValidateEvent(alvo.eventoId, actor, alvo.criadoPorId)
-      : await this.teamService.canValidateAny(actor);
-    if (!permitido) throw new AppError("Você não pode validar ingressos deste evento", 403);
-
     const { resultado, motivo, ingresso } = await this.ticketModel.validate(
-      codigoNormalizado,
+      codigo.trim().toUpperCase(),
       eventoId as string | undefined,
       actor.id,
       new Date(),

@@ -10,15 +10,6 @@ export class TicketModel {
     this.prismaClient = prismaClient;
   }
 
-  // Evento (e gerente) do ingresso com esse código, para checar se quem lê pode validar.
-  async findEventByCode(codigo: string): Promise<{ eventoId: string; criadoPorId: string | null } | null> {
-    const ingresso = await this.prismaClient.ingresso.findUnique({
-      where: { codigoQr: codigo },
-      select: { eventoId: true, evento: { select: { criadoPorId: true } } },
-    });
-    return ingresso ? { eventoId: ingresso.eventoId, criadoPorId: ingresso.evento.criadoPorId } : null;
-  }
-
   async findByOwner(donoId: string): Promise<Ticket[]> {
     return this.prismaClient.ingresso.findMany({
       where: { donoId },

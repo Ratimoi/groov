@@ -7,7 +7,7 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
 
-const resetar = (papel: "ADMIN" | "CLIENTE" = "ADMIN") =>
+const resetar = (papel: "ADMIN" | "PRODUTOR" | "CLIENTE" = "ADMIN") =>
   request(app).post("/admin/resetar-seed").set(logadoComo(papel, "adm"));
 
 describe("POST /admin/resetar-seed", () => {
@@ -25,7 +25,7 @@ describe("POST /admin/resetar-seed", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it.each(["CLIENTE"] as const)("%s recebe 403 e nada é apagado", async (papel) => {
+  it.each(["CLIENTE", "PRODUTOR"] as const)("%s recebe 403 e nada é apagado", async (papel) => {
     const res = await resetar(papel);
 
     expect(res.status).toBe(403);

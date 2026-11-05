@@ -20,7 +20,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         avatarUrl: "https://i.pravatar.cc/150?img=47",
         email: "fernanda.rocha@eventos.com",
         senha: "",
-        papel: "CLIENTE"
+        papel: "PRODUTOR"
     },
     {
         id: "usr-cliente-01",
@@ -136,7 +136,7 @@ const categorias: Prisma.CategoriaCreateManyInput[] = [
 ];
 
 // Criando os Eventos
-const eventosBase: Prisma.EventoCreateManyInput[] = [
+const eventos: Prisma.EventoCreateManyInput[] = [
     // ---------- FESTAS ----------
     {
         id: "evt-festa-01",
@@ -343,24 +343,6 @@ const eventosBase: Prisma.EventoCreateManyInput[] = [
     }
 ];
 
-// Pontos no mapa: o centro de cada cidade com um pequeno deslocamento por evento, para os pinos não se sobreporem.
-const CENTRO_DA_CIDADE: Record<string, [number, number]> = {
-  "Porto Alegre": [-30.0346, -51.2177],
-  Florianópolis: [-27.5954, -48.548],
-  "Rio de Janeiro": [-22.9068, -43.1729],
-  Curitiba: [-25.4284, -49.2733],
-  Pelotas: [-31.7654, -52.3376],
-  "São Paulo": [-23.5505, -46.6333],
-  "Belo Horizonte": [-19.9167, -43.9345],
-};
-
-const eventos: Prisma.EventoCreateManyInput[] = eventosBase.map((evento, i) => {
-  const centro = CENTRO_DA_CIDADE[evento.cidade];
-  if (!centro || evento.latitude != null) return evento;
-  const desvio = ((i % 5) - 2) * 0.006;
-  return { ...evento, latitude: centro[0] + desvio, longitude: centro[1] - desvio };
-});
-
 // Criando os Lotes (ingressos à venda de cada evento)
 // Nas Festas, o lote "Inteira" aceita compra em grupo com desconto
 const lotes: Prisma.LoteCreateManyInput[] = [
@@ -438,13 +420,11 @@ export async function aplicarSeed(prisma: PrismaClient | Prisma.TransactionClien
     await prisma.lote.createMany({ data: lotes });
     log(`${lotes.length} Lotes Cadastrados...`);
 
-    const contasAtracao = new Map(atracoes.map(a => [a.id as string, a]));
-    const atracoesDosEventos = Object.entries(atracoesPorEvento).flatMap(([eventoId, usuarioIds]) =>
-        usuarioIds.map((usuarioId, ordem) => {
-            const conta = contasAtracao.get(usuarioId)!;
-            return { id: `atr-${eventoId}-${ordem}`, eventoId, nome: conta.nome, fotoUrl: conta.avatarUrl ?? null, usuarioId, ordem };
-        })
-    );
-    await prisma.atracao.createMany({ data: atracoesDosEventos, skipDuplicates: true });
+    for (const [eventoId, usuarioIds] of Object.entries(atracoesPorEvento)) {
+        await prisma.evento.update({
+            where: { id: eventoId },
+            data: { atracoes: { set: usuarioIds.map(id => ({ id })) } }
+        });
+    }
     log(`Atrações vinculadas a ${Object.keys(atracoesPorEvento).length} Eventos...`);
 }

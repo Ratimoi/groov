@@ -356,12 +356,12 @@ describe("/usuarios", () => {
     });
 
     it("ADMIN altera o papel de outro usuário", async () => {
-      prismaMock.usuario.update.mockResolvedValue({ ...usuario, papel: "ADMIN" });
+      prismaMock.usuario.update.mockResolvedValue({ ...usuario, papel: "PRODUTOR" });
 
-      const res = await request(app).put("/usuarios/u1").set(logadoComo("ADMIN", "adm")).send({ papel: "ADMIN" });
+      const res = await request(app).put("/usuarios/u1").set(logadoComo("ADMIN", "adm")).send({ papel: "PRODUTOR" });
 
       expect(res.status).toBe(200);
-      expect(prismaMock.usuario.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { papel: "ADMIN" }, omit });
+      expect(prismaMock.usuario.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { papel: "PRODUTOR" }, omit });
     });
 
     it("ADMIN com papel inexistente recebe 400", async () => {

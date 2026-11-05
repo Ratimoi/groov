@@ -7,29 +7,17 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
 
-// Evento gerenciado por "adm" (o usuário padrão dos testes).
-const ingresso = {
-  id: "i1",
-  codigoQr: "GRV-ABCDEFGHJKLM",
-  eventoId: "e1",
-  donoId: "u9",
-  status: "VALIDO",
-  usadoEm: null,
-  evento: { criadoPorId: "adm" },
-};
+const ingresso = { id: "i1", codigoQr: "GRV-ABCDEFGHJKLM", eventoId: "e1", donoId: "u9", status: "VALIDO", usadoEm: null };
 
 function programa(atual: Record<string, unknown> | null, baixas = 1) {
   runTransactionCallbacks();
   prismaMock.ingresso.findUnique.mockResolvedValue(atual);
   prismaMock.ingresso.updateMany.mockResolvedValue({ count: baixas });
   prismaMock.validacaoIngresso.create.mockResolvedValue({});
-  // Para código desconhecido: "adm" valida em algum evento.
-  prismaMock.evento.count.mockResolvedValue(1);
-  prismaMock.eventoMembro.count.mockResolvedValue(0);
 }
 
-const validar = (corpo: unknown, papel: "ADMIN" | "CLIENTE" = "CLIENTE", id = "adm") =>
-  request(app).post("/ingressos/validar").set(logadoComo(papel, id)).send(corpo as object);
+const validar = (corpo: unknown, papel: "ADMIN" | "PRODUTOR" | "CLIENTE" = "ADMIN") =>
+  request(app).post("/ingressos/validar").set(logadoComo(papel, "adm")).send(corpo as object);
 
 describe("POST /ingressos/validar", () => {
   beforeEach(resetPrismaMock);
@@ -41,45 +29,12 @@ describe("POST /ingressos/validar", () => {
     expect(prismaMock.ingresso.updateMany).not.toHaveBeenCalled();
   });
 
-  it.each(["CLIENTE", "ADMIN"] as const)("%s que não é da equipe do evento recebe 403 e nada é gravado", async (papel) => {
-    programa(ingresso);
-    prismaMock.eventoMembro.findUnique.mockResolvedValue(null);
-
-    const res = await validar({ codigo: ingresso.codigoQr }, papel, "intruso");
+  it.each(["CLIENTE", "PRODUTOR"] as const)("%s recebe 403 e nada é consultado", async (papel) => {
+    const res = await validar({ codigo: ingresso.codigoQr }, papel);
 
     expect(res.status).toBe(403);
+    expect(prismaMock.ingresso.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.ingresso.updateMany).not.toHaveBeenCalled();
-    expect(prismaMock.validacaoIngresso.create).not.toHaveBeenCalled();
-  });
-
-  it("VALIDADOR do evento libera a entrada", async () => {
-    programa(ingresso);
-    prismaMock.eventoMembro.findUnique.mockResolvedValue({ cargo: "VALIDADOR" });
-
-    const res = await validar({ codigo: ingresso.codigoQr }, "CLIENTE", "val1");
-
-    expect(res.status).toBe(200);
-    expect(prismaMock.validacaoIngresso.create.mock.calls[0][0].data.validadoPorId).toBe("val1");
-  });
-
-  it("PROMOTOR do evento não valida", async () => {
-    programa(ingresso);
-    prismaMock.eventoMembro.findUnique.mockResolvedValue({ cargo: "PROMOTOR" });
-
-    const res = await validar({ codigo: ingresso.codigoQr }, "CLIENTE", "prom1");
-
-    expect(res.status).toBe(403);
-    expect(prismaMock.ingresso.updateMany).not.toHaveBeenCalled();
-  });
-
-  it("código desconhecido para quem não valida em evento nenhum responde 403", async () => {
-    programa(null);
-    prismaMock.evento.count.mockResolvedValue(0);
-    prismaMock.eventoMembro.count.mockResolvedValue(0);
-
-    const res = await validar({ codigo: "GRV-NAOEXISTE00" });
-
-    expect(res.status).toBe(403);
   });
 
   it.each([

@@ -8,11 +8,9 @@ export type Usuario = {
   username: string;
   avatarUrl?: string | null;
   email: string;
-  papel: "CLIENTE" | "ADMIN";
+  papel: "CLIENTE" | "PRODUTOR" | "ADMIN";
   // false em contas anteriores à exigência do CPF; ausente se a API for antiga.
   temCpf?: boolean;
-  // Gerente de algum evento ou VALIDADOR em algum: libera a leitura de ingressos. Ausente se a API for antiga.
-  podeValidar?: boolean;
 };
 
 export type DadosEditaveis = Partial<{ nome: string; username: string; email: string; cpf: string }>;
