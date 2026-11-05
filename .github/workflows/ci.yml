@@ -233,7 +233,7 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # O runtime do OTA vem da `version` do app.json: só chega ao APK dessa mesma versão.
+      # O runtime do OTA é a fingerprint do código nativo (policy "fingerprint" no app.json): a atualização só chega a APKs com o mesmo nativo, qualquer que seja a `version`.
       - run: npm ci
         if: steps.token.outputs.disponivel == 'true'
       - run: eas update --branch preview --environment preview --message "${{ github.sha }}" --non-interactive
