@@ -1,11 +1,10 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
-import { CabecalhoGroov } from "../components/CabecalhoGroov";
+import { Tela } from "../components/Tela";
 import { Campo } from "../components/Campo";
-import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { formatarReais } from "../utils/lote";
 
@@ -47,7 +46,6 @@ function Chip({ rotulo, ativo, onPress }: { rotulo: string; ativo: boolean; onPr
 // Equipe do evento (só o gerente): promotores, validadores e as condições do programa de promotores.
 export default function Equipe() {
   const router = useRouter();
-  const espacoNavBar = useEspacoNavBar();
   const { token } = useUser();
   const { eventoId } = useLocalSearchParams<{ eventoId: string }>();
   const [evento, setEvento] = useState<EventoPrograma | null>(null);
@@ -140,13 +138,7 @@ export default function Equipe() {
     ]);
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: voltar, rotulo: "Voltar" }} />
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 16 }}
-        showsVerticalScrollIndicator={false}
-      >
+    <Tela cabecalho={{ esquerda: { icone: "arrow-back", onPress: voltar, rotulo: "Voltar" } }} formulario>
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Equipe</Text>
         {!!evento && (
           <Text className="font-body-md text-body-md text-on-surface-variant mt-1 mb-5" numberOfLines={2}>
@@ -245,7 +237,6 @@ export default function Equipe() {
             </View>
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </Tela>
   );
 }

@@ -7,6 +7,7 @@ import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { ApiError } from "../utils/api";
 import { cpfValido, mascararCpf } from "../utils/cpf";
+import { conteudo } from "../utils/layout";
 
 type CampoProps = {
   rotulo: string;
@@ -84,7 +85,7 @@ export default function MeusDados() {
       <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: voltar, rotulo: "Voltar" }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
+        contentContainerStyle={conteudo(espacoNavBar)}
         showsVerticalScrollIndicator={false}
       >
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Meus Dados</Text>

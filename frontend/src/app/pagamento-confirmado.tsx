@@ -8,6 +8,7 @@ import { BarraSegmentada } from "../components/BarraSegmentada";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { formatarDataHora } from "../utils/evento";
 import { arredondar, formatarReais, precoNoGrupo, TAXA_SERVICO } from "../utils/lote";
+import { conteudo } from "../utils/layout";
 
 function Linha({ rotulo, valor, destaque }: { rotulo: string; valor: string; destaque?: boolean }) {
   return (
@@ -76,7 +77,7 @@ export default function PagamentoConfirmado() {
     <View className="flex-1 bg-background">
       <CabecalhoGroov esquerda={{ icone: "close", onPress: () => sair("/"), rotulo: "Fechar" }} />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
+        contentContainerStyle={conteudo(espacoNavBar)}
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center">

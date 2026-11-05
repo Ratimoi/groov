@@ -1,10 +1,9 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, Share, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Share, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
-import { CabecalhoGroov } from "../components/CabecalhoGroov";
-import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
+import { Tela } from "../components/Tela";
 import { api, ApiError } from "../utils/api";
 import { formatarReais } from "../utils/lote";
 
@@ -41,7 +40,6 @@ function Numero({ rotulo, valor }: { rotulo: string; valor: string }) {
 // Painel do promotor: o código para divulgar, as condições e quanto já vendeu.
 export default function Promotor() {
   const router = useRouter();
-  const espacoNavBar = useEspacoNavBar();
   const { token } = useUser();
   const { eventoId } = useLocalSearchParams<{ eventoId: string }>();
   const [painel, setPainel] = useState<Painel | null>(null);
@@ -82,12 +80,7 @@ export default function Promotor() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <CabecalhoGroov esquerda={{ icone: "arrow-back", onPress: voltar, rotulo: "Voltar" }} />
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar + 16 }}
-        showsVerticalScrollIndicator={false}
-      >
+    <Tela cabecalho={{ esquerda: { icone: "arrow-back", onPress: voltar, rotulo: "Voltar" } }}>
         <Text className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Meu link de promotor</Text>
 
         {carregando && <ActivityIndicator color="#bc13fe" className="my-10" />}
@@ -137,7 +130,6 @@ export default function Promotor() {
             </Text>
           </View>
         )}
-      </ScrollView>
-    </View>
+      </Tela>
   );
 }
