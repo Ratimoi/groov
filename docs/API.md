@@ -410,6 +410,19 @@ O gerente define as condições no evento (`PUT /eventos/:id`): `descontoAfiliad
 
 Comprar com o código: envie `codigoAfiliado` em `POST /pedidos` ou em `POST /grupos/compras`. O desconto do código **não soma** com o de grupo: vale o maior dos dois. A taxa de serviço incide sobre o valor já com desconto. O pedido guarda `promotorId`, `codigoAfiliado` e `comissao` (a comissão é só registrada, não há repasse automático) e ela é registrada mesmo quando o desconto de grupo é o maior, pois a venda veio do promotor. `400` para código inválido ou para o próprio código do promotor.
 
+## Feed
+
+Feed de eventos no estilo de rede social (aba Feed do app). Todas as rotas exigem login.
+
+| Rota | O que faz |
+|---|---|
+| `GET /feed?aba=&limit=&cursor=` | `aba`: `todos` (padrão), `seguindo` (organizadores que sigo) ou `salvos`. `limit` 1 a 30 (padrão 10). Mais recentes primeiro; fora de `salvos` só eventos que ainda não acabaram. Resposta: `{ data: [{ id, titulo, descricao, imagemUrl, comecaEm, terminaEm, nomeLocal, cidade, tags, criadoEm, organizador, atracoes, menorPreco, curtidas, curtido, salvo, seguindo }], nextCursor }`. `menorPreco` é `null` quando esgotou. Passe `nextCursor` em `cursor` para a próxima página; `null` = fim. `400` para parâmetro inválido |
+| `POST` / `DELETE /eventos/:id/curtir` | Curtir / descurtir (idempotente). `{ curtido, curtidas }` |
+| `POST` / `DELETE /eventos/:id/salvar` | Salvar / tirar dos salvos (idempotente). `{ salvo }` |
+| `POST` / `DELETE /usuarios/:id/seguir` | Seguir / deixar de seguir. `{ seguindo }`. `400` ao seguir a si mesmo, `404` se não existir |
+
+Eventos ocultos pela moderação não aparecem no feed e respondem `404` em curtir/salvar.
+
 ## Admin
 
 | Rota | O que faz |

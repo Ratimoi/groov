@@ -7,6 +7,7 @@ import userRoutes from './routes/UserRoutes';
 import groupRoutes from './routes/GroupRoutes';
 import groupPurchaseRoutes from './routes/GroupPurchaseRoutes';
 import eventRoutes from './routes/EventRoutes'
+import feedRoutes from './routes/FeedRoutes'
 import lotRoutes from './routes/LotRoutes';
 import orderRoutes from './routes/OrderRoutes';
 import ticketRoutes from './routes/TicketRoutes';
@@ -40,6 +41,7 @@ app.use('/usuarios', userRoutes);
 // '/grupos/compras' precisa vir antes de '/grupos', senão '/grupos/:id' captura "compras" como id.
 app.use('/grupos/compras', authenticate, groupPurchaseRoutes);
 app.use('/grupos', authenticate, groupRoutes);
+app.use('/feed', authenticate, feedRoutes);
 app.use('/eventos', eventRoutes)
 app.use('/lotes', lotRoutes);
 app.use('/pedidos', authenticate, orderRoutes);
