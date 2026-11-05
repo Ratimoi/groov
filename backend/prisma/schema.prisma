@@ -30,6 +30,7 @@ model Usuario {
   participacoesCompra ParticipanteCompra[]
   eventosComoAtracao  Evento[]             @relation("AtracoesEvento")
   avaliacoes          AvaliacaoEvento[]
+  cargosEvento        EventoMembro[]
 }
 
 model Categoria {
@@ -56,8 +57,13 @@ model Evento {
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
+  // Quem publicou é o gerente do evento: edita, apaga e monta a equipe (promotores e validadores).
   criadoPorId String?
   criadoPor   Usuario? @relation("CriadorEvento", fields: [criadoPorId], references: [id])
+
+  // Moderação: um evento oculto pelo ADMIN some das listagens e das buscas.
+  ocultoEm     DateTime?
+  ocultoMotivo String?
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -67,6 +73,7 @@ model Evento {
   ingressos  Ingresso[]
   validacoes ValidacaoIngresso[]
   avaliacoes AvaliacaoEvento[]
+  equipe     EventoMembro[]
 
   @@index([cidade])
 }
@@ -240,10 +247,17 @@ model ValidacaoIngresso {
   @@index([eventoId])
 }
 
+// Papel na plataforma. Quem pode o quê dentro de um evento vem do CargoEvento, não daqui: o ADMIN
+// cuida do software (moderação, usuários), não dos eventos.
 enum Papel {
   CLIENTE
-  PRODUTOR
   ADMIN
+}
+
+// Cargos da equipe de um evento, definidos pelo gerente (quem publicou).
+enum CargoEvento {
+  PROMOTOR
+  VALIDADOR
 }
 
 enum StatusEvento {
@@ -299,4 +313,18 @@ model AvaliacaoEvento {
 
   @@unique([eventoId, usuarioId])
   @@index([eventoId])
+}
+
+model EventoMembro {
+  id        String      @id @default(cuid())
+  eventoId  String
+  evento    Evento      @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  cargo     CargoEvento
+  criadoEm  DateTime    @default(now())
+
+  // Um cargo por pessoa em cada evento.
+  @@unique([eventoId, usuarioId])
+  @@index([usuarioId])
 }

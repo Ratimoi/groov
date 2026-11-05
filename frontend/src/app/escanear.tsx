@@ -68,7 +68,9 @@ export default function Escanear() {
     </View>
   );
 
-  if (user?.papel !== "ADMIN") return aviso("Só administradores podem validar ingressos.");
+  if (!(user?.podeValidar ?? user?.papel === "ADMIN")) {
+    return aviso("Só o gerente do evento e os validadores da equipe podem validar ingressos.");
+  }
   if (!Camera) return aviso("Esta versão do app não tem leitor de QR code. Instale a versão mais recente do Groov.");
   if (!permissao) return <View className="flex-1 bg-background" />;
   if (!permissao.granted) {

@@ -88,10 +88,10 @@ Rotas disponíveis:
 | `GET /ingressos`, `GET /ingressos/:id` | dono do ingresso | Só os seus; o de outra pessoa responde 404 |
 | `GET /usuarios/busca?q=` | logado | Busca por nome ou username (mínimo 2 caracteres) para convidar pessoas a um grupo |
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
-| `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
+| `POST /eventos` | qualquer usuário logado | Publica um evento; quem publica vira o gerente |
 | `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
 | `GET /eventos/:eventoId/lotes`, `GET /lotes/:id` | público | Lotes de um evento (preço, quantidade e disponibilidade) e um lote |
-| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | criador do evento (PRODUTOR) ou ADMIN | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
+| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | gerente do evento (quem o publicou) | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
 
 > Quem vai consumir a API (o app) deve ler o guia [docs/API.md](docs/API.md): formatos de resposta, erros, permissões e tipos TypeScript.
 

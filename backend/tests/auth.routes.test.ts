@@ -33,7 +33,7 @@ describe("autenticação", () => {
       const res = await request(app).post("/auth/login").send({ email: "ana@example.com", senha: SENHA });
 
       expect(res.status).toBe(200);
-      expect(res.body.usuario).toEqual({ ...publico, temCpf: false });
+      expect(res.body.usuario).toEqual({ ...publico, temCpf: false, podeValidar: false });
       expect(JSON.stringify(res.body)).not.toContain(usuarioComSenha.senha);
       expect(verifyToken(res.body.token)).toBe("u1");
       expect(prismaMock.usuario.findUnique).toHaveBeenCalledWith({ where: { email: "ana@example.com" } });
@@ -110,7 +110,7 @@ describe("autenticação", () => {
       const res = await request(app).get("/auth/me").set(bearer("u1"));
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ...publico, temCpf: false });
+      expect(res.body).toEqual({ ...publico, temCpf: false, podeValidar: false });
     });
 
     it("informa temCpf sem expor o CPF", async () => {

@@ -4,6 +4,41 @@ import type { AuthUser } from "../types/auth";
 import { AppError } from "../utils/AppError";
 
 export class AdminService {
+  async hideEvent(eventoId: string, body: unknown) {
+    const bruto = (body as { motivo?: unknown } | null | undefined)?.motivo;
+    const motivo = typeof bruto === "string" ? bruto.trim() : "";
+    if (motivo === "") throw new AppError("motivo é obrigatório", 400);
+    return this.setHidden(eventoId, { ocultoEm: new Date(), ocultoMotivo: motivo.slice(0, 500) });
+  }
+
+  async showEvent(eventoId: string) {
+    return this.setHidden(eventoId, { ocultoEm: null, ocultoMotivo: null });
+  }
+
+  private async setHidden(eventoId: string, data: { ocultoEm: Date | null; ocultoMotivo: string | null }) {
+    const existe = await prisma.evento.findUnique({ where: { id: eventoId }, select: { id: true } });
+    if (!existe) throw new AppError("Evento não encontrado", 404);
+    return prisma.evento.update({
+      where: { id: eventoId },
+      data,
+      select: { id: true, titulo: true, ocultoEm: true, ocultoMotivo: true },
+    });
+  }
+
+  listHiddenEvents() {
+    return prisma.evento.findMany({
+      where: { ocultoEm: { not: null } },
+      select: {
+        id: true,
+        titulo: true,
+        ocultoEm: true,
+        ocultoMotivo: true,
+        criadoPor: { select: { id: true, nome: true, username: true } },
+      },
+      orderBy: { ocultoEm: "desc" },
+    });
+  }
+
   // Apaga todos os dados, menos a conta de quem pediu, e recria os dados de demonstração do seed.
   // Recusado em produção: o banco real nunca deve ser zerado por uma chamada da API.
   async resetarSeed(actor: AuthUser): Promise<{ mensagem: string }> {

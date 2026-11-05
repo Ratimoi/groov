@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { TeamModel } from "../models/TeamModel";
 import { UserModel } from "../models/UserModel";
 import type { AuthServiceContract, LoginRequest, LoginResponse, SessionUser } from "../types/auth";
 import { AppError } from "../utils/AppError";
@@ -16,8 +17,11 @@ function getDummyHash(): Promise<string> {
 export class AuthService implements AuthServiceContract {
   private userModel: UserModel;
 
-  constructor(userModel: UserModel = new UserModel()) {
+  private teamModel: TeamModel;
+
+  constructor(userModel: UserModel = new UserModel(), teamModel: TeamModel = new TeamModel()) {
     this.userModel = userModel;
+    this.teamModel = teamModel;
   }
 
   async login(data: LoginRequest): Promise<LoginResponse> {
@@ -32,13 +36,14 @@ export class AuthService implements AuthServiceContract {
     }
 
     const { senha: _senha, cpf, ...usuario } = user;
-    return { token: signToken(user.id), usuario: { ...usuario, temCpf: cpf != null } };
+    const podeValidar = await this.teamModel.canValidateAny(user.id);
+    return { token: signToken(user.id), usuario: { ...usuario, temCpf: cpf != null, podeValidar } };
   }
 
   async me(userId: string): Promise<SessionUser | null> {
     const user = await this.userModel.findSelf(userId);
     if (!user) return null;
     const { cpf, ...usuario } = user;
-    return { ...usuario, temCpf: cpf != null };
+    return { ...usuario, temCpf: cpf != null, podeValidar: await this.teamModel.canValidateAny(userId) };
   }
 }

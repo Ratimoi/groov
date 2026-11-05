@@ -20,7 +20,9 @@ export class EventService implements EventServiceContract {
   }
 
   async findById(id: string): Promise<Evento | null> {
-    return this.eventModel.findById(id);
+    const evento = await this.eventModel.findById(id);
+    // Evento oculto pela moderação some da API pública.
+    return evento && !evento.ocultoEm ? evento : null;
   }
 
   async create(body: unknown, actor: AuthUser): Promise<Evento> {
