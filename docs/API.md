@@ -435,6 +435,21 @@ Feed de eventos no estilo de rede social (aba Feed do app). Todas as rotas exige
 
 Eventos ocultos pela moderação não aparecem no feed e respondem `404` em curtir/salvar.
 
+## Pagamentos
+
+Todo pagamento do app passa por `POST /pagamentos`, com a forma de pagamento escolhida. O valor é sempre calculado no servidor; os ingressos só são emitidos **depois** que o provedor aprova.
+
+Sem `MERCADOPAGO_ACCESS_TOKEN` o provedor é **simulado**: aprova na hora, sem cobrar (desenvolvimento, testes e preview). Com o token, a cobrança é feita no Mercado Pago (credencial `TEST-` = ambiente de testes deles) e é preciso definir também `PUBLIC_API_URL` (URL pública da API). Nesse modo `POST /pedidos` e `POST /grupos/compras/:id/pagar` respondem `410`, para não darem ingressos sem pagar.
+
+| Rota | O que faz |
+|---|---|
+| `POST /pagamentos` | `{ "metodo": "PIX" \| "CARTAO", "itens": [{ "tipo": "PEDIDO", "loteId", "quantidade", "codigoAfiliado"? }, { "tipo": "COTA", "compraId", "todos"? }] }` (1 a 10 itens). Responde `201` com o pagamento. `PIX` traz `pixCopiaECola` e `pixQrCodeBase64`; `CARTAO` traz `checkoutUrl` (página segura do Mercado Pago, sem dados de cartão no app). Erros dos itens (lote esgotado, cota já paga…) voltam como nas rotas diretas |
+| `GET /pagamentos/:id` | Só o dono. `{ id, status: PENDENTE \| APROVADO \| RECUSADO \| EXPIRADO, metodo, valor, expiraEm, pixCopiaECola, pixQrCodeBase64, checkoutUrl, erroEmissao, pedidos, compras }`. Enquanto `PENDENTE` confere no Mercado Pago; `pedidos` e `compras` vêm preenchidos quando `APROVADO`. Vale 30 minutos |
+| `POST /pagamentos/webhook/mercadopago` | Público. Aviso do Mercado Pago; a API sempre consulta o pagamento lá antes de aprovar, e só aprova se o valor pago for igual ao cobrado |
+| `GET /pagamentos/retorno` | Público. Página aberta no fim do checkout do cartão; devolve ao app por `groov://pagamento-retorno` |
+
+Um Pix pago depois do prazo ainda emite os ingressos. Se o pagamento foi aprovado mas algum item não pôde ser emitido (ex.: o lote esgotou nesse meio tempo), `erroEmissao` traz o motivo e o estorno é feito pelo painel do Mercado Pago.
+
 ## Admin
 
 | Rota | O que faz |

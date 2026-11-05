@@ -1,5 +1,5 @@
 import { LotModel } from "../models/LotModel";
-import { OrderModel } from "../models/OrderModel";
+import { OrderModel, type OrderCreateData } from "../models/OrderModel";
 import type { AuthUser } from "../types/auth";
 import { MAX_TICKETS_PER_ORDER, type Order, type OrderCreateBody, type OrderServiceContract } from "../types/order";
 import { AppError } from "../utils/AppError";
@@ -23,7 +23,8 @@ export class OrderService implements OrderServiceContract {
     this.teamService = teamService;
   }
 
-  async create(body: OrderCreateBody, actor: AuthUser): Promise<Order> {
+  // Valida o pedido e calcula os valores (o preço vem do lote no banco). Não grava nada.
+  async plan(body: OrderCreateBody, actor: AuthUser): Promise<{ data: OrderCreateData; valorCents: number }> {
     const { loteId, quantidade, codigoAfiliado } = asObject(body);
 
     if (typeof loteId !== "string" || loteId.trim() === "") fail("loteId é obrigatório");
@@ -44,18 +45,28 @@ export class OrderService implements OrderServiceContract {
     const subtotalCents = toCents(lote.preco) * quantidade;
     const descontoCents = afiliado ? fractionOfCents(subtotalCents, afiliado.desconto) : 0;
     const baseCents = subtotalCents - descontoCents;
-    const order = await this.orderModel.createPaid({
+    const taxaServicoCents = serviceFeeCents(baseCents);
+    const data: OrderCreateData = {
       usuarioId: actor.id,
       eventoId: lote.eventoId,
       loteId: lote.id,
       quantidade,
       subtotalCents,
       descontoCents,
-      taxaServicoCents: serviceFeeCents(baseCents),
+      taxaServicoCents,
       ...(afiliado
         ? { promotorId: afiliado.promotorId, codigoAfiliado: afiliado.codigo, comissaoCents: fractionOfCents(baseCents, afiliado.comissao) }
         : {}),
-    });
+    };
+    if (lote.quantidade - lote.quantidadeVendida - lote.quantidadeReservada < quantidade) {
+      throw new AppError("Ingressos insuficientes neste lote", 409);
+    }
+    return { data, valorCents: baseCents + taxaServicoCents };
+  }
+
+  async create(body: OrderCreateBody, actor: AuthUser): Promise<Order> {
+    const { data } = await this.plan(body, actor);
+    const order = await this.orderModel.createPaid(data);
     if (!order) throw new AppError("Ingressos insuficientes neste lote", 409);
 
     return order;

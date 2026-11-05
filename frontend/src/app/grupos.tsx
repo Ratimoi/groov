@@ -16,7 +16,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { BarraSegmentada } from "../components/BarraSegmentada";
@@ -237,8 +236,6 @@ function CardCompra({
 export default function Grupos() {
   const router = useRouter();
   const { user, token } = useUser();
-  const { definirResultado } = useCarrinho();
-  const [pagandoId, setPagandoId] = useState<string | null>(null);
   const espacoNavBar = useEspacoNavBar();
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [compras, setCompras] = useState<CompraGrupo[]>([]);
@@ -272,20 +269,16 @@ export default function Grupos() {
     }, [carregar]),
   );
 
-  const pagarCota = async (compra: CompraGrupo) => {
-    setPagandoId(compra.id);
-    try {
-      const atualizada = await api<CompraGrupo>(`/grupos/compras/${compra.id}/pagar`, { method: "POST", token });
-      definirResultado({ pedidos: [], compraGrupo: atualizada, nomeGrupo: grupos.find((grupo) => grupo.id === compra.grupoId)?.nome });
-      await carregar();
-      router.push("/pagamento-confirmado");
-    } catch (error) {
-      Alert.alert("Não foi possível pagar", error instanceof ApiError ? error.message : "Tente de novo.");
-      await carregar();
-    } finally {
-      setPagandoId(null);
-    }
-  };
+  // Pagar a cota passa sempre pela escolha do método (Pix ou cartão).
+  const pagarCota = (compra: CompraGrupo) =>
+    router.push({
+      pathname: "/metodo-pagamento",
+      params: {
+        compraId: compra.id,
+        nomeGrupo: grupos.find((grupo) => grupo.id === compra.grupoId)?.nome ?? "",
+        evento: compra.lote.evento.titulo,
+      },
+    });
 
   const gruposSemCompra = grupos.filter((grupo) => !compras.some((compra) => compra.grupoId === grupo.id));
   const convidar = async (grupo: Grupo) => {
@@ -364,7 +357,7 @@ export default function Grupos() {
                 meuId={user?.id ?? ""}
                 nomeGrupo={nomeDoGrupo(compra.grupoId)}
                 onPagar={pagarCota}
-                pagando={pagandoId === compra.id}
+                pagando={false}
                 onVerIngresso={() => router.push("/perfil")}
               />
             ))}

@@ -1,6 +1,6 @@
 import { GroupMemberModel } from "../models/GroupMemberModel";
 import { GroupModel } from "../models/GroupModel";
-import { GroupPurchaseModel } from "../models/GroupPurchaseModel";
+import { GroupPurchaseModel, type GroupSharePaymentData } from "../models/GroupPurchaseModel";
 import { LotModel } from "../models/LotModel";
 import type { AuthUser } from "../types/auth";
 import type {
@@ -129,10 +129,10 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     return purchase;
   }
 
-  // Pagamento simulado. Por padrão cada participante paga a própria cota; com `todos: true` o
-  // iniciador paga também as cotas pendentes dos demais. Quando a última cota é paga, a compra é
-  // confirmada e os ingressos de todos são emitidos (cada um no nome do seu dono).
-  async pay(id: string, actor: AuthUser, body?: GroupPurchasePayBody): Promise<GroupPurchase> {
+  // Valida quem pode pagar o quê e calcula cada cota (o preço vem do banco). Não grava nada.
+  // Por padrão cada participante paga a própria cota; com `todos: true` o iniciador paga também as
+  // cotas pendentes dos demais.
+  async planPay(id: string, actor: AuthUser, body?: GroupPurchasePayBody): Promise<{ cotas: GroupSharePaymentData[]; valorCents: number }> {
     const todos = body?.todos === true;
     const purchase = await this.groupPurchaseModel.findById(id);
     const participante = purchase?.participantes.find((item) => item.usuarioId === actor.id);
@@ -169,26 +169,41 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     const subtotalCents = toCents(lote.preco);
     const descontoGrupo = Number(lote.descontoGrupo ?? 0);
 
-    let atualizada: GroupPurchase | null = null;
+    const cotas: GroupSharePaymentData[] = [];
+    let valorCents = 0;
     for (const devedor of devedores) {
       const afiliado = purchase.codigoAfiliado
         ? await this.teamService.lookupAffiliate(lote.eventoId, purchase.codigoAfiliado, devedor.usuarioId)
         : null;
       const descontoCents = fractionOfCents(subtotalCents, Math.max(descontoGrupo, afiliado?.desconto ?? 0));
       const cotaCents = subtotalCents - descontoCents;
-      const paid = await this.groupPurchaseModel.payShare({
+      const taxaServicoCents = serviceFeeCents(cotaCents);
+      valorCents += cotaCents + taxaServicoCents;
+      cotas.push({
         compraId: purchase.id,
         usuarioId: devedor.usuarioId,
         eventoId: lote.eventoId,
         loteId: lote.id,
         subtotalCents,
         descontoCents,
-        taxaServicoCents: serviceFeeCents(cotaCents),
+        taxaServicoCents,
         ...(afiliado
           ? { promotorId: afiliado.promotorId, codigoAfiliado: afiliado.codigo, comissaoCents: fractionOfCents(cotaCents, afiliado.comissao) }
           : {}),
       });
-      if (!paid) throw new AppError(devedor.usuarioId === actor.id ? "Você já pagou a sua parte" : "Uma das cotas já foi paga", 409);
+    }
+    return { cotas, valorCents };
+  }
+
+  // Pagamento simulado. Quando a última cota é paga, a compra é confirmada e os ingressos de todos
+  // são emitidos (cada um no nome do seu dono).
+  async pay(id: string, actor: AuthUser, body?: GroupPurchasePayBody): Promise<GroupPurchase> {
+    const { cotas } = await this.planPay(id, actor, body);
+
+    let atualizada: GroupPurchase | null = null;
+    for (const cota of cotas) {
+      const paid = await this.groupPurchaseModel.payShare(cota);
+      if (!paid) throw new AppError(cota.usuarioId === actor.id ? "Você já pagou a sua parte" : "Uma das cotas já foi paga", 409);
       atualizada = paid;
     }
 
