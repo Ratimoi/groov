@@ -32,6 +32,10 @@ model Usuario {
   avaliacoes          AvaliacaoEvento[]
   cargosEvento        EventoMembro[]
   pedidosIndicados    Pedido[]             @relation("PromotorPedido")
+  curtidas            CurtidaEvento[]
+  eventosSalvos       EventoSalvo[]
+  seguindo            Seguidor[]           @relation("QuemSegue")
+  seguidores          Seguidor[]           @relation("QuemEhSeguido")
 }
 
 model Categoria {
@@ -84,6 +88,8 @@ model Evento {
   validacoes ValidacaoIngresso[]
   avaliacoes AvaliacaoEvento[]
   equipe     EventoMembro[]
+  curtidas   CurtidaEvento[]
+  salvos     EventoSalvo[]
 
   @@index([cidade])
 }
@@ -365,3 +371,38 @@ model Atracao {
   @@index([eventoId])
   @@index([usuarioId])
 }
+
+// Interações do feed: curtir e salvar um evento, seguir um organizador.
+model CurtidaEvento {
+  eventoId  String
+  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime @default(now())
+
+  @@id([eventoId, usuarioId])
+  @@index([usuarioId])
+}
+
+model EventoSalvo {
+  eventoId  String
+  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime @default(now())
+
+  @@id([eventoId, usuarioId])
+  @@index([usuarioId])
+}
+
+model Seguidor {
+  seguidorId String
+  seguidor   Usuario  @relation("QuemSegue", fields: [seguidorId], references: [id], onDelete: Cascade)
+  seguidoId  String
+  seguido    Usuario  @relation("QuemEhSeguido", fields: [seguidoId], references: [id], onDelete: Cascade)
+  criadoEm   DateTime @default(now())
+
+  @@id([seguidorId, seguidoId])
+  @@index([seguidoId])
+}
+

@@ -4,6 +4,7 @@ import { RatingController } from "../controllers/RatingController";
 import { lotController } from "./LotRoutes";
 import { authenticate } from "../middlewares/auth";
 import { publishLimiter } from "../middlewares/publishLimiter";
+import { feedController } from "./FeedRoutes";
 import { TeamController } from "../controllers/TeamController";
 import { TeamService } from "../services/TeamService";
 import { EventService } from "../services/EventService";
@@ -28,6 +29,12 @@ router.post("/", authenticate, publishLimiter, eventController.create);
 router.put("/:id", authenticate, eventController.update);
 router.delete("/:id", authenticate, eventController.delete);
 router.post("/:eventoId/lotes", authenticate, lotController.create);
+
+// Interações do feed (curtir e salvar são idempotentes).
+router.post("/:id/curtir", authenticate, feedController.like);
+router.delete("/:id/curtir", authenticate, feedController.unlike);
+router.post("/:id/salvar", authenticate, feedController.save);
+router.delete("/:id/salvar", authenticate, feedController.unsave);
 
 router.get("/:id/afiliado/:codigo", authenticate, teamController.checkCode);
 router.get("/:id/promotor", authenticate, teamController.promoterPanel);
