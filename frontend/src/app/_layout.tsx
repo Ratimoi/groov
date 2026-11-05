@@ -40,7 +40,7 @@ function Conteudo() {
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="busca" />
+      <Tabs.Screen name="feed" />
       <Tabs.Screen name="grupos" />
       <Tabs.Screen name="perfil" />
       <Tabs.Screen name="detalhes" />
