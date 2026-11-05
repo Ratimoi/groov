@@ -1,3 +1,4 @@
+import { parseLotCreate, type LotCreateData } from "./lotInput";
 import { asObject, fail } from "./validation";
 
 export type EventData = {
@@ -10,12 +11,21 @@ export type EventData = {
   cidade: string;
   categoriaId: string | null;
   tags: string[];
+  endereco: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
+
+// Atração enviada pelo app: nome livre, foto opcional e, se tiver conta, o @username dela.
+export type AtracaoInput = { nome: string; fotoUrl: string | null; username: string | null };
+
+// Itens que acompanham o evento ao publicar ou editar.
+export type EventExtras = { atracoes?: AtracaoInput[]; lotes?: LotCreateData[] };
 
 export type EventCreateData = Partial<EventData> & Pick<EventData, "titulo" | "comecaEm" | "cidade">;
 export type EventUpdateData = Partial<EventData>;
 
-const MAX_LENGTH = { titulo: 200, descricao: 5000, nomeLocal: 200, cidade: 100, imagemUrl: 2000, categoriaId: 100 };
+const MAX_LENGTH = { titulo: 200, descricao: 5000, nomeLocal: 200, cidade: 100, imagemUrl: 2000, categoriaId: 100, endereco: 300 };
 
 function requiredText(value: unknown, name: keyof typeof MAX_LENGTH): string {
   if (typeof value !== "string" || value.trim() === "") fail(`${name} é obrigatório`);
@@ -73,6 +83,44 @@ function tagList(value: unknown): string[] {
   return tags;
 }
 
+const MAX_ATRACOES = 30;
+const MAX_LOTES = 20;
+
+function coordinate(value: unknown, name: string, limit: number): number | null {
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || Math.abs(value) > limit) {
+    fail(`${name} deve ser um número entre -${limit} e ${limit}`);
+  }
+  return value;
+}
+
+function atracaoList(value: unknown): AtracaoInput[] {
+  if (!Array.isArray(value)) fail("atracoes deve ser uma lista");
+  if (value.length > MAX_ATRACOES) fail(`no máximo ${MAX_ATRACOES} atrações`);
+  return value.map((item) => {
+    const atracao = asObject(item);
+    if (typeof atracao.nome !== "string" || atracao.nome.trim() === "") fail("cada atração precisa de um nome");
+    if (atracao.nome.trim().length > 100) fail("nome da atração deve ter no máximo 100 caracteres");
+    let username: string | null = null;
+    if (atracao.username != null && atracao.username !== "") {
+      if (typeof atracao.username !== "string") fail("username da atração deve ser um texto");
+      username = atracao.username.trim().replace(/^@/, "") || null;
+    }
+    return {
+      nome: atracao.nome.trim(),
+      fotoUrl: atracao.fotoUrl == null || atracao.fotoUrl === "" ? null : imageUrl(atracao.fotoUrl),
+      username,
+    };
+  });
+}
+
+// Lotes enviados junto com o evento: se um for inválido, nada é publicado.
+function lotList(value: unknown): LotCreateData[] {
+  if (!Array.isArray(value)) fail("lotes deve ser uma lista");
+  if (value.length > MAX_LOTES) fail(`no máximo ${MAX_LOTES} lotes`);
+  return value.map((item) => parseLotCreate(item));
+}
+
 // Converte e valida os campos presentes. Campos desconhecidos (id, criadoPorId, criadoEm...) são ignorados.
 function parseFields(body: Record<string, unknown>): EventUpdateData {
   const data: EventUpdateData = {};
@@ -83,6 +131,9 @@ function parseFields(body: Record<string, unknown>): EventUpdateData {
   if (body.categoriaId !== undefined) data.categoriaId = optionalText(body.categoriaId, "categoriaId");
   if (body.imagemUrl !== undefined) data.imagemUrl = imageUrl(body.imagemUrl);
   if (body.tags !== undefined) data.tags = tagList(body.tags);
+  if (body.endereco !== undefined) data.endereco = optionalText(body.endereco, "endereco");
+  if (body.latitude !== undefined) data.latitude = coordinate(body.latitude, "latitude", 90);
+  if (body.longitude !== undefined) data.longitude = coordinate(body.longitude, "longitude", 180);
   if (body.comecaEm !== undefined) data.comecaEm = isoDate(body.comecaEm, "comecaEm");
   if (body.terminaEm !== undefined) data.terminaEm = body.terminaEm === null ? null : isoDate(body.terminaEm, "terminaEm");
   return data;
@@ -94,6 +145,20 @@ export function assertEndAfterStart(comecaEm: Date, terminaEm: Date | null | und
   }
 }
 
+// Latitude e longitude andam juntas: ou as duas, ou nenhuma.
+function assertCoordinatePair(data: EventUpdateData): void {
+  if ((data.latitude == null) !== (data.longitude == null)) fail("latitude e longitude devem ser informadas juntas");
+}
+
+// Atrações (e lotes, na criação) vêm no mesmo corpo do evento, mas são gravados à parte.
+export function parseEventExtras(body: unknown, withLots: boolean): EventExtras {
+  const input = asObject(body);
+  const extras: EventExtras = {};
+  if (input.atracoes !== undefined) extras.atracoes = atracaoList(input.atracoes);
+  if (withLots && input.lotes !== undefined) extras.lotes = lotList(input.lotes);
+  return extras;
+}
+
 export function parseEventCreate(body: unknown): EventCreateData {
   const input = asObject(body);
   for (const required of ["titulo", "comecaEm", "cidade"]) {
@@ -101,11 +166,14 @@ export function parseEventCreate(body: unknown): EventCreateData {
   }
   const data = parseFields(input) as EventCreateData;
   assertEndAfterStart(data.comecaEm, data.terminaEm);
+  assertCoordinatePair(data);
   return data;
 }
 
 export function parseEventUpdate(body: unknown): EventUpdateData {
-  const data = parseFields(asObject(body));
-  if (Object.keys(data).length === 0) fail("Nenhum campo para atualizar");
+  const input = asObject(body);
+  const data = parseFields(input);
+  if (Object.keys(data).length === 0 && input.atracoes === undefined) fail("Nenhum campo para atualizar");
+  if (data.latitude !== undefined || data.longitude !== undefined) assertCoordinatePair(data);
   return data;
 }
