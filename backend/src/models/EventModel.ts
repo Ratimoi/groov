@@ -52,13 +52,14 @@ export class EventModel {
   async findPage({ page, limit }: PaginationParams): Promise<{ events: EventoCompleto[]; total: number }> {
     const [events, total] = await Promise.all([
       this.prismaClient.evento.findMany({
+        where: { ocultoEm: null },
         // O id desempata eventos que começam juntos; sem ele as páginas podem repetir ou perder itens.
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
         include: eventoInclude,
       }),
-      this.prismaClient.evento.count(),
+      this.prismaClient.evento.count({ where: { ocultoEm: null } }),
     ]);
     return { events, total };
   }

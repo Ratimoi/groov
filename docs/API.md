@@ -50,7 +50,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3333
 1. `POST /auth/login` devolve um **token JWT**.
 2. Envie em toda rota protegida: `Authorization: Bearer <token>`.
 3. O token vale **1 dia**. Não existe refresh token nem logout no servidor: ao expirar (`401`), peça login de novo e descarte o token.
-4. O papel do usuário (`CLIENTE`, `PRODUTOR`, `ADMIN`) é lido do banco a cada requisição. Não confie em papel guardado no app para liberar telas; use `GET /auth/me` para saber o papel atual.
+4. O papel do usuário (`CLIENTE`, `ADMIN`) é lido do banco a cada requisição. Não confie em papel guardado no app para liberar telas; use `GET /auth/me` para saber o papel atual.
 
 **Guarde o token no `expo-secure-store`**, não no `AsyncStorage` (que não é criptografado).
 
@@ -84,7 +84,7 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 ```
 
 - `senha`: mínimo **8 caracteres**.
-- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`. `POST /auth/login` e `GET /auth/me` trazem `temCpf` (boolean) no usuário: o app usa `temCpf: false` para pedir o CPF antes de liberar o resto.
+- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`. `POST /auth/login` e `GET /auth/me` trazem `podeValidar` (boolean: é gerente de algum evento ou VALIDADOR em algum; libera a tela de leitura de ingressos) e `temCpf` (boolean) no usuário: o app usa `temCpf: false` para pedir o CPF antes de liberar o resto.
 - `username` e `email` são únicos: repetido dá `409` com `"fields": ["username"]` (ou `"email"`).
 - Todo novo usuário é `CLIENTE`. Não dá para escolher o papel no cadastro.
 - Depois do cadastro, faça o login (o cadastro não devolve token).
@@ -137,7 +137,7 @@ Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não 
 
 ### Escrita (`POST /eventos`, `PUT` e `DELETE /eventos/:id`)
 
-Só `PRODUTOR` ou `ADMIN`; editar e apagar exigem ser o criador do evento (ADMIN edita qualquer um). Para `CLIENTE`, `403`.
+Qualquer usuário logado publica um evento (`POST`) e vira o **gerente** dele (`criadoPorId`). Editar, apagar e montar a equipe exigem ser o gerente: nem o `ADMIN` edita evento alheio (ele cuida do software e só modera, veja Admin). `403` para os demais; no máximo 10 publicações por hora por usuário (`429`). Evento com pedidos não pode ser apagado (`409`). Eventos ocultos pela moderação somem da listagem e de `GET /eventos/:id` (`404`).
 
 - Obrigatórios no `POST`: `titulo`, `cidade`, `comecaEm`. Opcionais: `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (só `http`/`https`), `categoriaId`.
 - `terminaEm` não pode ser antes de `comecaEm`.
@@ -172,13 +172,13 @@ Um evento vende ingressos por **lotes** ("1º lote", "Pista", "VIP"...), cada um
 |---|---|
 | `GET /eventos/:eventoId/lotes` | público. Lista os lotes do evento, do mais antigo para o mais novo (sem paginação). `404` se o evento não existir; evento sem lotes devolve `[]` |
 | `GET /lotes/:id` | público |
-| `POST /eventos/:eventoId/lotes` | PRODUTOR criador do evento ou ADMIN |
+| `POST /eventos/:eventoId/lotes` | gerente do evento (quem o publicou) |
 | `PUT /lotes/:id` | idem |
 | `DELETE /lotes/:id` | idem → `204` |
 
 Para o `loteId` de uma compra em grupo, use o `id` de um lote devolvido por `GET /eventos/:eventoId/lotes`.
 
-**Criar e editar** (só PRODUTOR/ADMIN):
+**Criar e editar** (só o gerente do evento):
 - Obrigatórios no `POST`: `nome` (até 100 caracteres), `preco` (número ou texto, até 2 casas, de 0 a 99999999.99) e `quantidade` (inteiro de 1 a 1.000.000).
 - Compra em grupo, opcional: `tamanhoGrupo` (2 a 50), `prazoGrupoHoras` (1 a 720) e `descontoGrupo` (de 0 a 0.9999). `tamanhoGrupo` e `prazoGrupoHoras` precisam vir **juntos**, e `descontoGrupo` só existe se o grupo estiver ligado. `null` desliga o campo; para desligar a compra em grupo por inteiro, envie os três como `null`.
 - No `PUT`, envie só o que mudou. Os contadores (`quantidadeVendida`, `quantidadeReservada`) não são graváveis.
@@ -320,7 +320,7 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 | Ingresso cancelado, ou de outro evento | `409` | `INVALIDO` |
 | Código inexistente (`ingresso: null`) | `404` | `INVALIDO` |
 
-A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). `CLIENTE` e `PRODUTOR` recebem `403`.
+A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). Quem valida é o **gerente** do evento do ingresso ou um **VALIDADOR** dele (veja Equipe do evento); os demais recebem `403`. Código inexistente só é respondido (`404`) a quem valida em algum evento; para os outros é `403`.
 
 **O que ainda não existe na API:** categorias, estorno manual e pagamento real.
 
@@ -335,7 +335,7 @@ Os tipos da branch `feat/integracao-back` espelham as tabelas do banco, e isso n
 - A resposta de listagem de eventos é um envelope (`{ data, page, limit, total, totalPages }`).
 
 ```ts
-export type Papel = "CLIENTE" | "PRODUTOR" | "ADMIN";
+export type Papel = "CLIENTE" | "ADMIN";
 
 export type Usuario = {
   id: string; nome: string; username: string; avatarUrl: string | null;
@@ -384,10 +384,24 @@ const { data: eventos } = await api<Pagina<Evento>>("/eventos?page=1&limit=20");
 
 Na `HomeScreen`, a chamada atual a `${apiUrl}/filmes` deve virar `/eventos`, e o resultado é lido de `.data`. Trate também o estado inicial vazio (`eventos[0]` não existe antes da resposta chegar).
 
+## Equipe do evento
+
+O gerente (quem publicou) define quem ajuda no evento. Cada pessoa tem um cargo por evento: `PROMOTOR` (divulga com link de afiliado) ou `VALIDADOR` (lê os QR codes na portaria). Todas as rotas exigem ser o gerente.
+
+| Rota | O que faz |
+|---|---|
+| `GET /eventos/:id/equipe` | Lista a equipe: `[{ id, eventoId, usuarioId, cargo, criadoEm, usuario }]` |
+| `POST /eventos/:id/equipe` | `{ "username": "ana", "cargo": "VALIDADOR" }` → `201`. Repetir a pessoa troca o cargo. `404` se o username não existir; `400` para o próprio gerente ou cargo inválido |
+| `DELETE /eventos/:id/equipe/:usuarioId` | `204`; `404` se não for da equipe |
+| `GET /eventos/meus` | Qualquer logado: eventos em que atua, `[{ cargo: "GERENTE" \| "PROMOTOR" \| "VALIDADOR", evento }]` |
+
 ## Admin
 
 | Rota | O que faz |
 |---|---|
+| `GET /admin/eventos/ocultos` | **só ADMIN.** Eventos ocultos, com motivo e quem publicou |
+| `POST /admin/eventos/:id/ocultar` | **só ADMIN.** `{ "motivo": "..." }` (obrigatório). O evento some da listagem e das buscas |
+| `POST /admin/eventos/:id/reexibir` | **só ADMIN.** Desfaz a ocultação |
 | `POST /admin/resetar-seed` | **só ADMIN.** Apaga todos os dados, menos a conta de quem pediu, e recria o seed de demonstração |
 
 Responde `200 { "mensagem" }`. Recusado com `403` quando `NODE_ENV=production` (o banco real nunca é zerado pela API) e com `500` se `SEED_PASSWORD` não estiver definida no servidor, pois é a senha das contas do seed. Os dados são apagados e recriados numa única transação: se algo falhar, nada muda.

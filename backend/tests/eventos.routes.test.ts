@@ -26,6 +26,7 @@ describe("/eventos", () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ data: [evento], page: 1, limit: 20, total: 1, totalPages: 1 });
       expect(prismaMock.evento.findMany).toHaveBeenCalledWith({
+        where: { ocultoEm: null },
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: 0,
         take: 20,
