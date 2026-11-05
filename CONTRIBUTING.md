@@ -54,7 +54,7 @@ O deploy é disparado pelo push (merge) em `main`, depois que os jobs de backend
 | **Rótulos** | O PR recebe `backend`, `frontend`, `ci` e `docs` conforme os arquivos alterados. |
 | **CI repetida** | Um push novo no mesmo PR cancela a CI anterior dele. |
 | **Dependabot** | Toda semana abre PRs para a `dev` com as atualizações minor/patch (backend, frontend e GitHub Actions). Majors, Expo e React Native ficam de fora: sobem com `npx expo install` numa troca de SDK. |
-| **OTA de preview** | Todo merge na `dev` publica um EAS Update no canal `preview`, no runtime da `version` do `app.json` (só chega ao APK dessa versão). Exige o secret `EXPO_TOKEN` no environment `dev - groov-api`; sem ele o job apenas avisa e pula. |
+| **OTA de preview** | Todo merge na `dev` publica um EAS Update no canal `preview`, no runtime dos dois primeiros números da `version` (`frontend/app.config.js`: 1.5.0, 1.5.1... chegam a todo APK 1.5; subir o número do meio exige APK novo). Exige o secret `EXPO_TOKEN` no environment `dev - groov-api`; sem ele o job apenas avisa e pula. |
 | **Release** | Ver [Versões](#versões). |
 
 ### Hooks locais (opcional, recomendado)
