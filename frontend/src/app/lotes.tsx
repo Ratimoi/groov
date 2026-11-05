@@ -6,21 +6,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { CardLote, CardPacoteGrupo } from "../components/CardLote";
+import { CodigoPromotor } from "../components/CodigoPromotor";
 import { ALTURA_NAVBAR, MARGEM_INFERIOR_NAVBAR } from "../components/NavBar";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useLotesEvento } from "../hooks/useLotesEvento";
 import { aceitaGrupo, calcularPedido, formatarDesconto, formatarReais } from "../utils/lote";
 
 export default function Lotes() {
-  const { eventoId } = useLocalSearchParams<{ eventoId: string }>();
+  const { eventoId, ref: codigoLink } = useLocalSearchParams<{ eventoId: string; ref?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const espacoNavBar = useEspacoNavBar();
-    const { carrinho, gruposPorLote } = useCarrinho();
+  const { carrinho, gruposPorLote, afiliado } = useCarrinho();
   const { lotes, tituloEvento, carregando, erro, tentarDeNovo } = useLotesEvento(eventoId);
 
   const voltar = () => (router.canGoBack() ? router.back() : router.replace("/"));
-  const pedido = calcularPedido(lotes, carrinho, gruposPorLote);
+  const descontoAfiliado = afiliado && afiliado.eventoId === eventoId ? afiliado.desconto : 0;
+  const pedido = calcularPedido(lotes, carrinho, gruposPorLote, {}, descontoAfiliado);
   const temItens = pedido.linhas.length > 0;
   const lotesDeGrupo = lotes.filter(aceitaGrupo);
 
@@ -78,6 +80,8 @@ export default function Lotes() {
                 <CardLote data={lote} key={lote.id} />
               ))}
             </View>
+
+            <CodigoPromotor eventoId={eventoId} inicial={codigoLink} />
 
             <View className="bg-surface-container-low/90 border border-white/10 rounded-xl p-gutter overflow-hidden">
               <LinearGradient

@@ -161,13 +161,14 @@ export default function MeusEventos() {
                 {item.cargo === "GERENTE" && (
                   <>
                     <Acao icone="edit" texto="Editar" onPress={() => router.push({ pathname: "/publicar", params: { eventoId: item.evento.id } })} />
+                    <Acao icone="groups" texto="Equipe" onPress={() => router.push({ pathname: "/equipe", params: { eventoId: item.evento.id } })} />
                     <Acao icone="qr-code-scanner" texto="Validar" onPress={() => router.push("/escanear")} />
                     <Acao icone="delete-outline" texto="Apagar" perigo onPress={() => apagar(item)} />
                   </>
                 )}
                 {item.cargo === "VALIDADOR" && <Acao icone="qr-code-scanner" texto="Validar ingressos" onPress={() => router.push("/escanear")} />}
                 {item.cargo === "PROMOTOR" && (
-                  <Text className="font-body-sm text-[12px] text-on-surface-variant">Você divulga este evento.</Text>
+                  <Acao icone="link" texto="Meu link e vendas" onPress={() => router.push({ pathname: "/promotor", params: { eventoId: item.evento.id } })} />
                 )}
               </View>
             </View>

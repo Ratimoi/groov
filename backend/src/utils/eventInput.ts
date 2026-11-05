@@ -1,4 +1,4 @@
-import { parseLotCreate, type LotCreateData } from "./lotInput";
+import { decimal, parseLotCreate, type LotCreateData } from "./lotInput";
 import { asObject, fail } from "./validation";
 
 export type EventData = {
@@ -14,6 +14,8 @@ export type EventData = {
   endereco: string | null;
   latitude: number | null;
   longitude: number | null;
+  descontoAfiliado: string | null;
+  comissaoPromotor: string | null;
 };
 
 // Atração enviada pelo app: nome livre, foto opcional e, se tiver conta, o @username dela.
@@ -132,6 +134,12 @@ function parseFields(body: Record<string, unknown>): EventUpdateData {
   if (body.imagemUrl !== undefined) data.imagemUrl = imageUrl(body.imagemUrl);
   if (body.tags !== undefined) data.tags = tagList(body.tags);
   if (body.endereco !== undefined) data.endereco = optionalText(body.endereco, "endereco");
+  if (body.descontoAfiliado !== undefined) {
+    data.descontoAfiliado = body.descontoAfiliado === null ? null : decimal(body.descontoAfiliado, "descontoAfiliado", 4, 0, 0.9999);
+  }
+  if (body.comissaoPromotor !== undefined) {
+    data.comissaoPromotor = body.comissaoPromotor === null ? null : decimal(body.comissaoPromotor, "comissaoPromotor", 4, 0, 0.9999);
+  }
   if (body.latitude !== undefined) data.latitude = coordinate(body.latitude, "latitude", 90);
   if (body.longitude !== undefined) data.longitude = coordinate(body.longitude, "longitude", 180);
   if (body.comecaEm !== undefined) data.comecaEm = isoDate(body.comecaEm, "comecaEm");

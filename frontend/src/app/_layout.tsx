@@ -54,6 +54,8 @@ function Conteudo() {
       <Tabs.Screen name="entrar-grupo" />
       <Tabs.Screen name="publicar" />
       <Tabs.Screen name="meus-eventos" />
+      <Tabs.Screen name="equipe" />
+      <Tabs.Screen name="promotor" />
     </Tabs>
   );
 }

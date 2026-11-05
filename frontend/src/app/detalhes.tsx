@@ -18,7 +18,7 @@ const MAX_ATRACOES_VISIVEIS = 3;
 const doisDigitos = (valor: number) => String(valor).padStart(2, "0");
 
 export default function DetalhesEvento() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, ref: codigoLink } = useLocalSearchParams<{ id: string; ref?: string }>();
   const espacoNavBar = useEspacoNavBar();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -256,7 +256,7 @@ export default function DetalhesEvento() {
       >
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => router.push(`/lotes?eventoId=${evento.id}`)}
+          onPress={() => router.push({ pathname: "/lotes", params: { eventoId: evento.id, ...(codigoLink ? { ref: codigoLink } : {}) } })}
           className="rounded-full overflow-hidden"
           style={{ shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 }}
         >

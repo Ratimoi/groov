@@ -288,6 +288,8 @@ Exige login. `POST /pedidos`:
 { "loteId": "clx...", "quantidade": 2 }
 ```
 
+Opcional: `"codigoAfiliado": "ABCD2345"` (código de promotor do evento; veja Programa de promotores).
+
 - `quantidade`: inteiro de 1 a 10. `404` se o lote não existir; `409` se faltar estoque.
 - O pagamento é simulado: o pedido já nasce `PAGO` e emite um ingresso por unidade.
 - Valores em texto com 2 casas: `subtotal`, `desconto`, `taxaServico` (12,5% do subtotal) e `valor` (total).
@@ -392,10 +394,21 @@ O gerente (quem publicou) define quem ajuda no evento. Cada pessoa tem um cargo 
 
 | Rota | O que faz |
 |---|---|
-| `GET /eventos/:id/equipe` | Lista a equipe: `[{ id, eventoId, usuarioId, cargo, criadoEm, usuario }]` |
+| `GET /eventos/:id/equipe` | Lista a equipe: `[{ id, eventoId, usuarioId, cargo, codigoAfiliado, criadoEm, usuario, vendas: { pedidos, ingressos, comissao } }]` (`vendas` só tem números para promotor) |
 | `POST /eventos/:id/equipe` | `{ "username": "ana", "cargo": "VALIDADOR" }` → `201`. Repetir a pessoa troca o cargo. `404` se o username não existir; `400` para o próprio gerente ou cargo inválido |
 | `DELETE /eventos/:id/equipe/:usuarioId` | `204`; `404` se não for da equipe |
 | `GET /eventos/meus` | Qualquer logado: eventos em que atua, `[{ cargo: "GERENTE" \| "PROMOTOR" \| "VALIDADOR", evento }]` |
+
+### Programa de promotores
+
+O gerente define as condições no evento (`PUT /eventos/:id`): `descontoAfiliado` (fração: `0.1` = 10% para quem compra) e `comissaoPromotor` (fração do valor dos ingressos que o promotor ganha). `null` desliga. Cada `PROMOTOR` recebe um `codigoAfiliado` (8 caracteres, estável).
+
+| Rota | O que faz |
+|---|---|
+| `GET /eventos/:id/afiliado/:codigo` | Qualquer logado. Confere o código antes de comprar: `{ codigo, descontoAfiliado, promotor: { nome, username } }`. `404` se não valer no evento (ou for o próprio código de quem pergunta) |
+| `GET /eventos/:id/promotor` | Só o promotor do evento: `{ evento, codigo, descontoAfiliado, comissaoPromotor, pedidos, ingressos, comissaoTotal }`. `403` para os demais |
+
+Comprar com o código: envie `codigoAfiliado` em `POST /pedidos` ou em `POST /grupos/compras`. O desconto do código **não soma** com o de grupo: vale o maior dos dois. A taxa de serviço incide sobre o valor já com desconto. O pedido guarda `promotorId`, `codigoAfiliado` e `comissao` (a comissão é só registrada, não há repasse automático) e ela é registrada mesmo quando o desconto de grupo é o maior, pois a venda veio do promotor. `400` para código inválido ou para o próprio código do promotor.
 
 ## Admin
 

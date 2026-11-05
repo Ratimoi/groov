@@ -12,7 +12,8 @@ export const orderInclude = {
 export type Order = Prisma.PedidoGetPayload<{ include: typeof orderInclude }>;
 
 // O comprador é sempre o usuário logado; o preço vem do lote, nunca do corpo.
-export type OrderCreateBody = { loteId: string; quantidade: number };
+// `codigoAfiliado` (opcional) é o código de um promotor do evento: dá desconto ao comprador.
+export type OrderCreateBody = { loteId: string; quantidade: number; codigoAfiliado?: unknown };
 
 export const MAX_TICKETS_PER_ORDER = 10;
 

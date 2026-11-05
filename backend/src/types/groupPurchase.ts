@@ -8,6 +8,8 @@ export type GroupPurchaseCreateRequest = {
   loteId: string;
   iniciadorId: string;
   participantesIds: string[];
+  // Código de promotor do evento (opcional): vale o maior entre o desconto do grupo e o do promotor.
+  codigoAfiliado?: string;
 };
 
 // O iniciador é sempre o usuário logado, nunca vem do corpo da requisição.
