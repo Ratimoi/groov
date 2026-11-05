@@ -4,7 +4,6 @@ const delegate = () => ({
   create: vi.fn(),
   findMany: vi.fn(),
   findUnique: vi.fn(),
-  findFirst: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
   deleteMany: vi.fn(),
@@ -13,7 +12,6 @@ const delegate = () => ({
   upsert: vi.fn(),
   aggregate: vi.fn(),
   count: vi.fn(),
-  groupBy: vi.fn(),
 });
 
 // Cliente Prisma falso: cada teste programa os retornos que precisa.
@@ -30,12 +28,6 @@ export const prismaMock = {
   conviteGrupo: delegate(),
   avaliacaoEvento: delegate(),
   evento: delegate(),
-  eventoMembro: delegate(),
-  atracao: delegate(),
-  curtidaEvento: delegate(),
-  eventoSalvo: delegate(),
-  seguidor: delegate(),
-  pagamento: delegate(),
   categoria: delegate(),
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),

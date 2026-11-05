@@ -5,7 +5,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { EventoType } from "@/utils";
-import { coluna } from "../utils/layout";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useContagem } from "../hooks/useContagem";
 import { AvaliacoesEvento } from "../components/AvaliacoesEvento";
@@ -19,7 +18,7 @@ const MAX_ATRACOES_VISIVEIS = 3;
 const doisDigitos = (valor: number) => String(valor).padStart(2, "0");
 
 export default function DetalhesEvento() {
-  const { id, ref: codigoLink } = useLocalSearchParams<{ id: string; ref?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const espacoNavBar = useEspacoNavBar();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -119,7 +118,7 @@ export default function DetalhesEvento() {
     <View className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ ...coluna, paddingBottom: espacoNavBar + 64 }}
+        contentContainerStyle={{ paddingBottom: espacoNavBar + 64 }}
         showsVerticalScrollIndicator={false}
       >
         <View className="relative w-full aspect-[4/5] overflow-hidden">
@@ -204,7 +203,7 @@ export default function DetalhesEvento() {
 
         {atracoes.length > 0 && (
           <View className="px-margin-mobile pb-8">
-            <Text className="font-headline-md text-headline-md text-white mb-4">Atrações</Text>
+            <Text className="font-headline-md text-headline-md text-white mb-4">Lineup</Text>
             <View className="flex-row gap-stack-md">
               {atracoesVisiveis.map((atracao) => (
                 <View
@@ -213,7 +212,7 @@ export default function DetalhesEvento() {
                 >
                   <View className="aspect-square">
                     <Image
-                      source={{ uri: atracao.fotoUrl ?? atracao.usuario?.avatarUrl ?? "https://i.pravatar.cc/150" }}
+                      source={{ uri: atracao.avatarUrl ?? "https://i.pravatar.cc/150" }}
                       className="w-full h-full"
                       resizeMode="cover"
                     />
@@ -257,7 +256,7 @@ export default function DetalhesEvento() {
       >
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => router.push({ pathname: "/lotes", params: { eventoId: evento.id, ...(codigoLink ? { ref: codigoLink } : {}) } })}
+          onPress={() => router.push(`/lotes?eventoId=${evento.id}`)}
           className="rounded-full overflow-hidden"
           style={{ shadowColor: "#bc13fe", shadowOpacity: 0.5, shadowRadius: 16, elevation: 10 }}
         >

@@ -13,7 +13,7 @@ export const MARGEM_INFERIOR_NAVBAR = 20;
 
 const ABAS = [
   { caminho: "/", label: "Início", icone: "home" },
-  { caminho: "/feed", label: "Feed", icone: "dynamic-feed" },
+  { caminho: "/busca", label: "Busca", icone: "search" },
   { caminho: "/grupos", label: "Grupos", icone: "group" },
   { caminho: "/perfil", label: "Perfil", icone: "person" },
 ] as const;

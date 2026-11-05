@@ -13,8 +13,6 @@ import {
   JetBrainsMono_600SemiBold,
 } from "@expo-google-fonts/jetbrains-mono";
 import { Tabs } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { NavigationBar } from "expo-navigation-bar";
 import { NavBar } from "../components/NavBar";
 import { CarrinhoProvider } from "@/contexts/CarrinhoContext";
 import { UserProvider, useUser } from "@/contexts/UserContext";
@@ -40,7 +38,7 @@ function Conteudo() {
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={() => <NavBar />}>
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="feed" />
+      <Tabs.Screen name="busca" />
       <Tabs.Screen name="grupos" />
       <Tabs.Screen name="perfil" />
       <Tabs.Screen name="detalhes" />
@@ -48,17 +46,10 @@ function Conteudo() {
       <Tabs.Screen name="pagamento" />
       <Tabs.Screen name="criar-grupo" />
       <Tabs.Screen name="pagamento-confirmado" />
-      <Tabs.Screen name="aguardando-pagamento" />
-      <Tabs.Screen name="metodo-pagamento" />
-      <Tabs.Screen name="pagamento-retorno" />
       <Tabs.Screen name="ingresso" />
       <Tabs.Screen name="escanear" />
       <Tabs.Screen name="meus-dados" />
       <Tabs.Screen name="entrar-grupo" />
-      <Tabs.Screen name="publicar" />
-      <Tabs.Screen name="meus-eventos" />
-      <Tabs.Screen name="equipe" />
-      <Tabs.Screen name="promotor" />
     </Tabs>
   );
 }
@@ -80,11 +71,6 @@ export default function RootLayout() {
         <UserProvider>
           <CarrinhoProvider>
             <View className="flex-1 bg-background">
-              {/* Tela cheia: esconde os botões do Android (voltar, início, recentes). Um deslize
-                  na borda de baixo os mostra por um instante. A barra de status (hora e bateria)
-                  continua visível. */}
-              <NavigationBar hidden />
-              <StatusBar style="light" />
               <Conteudo />
             </View>
           </CarrinhoProvider>

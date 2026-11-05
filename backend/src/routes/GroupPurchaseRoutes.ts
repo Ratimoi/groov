@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { GroupPurchaseController } from "../controllers/GroupPurchaseController";
-import { requireSimulatedPayment } from "../middlewares/requireSimulatedPayment";
 import { GroupPurchaseService } from "../services/GroupPurchaseService";
 
 const router = Router();
@@ -9,6 +8,6 @@ const groupPurchaseController = new GroupPurchaseController(new GroupPurchaseSer
 router.post("/", groupPurchaseController.create);
 router.get("/", groupPurchaseController.findAll);
 router.get("/:id", groupPurchaseController.findById);
-router.post("/:id/pagar", requireSimulatedPayment, groupPurchaseController.pay);
+router.post("/:id/pagar", groupPurchaseController.pay);
 
 export default router;

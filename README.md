@@ -41,7 +41,7 @@ groov/
         │   ├── busca.tsx    # busca
         │   ├── grupos.tsx   # grupos
         │   └── perfil.tsx   # perfil
-        ├── components/      # componentes reutilizáveis (ex.: NavBar, Tela: casca padrão das telas rolláveis, que reserva o espaço da NavBar flutuante e centraliza a coluna em tablets)
+        ├── components/      # componentes reutilizáveis (ex.: NavBar)
         ├── constants/       # tema, cores e outras constantes
         ├── contexts/        # contextos React
         ├── hooks/           # hooks customizados
@@ -88,18 +88,16 @@ Rotas disponíveis:
 | `GET /ingressos`, `GET /ingressos/:id` | dono do ingresso | Só os seus; o de outra pessoa responde 404 |
 | `GET /usuarios/busca?q=` | logado | Busca por nome ou username (mínimo 2 caracteres) para convidar pessoas a um grupo |
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
-| `POST /eventos` | qualquer usuário logado | Publica um evento; quem publica vira o gerente |
+| `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
 | `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
 | `GET /eventos/:eventoId/lotes`, `GET /lotes/:id` | público | Lotes de um evento (preço, quantidade e disponibilidade) e um lote |
-| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | gerente do evento (quem o publicou) | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
+| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | criador do evento (PRODUTOR) ou ADMIN | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
 
 > Quem vai consumir a API (o app) deve ler o guia [docs/API.md](docs/API.md): formatos de resposta, erros, permissões e tipos TypeScript.
 
 ### Autenticação
 
 O login devolve um token JWT, que deve ser enviado nas rotas protegidas no cabeçalho `Authorization: Bearer <token>`. O token vale 1 dia (`JWT_EXPIRES_IN`) e carrega só o id do usuário: o papel é lido do banco a cada requisição, então apagar ou rebaixar um usuário vale na hora. Rotas protegidas sem token válido respondem 401; sem permissão, 403. O login é limitado a 10 tentativas por IP a cada 15 minutos (429).
-
-Pagamentos reais usam `MERCADOPAGO_ACCESS_TOKEN` e `PUBLIC_API_URL` (veja `docs/API.md`, seção Pagamentos); sem eles o pagamento é simulado.
 
 A API **não sobe** sem `JWT_SECRET` (mínimo 32 caracteres). Gere um com:
 

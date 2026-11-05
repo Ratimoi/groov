@@ -28,15 +28,8 @@ model Usuario {
   participacoes       MembroGrupo[]
   comprasIniciadas    CompraGrupo[]        @relation("IniciadorCompra")
   participacoesCompra ParticipanteCompra[]
-  atracoesVinculadas  Atracao[]
+  eventosComoAtracao  Evento[]             @relation("AtracoesEvento")
   avaliacoes          AvaliacaoEvento[]
-  cargosEvento        EventoMembro[]
-  pedidosIndicados    Pedido[]             @relation("PromotorPedido")
-  pagamentos          Pagamento[]
-  curtidas            CurtidaEvento[]
-  eventosSalvos       EventoSalvo[]
-  seguindo            Seguidor[]           @relation("QuemSegue")
-  seguidores          Seguidor[]           @relation("QuemEhSeguido")
 }
 
 model Categoria {
@@ -58,27 +51,13 @@ model Evento {
   destaque  Boolean?  @default(false)
   // Selos de classificação do evento (ex.: "18+", "open bar"), definidos por quem cria o evento.
   tags      String[]  @default([])
-  atracoes  Atracao[]
-  // Endereço e ponto no mapa (usados na busca "perto de mim").
-  endereco  String?
-  latitude  Float?
-  longitude Float?
+  atracoes  Usuario[] @relation("AtracoesEvento")
 
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
 
-  // Quem publicou é o gerente do evento: edita, apaga e monta a equipe (promotores e validadores).
   criadoPorId String?
   criadoPor   Usuario? @relation("CriadorEvento", fields: [criadoPorId], references: [id])
-
-  // Moderação: um evento oculto pelo ADMIN some das listagens e das buscas.
-  ocultoEm     DateTime?
-  ocultoMotivo String?
-
-  // Programa de promotores: quem compra com o código de um promotor ganha `descontoAfiliado` (fração,
-  // 0.1 = 10%) e o promotor recebe `comissaoPromotor` do valor dos ingressos. Nulo = sem programa.
-  descontoAfiliado Decimal? @db.Decimal(5, 4)
-  comissaoPromotor Decimal? @db.Decimal(5, 4)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -88,9 +67,6 @@ model Evento {
   ingressos  Ingresso[]
   validacoes ValidacaoIngresso[]
   avaliacoes AvaliacaoEvento[]
-  equipe     EventoMembro[]
-  curtidas   CurtidaEvento[]
-  salvos     EventoSalvo[]
 
   @@index([cidade])
 }
@@ -136,18 +112,11 @@ model Pedido {
   criadoEm DateTime  @default(now())
   pagoEm   DateTime?
 
-  // Venda por link de promotor: quem indicou, o código usado e a comissão devida (só registrada).
-  promotorId     String?
-  promotor       Usuario? @relation("PromotorPedido", fields: [promotorId], references: [id])
-  codigoAfiliado String?
-  comissao       Decimal  @default(0) @db.Decimal(10, 2)
-
   ingressos          Ingresso[]
   participanteCompra ParticipanteCompra?
 
   @@index([usuarioId])
   @@index([eventoId])
-  @@index([promotorId])
 }
 
 model Grupo {
@@ -203,8 +172,6 @@ model CompraGrupo {
 
   status   StatusCompraGrupo @default(PENDENTE)
   expiraEm DateTime
-  // Código de promotor informado ao iniciar; vale para todas as cotas (usa o maior desconto).
-  codigoAfiliado String?
   criadoEm DateTime          @default(now())
 
   participantes ParticipanteCompra[]
@@ -273,17 +240,10 @@ model ValidacaoIngresso {
   @@index([eventoId])
 }
 
-// Papel na plataforma. Quem pode o quê dentro de um evento vem do CargoEvento, não daqui: o ADMIN
-// cuida do software (moderação, usuários), não dos eventos.
 enum Papel {
   CLIENTE
+  PRODUTOR
   ADMIN
-}
-
-// Cargos da equipe de um evento, definidos pelo gerente (quem publicou).
-enum CargoEvento {
-  PROMOTOR
-  VALIDADOR
 }
 
 enum StatusEvento {
@@ -340,113 +300,3 @@ model AvaliacaoEvento {
   @@unique([eventoId, usuarioId])
   @@index([eventoId])
 }
-
-model EventoMembro {
-  id        String      @id @default(cuid())
-  eventoId  String
-  evento    Evento      @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuarioId String
-  usuario   Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  cargo     CargoEvento
-  // Código de afiliado do PROMOTOR (vai no link e é digitado no checkout).
-  codigoAfiliado String?    @unique
-  criadoEm  DateTime    @default(now())
-
-  // Um cargo por pessoa em cada evento.
-  @@unique([eventoId, usuarioId])
-  @@index([usuarioId])
-}
-
-// Atração do evento: nome livre, foto opcional e, se a atração tiver conta no Groov, a conta marcada.
-model Atracao {
-  id        String   @id @default(cuid())
-  eventoId  String
-  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  nome      String
-  fotoUrl   String?
-  usuarioId String?
-  usuario   Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-  ordem     Int      @default(0)
-  criadoEm  DateTime @default(now())
-
-  @@index([eventoId])
-  @@index([usuarioId])
-}
-
-// Interações do feed: curtir e salvar um evento, seguir um organizador.
-model CurtidaEvento {
-  eventoId  String
-  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuarioId String
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  criadoEm  DateTime @default(now())
-
-  @@id([eventoId, usuarioId])
-  @@index([usuarioId])
-}
-
-model EventoSalvo {
-  eventoId  String
-  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuarioId String
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  criadoEm  DateTime @default(now())
-
-  @@id([eventoId, usuarioId])
-  @@index([usuarioId])
-}
-
-model Seguidor {
-  seguidorId String
-  seguidor   Usuario  @relation("QuemSegue", fields: [seguidorId], references: [id], onDelete: Cascade)
-  seguidoId  String
-  seguido    Usuario  @relation("QuemEhSeguido", fields: [seguidoId], references: [id], onDelete: Cascade)
-  criadoEm   DateTime @default(now())
-
-  @@id([seguidorId, seguidoId])
-  @@index([seguidoId])
-}
-
-enum MetodoPagamento {
-  PIX
-  CARTAO
-}
-
-enum StatusPagamento {
-  PENDENTE
-  APROVADO
-  RECUSADO
-  EXPIRADO
-}
-
-// Uma cobrança do checkout. `itens` guarda o que será emitido quando o provedor aprovar (pedidos
-// individuais e cotas de compras em grupo); só então os ingressos nascem.
-model Pagamento {
-  id        String          @id @default(cuid())
-  usuarioId String
-  usuario   Usuario         @relation(fields: [usuarioId], references: [id])
-  metodo    MetodoPagamento
-  status    StatusPagamento @default(PENDENTE)
-  // SIMULADO (sem credenciais) ou MERCADOPAGO.
-  provedor  String
-  valor     Decimal         @db.Decimal(10, 2)
-  itens     Json
-
-  externoId       String?
-  pixCopiaECola   String?
-  pixQrCodeBase64 String?
-  checkoutUrl     String?
-
-  // Ids dos pedidos e das compras em grupo gerados na aprovação; erroEmissao guarda o motivo se
-  // algo não pôde ser emitido (o dinheiro entrou, então precisa de atenção manual/estorno).
-  resultado   Json?
-  erroEmissao String?
-
-  expiraEm   DateTime
-  criadoEm   DateTime  @default(now())
-  aprovadoEm DateTime?
-
-  @@index([usuarioId])
-  @@index([status, expiraEm])
-}
-

@@ -11,10 +11,6 @@ export type OrderCreateData = {
   quantidade: number;
   subtotalCents: number;
   taxaServicoCents: number;
-  descontoCents?: number;
-  promotorId?: string;
-  codigoAfiliado?: string;
-  comissaoCents?: number;
 };
 
 class InsufficientStockError extends Error {}
@@ -48,12 +44,9 @@ export class OrderModel {
             quantidade: data.quantidade,
             status: "PAGO",
             subtotal: fromCents(data.subtotalCents),
-            desconto: fromCents(data.descontoCents ?? 0),
+            desconto: "0.00",
             taxaServico: fromCents(data.taxaServicoCents),
-            valor: fromCents(data.subtotalCents - (data.descontoCents ?? 0) + data.taxaServicoCents),
-            ...(data.promotorId
-              ? { promotorId: data.promotorId, codigoAfiliado: data.codigoAfiliado, comissao: fromCents(data.comissaoCents ?? 0) }
-              : {}),
+            valor: fromCents(data.subtotalCents + data.taxaServicoCents),
             pagoEm: new Date(),
             ingressos: {
               create: Array.from({ length: data.quantidade }, () => ({

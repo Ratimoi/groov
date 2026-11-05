@@ -14,7 +14,7 @@ export type UsuarioType = {
   avatarUrl?: string | null;
   email: string;
   senha: string;
-  papel: "CLIENTE" | "ADMIN";
+  papel: "CLIENTE" | "PRODUTOR" | "ADMIN";
   criadoEm: Date;
   pedidos: PedidoType[];
   ingressos: IngressoType[];

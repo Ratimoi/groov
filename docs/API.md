@@ -50,7 +50,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3333
 1. `POST /auth/login` devolve um **token JWT**.
 2. Envie em toda rota protegida: `Authorization: Bearer <token>`.
 3. O token vale **1 dia**. Não existe refresh token nem logout no servidor: ao expirar (`401`), peça login de novo e descarte o token.
-4. O papel do usuário (`CLIENTE`, `ADMIN`) é lido do banco a cada requisição. Não confie em papel guardado no app para liberar telas; use `GET /auth/me` para saber o papel atual.
+4. O papel do usuário (`CLIENTE`, `PRODUTOR`, `ADMIN`) é lido do banco a cada requisição. Não confie em papel guardado no app para liberar telas; use `GET /auth/me` para saber o papel atual.
 
 **Guarde o token no `expo-secure-store`**, não no `AsyncStorage` (que não é criptografado).
 
@@ -84,7 +84,7 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 ```
 
 - `senha`: mínimo **8 caracteres**.
-- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`. `POST /auth/login` e `GET /auth/me` trazem `podeValidar` (boolean: é gerente de algum evento ou VALIDADOR em algum; libera a tela de leitura de ingressos) e `temCpf` (boolean) no usuário: o app usa `temCpf: false` para pedir o CPF antes de liberar o resto.
+- `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`. `POST /auth/login` e `GET /auth/me` trazem `temCpf` (boolean) no usuário: o app usa `temCpf: false` para pedir o CPF antes de liberar o resto.
 - `username` e `email` são únicos: repetido dá `409` com `"fields": ["username"]` (ou `"email"`).
 - Todo novo usuário é `CLIENTE`. Não dá para escolher o papel no cadastro.
 - Depois do cadastro, faça o login (o cadastro não devolve token).
@@ -106,18 +106,6 @@ A senha nunca é devolvida. Para trocar a senha, envie `senha` no `PUT`.
 
 Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão `400`).
 
-Filtros opcionais (combinam entre si; valor inválido dá `400`):
-
-| Parâmetro | O que faz |
-|---|---|
-| `q` | Texto livre: procura em título, descrição, local, cidade e selos (sem diferenciar maiúsculas) |
-| `categoria`, `cidade` | Nome exato (sem diferenciar maiúsculas) |
-| `tag` | Eventos com esse selo |
-| `de`, `ate` | Intervalo do início do evento (data ISO) |
-| `gratis=true` | Eventos com algum lote de R$ 0 |
-| `precoMax` | Eventos com algum lote até esse valor |
-| `latitude`, `longitude`, `raioKm` | Perto de mim: só eventos com ponto marcado dentro do raio (padrão 25 km, máximo 500). Vem ordenado do mais perto para o mais longe e cada evento ganha `distanciaKm`. `latitude` e `longitude` andam juntas |
-
 ```json
 {
   "data": [
@@ -129,8 +117,7 @@ Filtros opcionais (combinam entre si; valor inválido dá `400`):
       "criadoEm": "...", "atualizadoEm": "...",
       "categoria": { "id": "clx...", "nome": "Techno" },
       "lotes": [ { "id": "clx...", "nome": "1º lote", "preco": "180", "quantidade": 100, "quantidadeVendida": 10, "quantidadeReservada": 5 } ],
-      "endereco": "Rua A, 10", "latitude": -8.05, "longitude": -34.9,
-      "atracoes": [ { "id": "clx...", "nome": "DJ Fulano", "fotoUrl": null, "usuario": { "id": "clx...", "username": "djfulano", "avatarUrl": null } } ],
+      "atracoes": [ { "id": "clx...", "nome": "DJ Fulano", "username": "djfulano", "avatarUrl": null } ],
       "criadoPor": { "id": "clx...", "nome": "Produtora X", "username": "produtorax", "avatarUrl": null }
     }
   ],
@@ -141,7 +128,7 @@ Filtros opcionais (combinam entre si; valor inválido dá `400`):
 - A lista vem em `resposta.data` (**não é um array direto**).
 - Ordenada por data de início crescente (os mais antigos primeiro, inclusive eventos já passados). Ainda não há filtro por cidade, categoria ou data.
 - Para carregar mais (scroll infinito): peça `page + 1` enquanto `page < totalPages`.
-- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `criadoPor` e o `usuario` de cada atração trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail, senha ou papel. Uma atração tem nome livre, `fotoUrl` opcional e `usuario` (a conta marcada) ou `null` quando não tem conta.
+- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `atracoes` e `criadoPor` trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail, senha ou papel.
 - **Atenção ao formato dos lotes embutidos:** dentro do evento eles vêm **crus**, com `preco` como `"180"` (sem casas fixas) e **sem** `quantidadeDisponivel`. Para o formato completo (`"180.00"` e a disponibilidade calculada), use `GET /eventos/:eventoId/lotes` (veja a seção Lotes). Não misture os dois formatos na mesma tela.
 - `horario` (hora do dia, sem data) e `destaque` (se o evento aparece em destaque) são campos do evento; `destaque` pode ser `null` em eventos antigos.
 
@@ -150,13 +137,12 @@ Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não 
 
 ### Escrita (`POST /eventos`, `PUT` e `DELETE /eventos/:id`)
 
-Qualquer usuário logado publica um evento (`POST`) e vira o **gerente** dele (`criadoPorId`). Editar, apagar e montar a equipe exigem ser o gerente: nem o `ADMIN` edita evento alheio (ele cuida do software e só modera, veja Admin). `403` para os demais; no máximo 10 publicações por hora por usuário (`429`). Evento com pedidos não pode ser apagado (`409`). Eventos ocultos pela moderação somem da listagem e de `GET /eventos/:id` (`404`).
+Só `PRODUTOR` ou `ADMIN`; editar e apagar exigem ser o criador do evento (ADMIN edita qualquer um). Para `CLIENTE`, `403`.
 
-- Obrigatórios no `POST`: `titulo`, `cidade`, `comecaEm`. Opcionais: `terminaEm`, `descricao`, `nomeLocal`, `endereco`, `latitude`/`longitude` (juntas), `imagemUrl` (só `http`/`https`), `categoriaId`.
-- **Atrações e lotes na mesma chamada:** `atracoes: [{ "nome", "fotoUrl"?, "username"? }]` (até 30; `username` marca a conta, `400` se não existir) e, só no `POST`, `lotes: [{ nome, preco, quantidade, ... }]` (até 20, mesmo formato de `POST /eventos/:id/lotes`). Tudo ou nada: se algo for inválido nada é publicado. No `PUT`, `atracoes` troca a lista inteira.
+- Obrigatórios no `POST`: `titulo`, `cidade`, `comecaEm`. Opcionais: `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (só `http`/`https`), `categoriaId`.
 - `terminaEm` não pode ser antes de `comecaEm`.
 - No `PUT`, envie só o que mudou; `null` limpa um campo opcional.
-- `DELETE` devolve `204` e leva junto os lotes e as avaliações. Evento que já tem pedidos dá `409`.
+- `DELETE` devolve `204`. Evento que já tem lotes ou pedidos dá `409`.
 
 ### Tags e avaliações do evento
 
@@ -186,13 +172,13 @@ Um evento vende ingressos por **lotes** ("1º lote", "Pista", "VIP"...), cada um
 |---|---|
 | `GET /eventos/:eventoId/lotes` | público. Lista os lotes do evento, do mais antigo para o mais novo (sem paginação). `404` se o evento não existir; evento sem lotes devolve `[]` |
 | `GET /lotes/:id` | público |
-| `POST /eventos/:eventoId/lotes` | gerente do evento (quem o publicou) |
+| `POST /eventos/:eventoId/lotes` | PRODUTOR criador do evento ou ADMIN |
 | `PUT /lotes/:id` | idem |
 | `DELETE /lotes/:id` | idem → `204` |
 
 Para o `loteId` de uma compra em grupo, use o `id` de um lote devolvido por `GET /eventos/:eventoId/lotes`.
 
-**Criar e editar** (só o gerente do evento):
+**Criar e editar** (só PRODUTOR/ADMIN):
 - Obrigatórios no `POST`: `nome` (até 100 caracteres), `preco` (número ou texto, até 2 casas, de 0 a 99999999.99) e `quantidade` (inteiro de 1 a 1.000.000).
 - Compra em grupo, opcional: `tamanhoGrupo` (2 a 50), `prazoGrupoHoras` (1 a 720) e `descontoGrupo` (de 0 a 0.9999). `tamanhoGrupo` e `prazoGrupoHoras` precisam vir **juntos**, e `descontoGrupo` só existe se o grupo estiver ligado. `null` desliga o campo; para desligar a compra em grupo por inteiro, envie os três como `null`.
 - No `PUT`, envie só o que mudou. Os contadores (`quantidadeVendida`, `quantidadeReservada`) não são graváveis.
@@ -282,7 +268,7 @@ Resposta `201` (e `GET`):
 
 ### `POST /grupos/compras/:id/pagar` (pagamento simulado da sua cota)
 
-Corpo opcional `{ "todos": true }`: o **iniciador** da compra paga também as cotas ainda pendentes dos demais participantes (cada ingresso sai no nome do seu dono; `403` para quem não iniciou, `409` se não há cota pendente). Sem corpo, cada participante paga a **própria** cota: o preço do lote com o desconto do grupo, mais a taxa de serviço (12,5%). A reserva do ingresso vira venda. Quando o **último** participante paga, a compra vira `CONFIRMADA` e os ingressos de todos são emitidos (antes disso ninguém recebe ingresso). Devolve a compra atualizada.
+Sem corpo. Cada participante paga a **própria** cota: o preço do lote com o desconto do grupo, mais a taxa de serviço (12,5%). A reserva do ingresso vira venda. Quando o **último** participante paga, a compra vira `CONFIRMADA` e os ingressos de todos são emitidos (antes disso ninguém recebe ingresso). Devolve a compra atualizada.
 
 - `404`: a compra não existe ou você não participa. `403`: ADMIN que não participa.
 - `409`: você já pagou, a compra já foi confirmada ou o prazo expirou.
@@ -299,8 +285,6 @@ Exige login. `POST /pedidos`:
 // requisição: o comprador é você; preço e taxa vêm do lote, nunca do corpo
 { "loteId": "clx...", "quantidade": 2 }
 ```
-
-Opcional: `"codigoAfiliado": "ABCD2345"` (código de promotor do evento; veja Programa de promotores).
 
 - `quantidade`: inteiro de 1 a 10. `404` se o lote não existir; `409` se faltar estoque.
 - O pagamento é simulado: o pedido já nasce `PAGO` e emite um ingresso por unidade.
@@ -336,7 +320,7 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 | Ingresso cancelado, ou de outro evento | `409` | `INVALIDO` |
 | Código inexistente (`ingresso: null`) | `404` | `INVALIDO` |
 
-A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). Quem valida é o **gerente** do evento do ingresso ou um **VALIDADOR** dele (veja Equipe do evento); os demais recebem `403`. Código inexistente só é respondido (`404`) a quem valida em algum evento; para os outros é `403`.
+A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). `CLIENTE` e `PRODUTOR` recebem `403`.
 
 **O que ainda não existe na API:** categorias, estorno manual e pagamento real.
 
@@ -351,7 +335,7 @@ Os tipos da branch `feat/integracao-back` espelham as tabelas do banco, e isso n
 - A resposta de listagem de eventos é um envelope (`{ data, page, limit, total, totalPages }`).
 
 ```ts
-export type Papel = "CLIENTE" | "ADMIN";
+export type Papel = "CLIENTE" | "PRODUTOR" | "ADMIN";
 
 export type Usuario = {
   id: string; nome: string; username: string; avatarUrl: string | null;
@@ -400,63 +384,10 @@ const { data: eventos } = await api<Pagina<Evento>>("/eventos?page=1&limit=20");
 
 Na `HomeScreen`, a chamada atual a `${apiUrl}/filmes` deve virar `/eventos`, e o resultado é lido de `.data`. Trate também o estado inicial vazio (`eventos[0]` não existe antes da resposta chegar).
 
-## Equipe do evento
-
-O gerente (quem publicou) define quem ajuda no evento. Cada pessoa tem um cargo por evento: `PROMOTOR` (divulga com link de afiliado) ou `VALIDADOR` (lê os QR codes na portaria). Todas as rotas exigem ser o gerente.
-
-| Rota | O que faz |
-|---|---|
-| `GET /eventos/:id/equipe` | Lista a equipe: `[{ id, eventoId, usuarioId, cargo, codigoAfiliado, criadoEm, usuario, vendas: { pedidos, ingressos, comissao } }]` (`vendas` só tem números para promotor) |
-| `POST /eventos/:id/equipe` | `{ "username": "ana", "cargo": "VALIDADOR" }` → `201`. Repetir a pessoa troca o cargo. `404` se o username não existir; `400` para o próprio gerente ou cargo inválido |
-| `DELETE /eventos/:id/equipe/:usuarioId` | `204`; `404` se não for da equipe |
-| `GET /eventos/meus` | Qualquer logado: eventos em que atua, `[{ cargo: "GERENTE" \| "PROMOTOR" \| "VALIDADOR", evento }]` |
-
-### Programa de promotores
-
-O gerente define as condições no evento (`PUT /eventos/:id`): `descontoAfiliado` (fração: `0.1` = 10% para quem compra) e `comissaoPromotor` (fração do valor dos ingressos que o promotor ganha). `null` desliga. Cada `PROMOTOR` recebe um `codigoAfiliado` (8 caracteres, estável).
-
-| Rota | O que faz |
-|---|---|
-| `GET /eventos/:id/afiliado/:codigo` | Qualquer logado. Confere o código antes de comprar: `{ codigo, descontoAfiliado, promotor: { nome, username } }`. `404` se não valer no evento (ou for o próprio código de quem pergunta) |
-| `GET /eventos/:id/promotor` | Só o promotor do evento: `{ evento, codigo, descontoAfiliado, comissaoPromotor, pedidos, ingressos, comissaoTotal }`. `403` para os demais |
-
-Comprar com o código: envie `codigoAfiliado` em `POST /pedidos` ou em `POST /grupos/compras`. O desconto do código **não soma** com o de grupo: vale o maior dos dois. A taxa de serviço incide sobre o valor já com desconto. O pedido guarda `promotorId`, `codigoAfiliado` e `comissao` (a comissão é só registrada, não há repasse automático) e ela é registrada mesmo quando o desconto de grupo é o maior, pois a venda veio do promotor. `400` para código inválido ou para o próprio código do promotor.
-
-## Feed
-
-Feed de eventos no estilo de rede social (aba Feed do app). Todas as rotas exigem login.
-
-| Rota | O que faz |
-|---|---|
-| `GET /feed?aba=&limit=&cursor=` | `aba`: `todos` (padrão), `seguindo` (organizadores que sigo) ou `salvos`. `limit` 1 a 30 (padrão 10). Mais recentes primeiro; fora de `salvos` só eventos que ainda não acabaram. Resposta: `{ data: [{ id, titulo, descricao, imagemUrl, comecaEm, terminaEm, nomeLocal, cidade, tags, criadoEm, organizador, atracoes, menorPreco, curtidas, curtido, salvo, seguindo }], nextCursor }`. `menorPreco` é `null` quando esgotou. Passe `nextCursor` em `cursor` para a próxima página; `null` = fim. `400` para parâmetro inválido |
-| `POST` / `DELETE /eventos/:id/curtir` | Curtir / descurtir (idempotente). `{ curtido, curtidas }` |
-| `POST` / `DELETE /eventos/:id/salvar` | Salvar / tirar dos salvos (idempotente). `{ salvo }` |
-| `POST` / `DELETE /usuarios/:id/seguir` | Seguir / deixar de seguir. `{ seguindo }`. `400` ao seguir a si mesmo, `404` se não existir |
-
-Eventos ocultos pela moderação não aparecem no feed e respondem `404` em curtir/salvar.
-
-## Pagamentos
-
-Todo pagamento do app passa por `POST /pagamentos`, com a forma de pagamento escolhida. O valor é sempre calculado no servidor; os ingressos só são emitidos **depois** que o provedor aprova.
-
-Sem `MERCADOPAGO_ACCESS_TOKEN` o provedor é **simulado**: aprova na hora, sem cobrar (desenvolvimento, testes e preview). Com o token, a cobrança é feita no Mercado Pago (credencial `TEST-` = ambiente de testes deles) e é preciso definir também `PUBLIC_API_URL` (URL pública da API). Nesse modo `POST /pedidos` e `POST /grupos/compras/:id/pagar` respondem `410`, para não darem ingressos sem pagar.
-
-| Rota | O que faz |
-|---|---|
-| `POST /pagamentos` | `{ "metodo": "PIX" \| "CARTAO", "itens": [{ "tipo": "PEDIDO", "loteId", "quantidade", "codigoAfiliado"? }, { "tipo": "COTA", "compraId", "todos"? }] }` (1 a 10 itens). Responde `201` com o pagamento. `PIX` traz `pixCopiaECola` e `pixQrCodeBase64`; `CARTAO` traz `checkoutUrl` (página segura do Mercado Pago, sem dados de cartão no app). Erros dos itens (lote esgotado, cota já paga…) voltam como nas rotas diretas |
-| `GET /pagamentos/:id` | Só o dono. `{ id, status: PENDENTE \| APROVADO \| RECUSADO \| EXPIRADO, metodo, valor, expiraEm, pixCopiaECola, pixQrCodeBase64, checkoutUrl, erroEmissao, pedidos, compras }`. Enquanto `PENDENTE` confere no Mercado Pago; `pedidos` e `compras` vêm preenchidos quando `APROVADO`. Vale 30 minutos |
-| `POST /pagamentos/webhook/mercadopago` | Público. Aviso do Mercado Pago; a API sempre consulta o pagamento lá antes de aprovar, e só aprova se o valor pago for igual ao cobrado |
-| `GET /pagamentos/retorno` | Público. Página aberta no fim do checkout do cartão; devolve ao app por `groov://pagamento-retorno` |
-
-Um Pix pago depois do prazo ainda emite os ingressos. Se o pagamento foi aprovado mas algum item não pôde ser emitido (ex.: o lote esgotou nesse meio tempo), `erroEmissao` traz o motivo e o estorno é feito pelo painel do Mercado Pago.
-
 ## Admin
 
 | Rota | O que faz |
 |---|---|
-| `GET /admin/eventos/ocultos` | **só ADMIN.** Eventos ocultos, com motivo e quem publicou |
-| `POST /admin/eventos/:id/ocultar` | **só ADMIN.** `{ "motivo": "..." }` (obrigatório). O evento some da listagem e das buscas |
-| `POST /admin/eventos/:id/reexibir` | **só ADMIN.** Desfaz a ocultação |
 | `POST /admin/resetar-seed` | **só ADMIN.** Apaga todos os dados, menos a conta de quem pediu, e recria o seed de demonstração |
 
 Responde `200 { "mensagem" }`. Recusado com `403` quando `NODE_ENV=production` (o banco real nunca é zerado pela API) e com `500` se `SEED_PASSWORD` não estiver definida no servidor, pois é a senha das contas do seed. Os dados são apagados e recriados numa única transação: se algo falhar, nada muda.

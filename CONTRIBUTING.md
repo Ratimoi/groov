@@ -37,35 +37,10 @@ feature/xxx ──PR──▶ dev ──PR──▶ main
 2. Commitar seguindo [Conventional Commits](https://www.conventionalcommits.org/):
    `feat: `, `fix: `, `test: `, `chore: `, `docs: `, `refactor: `.
 3. Abrir Pull Request para `dev`. A CI roda automaticamente.
-4. Após aprovação e CI verde, fazer o merge em `dev`. A branch é apagada automaticamente depois do merge.
+4. Após aprovação e CI verde, fazer o merge em `dev` e apagar a branch.
 5. Periodicamente, abrir PR de `dev` para `main`. A CI roda de novo antes do merge.
 
 O deploy é disparado pelo push (merge) em `main`, depois que os jobs de backend e frontend passam. Veja a seção [Deploy](#deploy).
-
-## Proteção das branches e merge
-
-`main` e `dev` são protegidas: não aceitam force push nem exclusão, e só recebem mudança por Pull Request com os checks **Backend** e **Frontend** verdes. O repositório aceita apenas **merge commit** (squash e rebase estão desligados) e apaga a branch de trabalho depois do merge.
-
-## Automações
-
-| O quê | Como funciona |
-|---|---|
-| **Checagens de PR** (`pr-checks.yml`) | O título do PR precisa seguir Conventional Commits (`feat: ...`, `fix: ...`, `release: V1.4.1`) e a branch precisa começar com `feature/`, `fix/`, `test/`, `chore/`, `docs/` ou `hotfix/`. PRs para a `main` só saem da `dev` ou de `hotfix/*`. Não bloqueiam o merge, mas aparecem em vermelho. |
-| **Rótulos** | O PR recebe `backend`, `frontend`, `ci` e `docs` conforme os arquivos alterados. |
-| **CI repetida** | Um push novo no mesmo PR cancela a CI anterior dele. |
-| **Dependabot** | Toda semana abre PRs para a `dev` com as atualizações minor/patch (backend, frontend e GitHub Actions). Majors, Expo e React Native ficam de fora: sobem com `npx expo install` numa troca de SDK. |
-| **OTA de preview** | Todo merge na `dev` publica um EAS Update no canal `preview`, na *fingerprint* do código nativo (`runtimeVersion.policy = "fingerprint"`): chega a todo APK com o mesmo código nativo, não importa a `version`. Se uma mudança altera o nativo (biblioteca nativa, plugin, permissão), a fingerprint muda e é preciso gerar um APK novo. Exige o secret `EXPO_TOKEN` no environment `dev - groov-api`; sem ele o job apenas avisa e pula. |
-| **Release** | Ver [Versões](#versões). |
-
-### Hooks locais (opcional, recomendado)
-
-Rodam lint e typecheck antes do commit e validam a mensagem. Ative uma vez por clone:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-O `pre-commit` só roda nas áreas (`backend/`, `frontend/`) que têm arquivo no commit. O `.editorconfig` padroniza charset, quebra de linha e indentação nos editores.
 
 ## Hotfix
 
@@ -77,7 +52,6 @@ O workflow (`.github/workflows/ci.yml`) roda em todo PR e push para `dev` e `mai
 
 **Backend** (`backend/`)
 - `npm ci`
-- `npm run lint` (ESLint)
 - `npm run typecheck` (código e testes)
 - `npm test` (Vitest + Supertest; o Prisma é substituído por um mock, então não precisa de banco)
 - `npm run build` (compila o TypeScript)
@@ -134,7 +108,13 @@ As versões seguem o [versionamento semântico](https://semver.org/lang/pt-BR/) 
 - **`version` do app:** no `frontend/app.json` fica **sem o V** (`"version": "1.0.0"`), porque o Android e o EAS exigem número puro. Quem escreve `V` é só a tag, a release e a comunicação.
 - **Atualizações OTA:** o `runtimeVersion` do app segue a `version`. Mudou dependência nativa? Suba a versão (ao menos a minor) e gere um build novo; só mudanças em JS/TS vão por EAS Update.
 
-**A tag e a release saem sozinhas.** Depois que o deploy da `main` termina com sucesso, o job *Release* da CI cria a tag e a release `V` + `version` do `frontend/app.json` (`1.4.0` → `V1.4.0`), com as notas geradas a partir dos PRs. Para lançar uma versão nova, basta subir a `version` no `app.json` antes do PR `dev → main`; se ela não mudou, a release já existe e o job só avisa. Só marque a tag à mão (`git tag -a V1.0.0 -m "V1.0.0" && git push origin V1.0.0`) se a CI estiver fora do ar.
+Para marcar uma versão, depois do merge em `main`:
+
+```bash
+git checkout main && git pull
+git tag -a V1.0.0 -m "V1.0.0"
+git push origin V1.0.0
+```
 
 ## Gerar o APK (Android)
 

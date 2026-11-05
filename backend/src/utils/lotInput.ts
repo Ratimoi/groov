@@ -34,7 +34,7 @@ function integer(value: unknown, name: string, min: number, max: number): number
 
 // Aceita número ou texto decimal ("180", "180.5", "180.50"), no máximo `scale` casas, sem notação
 // científica. Devolve sempre texto com `scale` casas, que o Prisma grava como Decimal sem erro de ponto flutuante.
-export function decimal(value: unknown, name: string, scale: number, min: number, max: number): string {
+function decimal(value: unknown, name: string, scale: number, min: number, max: number): string {
   const text = typeof value === "number" && Number.isFinite(value) ? String(value) : value;
   const pattern = new RegExp(`^\\d+(\\.\\d{1,${scale}})?$`);
   if (typeof text !== "string" || !pattern.test(text)) {
