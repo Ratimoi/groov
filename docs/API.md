@@ -117,7 +117,8 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
       "criadoEm": "...", "atualizadoEm": "...",
       "categoria": { "id": "clx...", "nome": "Techno" },
       "lotes": [ { "id": "clx...", "nome": "1º lote", "preco": "180", "quantidade": 100, "quantidadeVendida": 10, "quantidadeReservada": 5 } ],
-      "atracoes": [ { "id": "clx...", "nome": "DJ Fulano", "username": "djfulano", "avatarUrl": null } ],
+      "endereco": "Rua A, 10", "latitude": -8.05, "longitude": -34.9,
+      "atracoes": [ { "id": "clx...", "nome": "DJ Fulano", "fotoUrl": null, "usuario": { "id": "clx...", "username": "djfulano", "avatarUrl": null } } ],
       "criadoPor": { "id": "clx...", "nome": "Produtora X", "username": "produtorax", "avatarUrl": null }
     }
   ],
@@ -128,7 +129,7 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
 - A lista vem em `resposta.data` (**não é um array direto**).
 - Ordenada por data de início crescente (os mais antigos primeiro, inclusive eventos já passados). Ainda não há filtro por cidade, categoria ou data.
 - Para carregar mais (scroll infinito): peça `page + 1` enquanto `page < totalPages`.
-- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `atracoes` e `criadoPor` trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail, senha ou papel.
+- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `criadoPor` e o `usuario` de cada atração trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail, senha ou papel. Uma atração tem nome livre, `fotoUrl` opcional e `usuario` (a conta marcada) ou `null` quando não tem conta.
 - **Atenção ao formato dos lotes embutidos:** dentro do evento eles vêm **crus**, com `preco` como `"180"` (sem casas fixas) e **sem** `quantidadeDisponivel`. Para o formato completo (`"180.00"` e a disponibilidade calculada), use `GET /eventos/:eventoId/lotes` (veja a seção Lotes). Não misture os dois formatos na mesma tela.
 - `horario` (hora do dia, sem data) e `destaque` (se o evento aparece em destaque) são campos do evento; `destaque` pode ser `null` em eventos antigos.
 
@@ -139,10 +140,11 @@ Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não 
 
 Qualquer usuário logado publica um evento (`POST`) e vira o **gerente** dele (`criadoPorId`). Editar, apagar e montar a equipe exigem ser o gerente: nem o `ADMIN` edita evento alheio (ele cuida do software e só modera, veja Admin). `403` para os demais; no máximo 10 publicações por hora por usuário (`429`). Evento com pedidos não pode ser apagado (`409`). Eventos ocultos pela moderação somem da listagem e de `GET /eventos/:id` (`404`).
 
-- Obrigatórios no `POST`: `titulo`, `cidade`, `comecaEm`. Opcionais: `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (só `http`/`https`), `categoriaId`.
+- Obrigatórios no `POST`: `titulo`, `cidade`, `comecaEm`. Opcionais: `terminaEm`, `descricao`, `nomeLocal`, `endereco`, `latitude`/`longitude` (juntas), `imagemUrl` (só `http`/`https`), `categoriaId`.
+- **Atrações e lotes na mesma chamada:** `atracoes: [{ "nome", "fotoUrl"?, "username"? }]` (até 30; `username` marca a conta, `400` se não existir) e, só no `POST`, `lotes: [{ nome, preco, quantidade, ... }]` (até 20, mesmo formato de `POST /eventos/:id/lotes`). Tudo ou nada: se algo for inválido nada é publicado. No `PUT`, `atracoes` troca a lista inteira.
 - `terminaEm` não pode ser antes de `comecaEm`.
 - No `PUT`, envie só o que mudou; `null` limpa um campo opcional.
-- `DELETE` devolve `204`. Evento que já tem lotes ou pedidos dá `409`.
+- `DELETE` devolve `204` e leva junto os lotes e as avaliações. Evento que já tem pedidos dá `409`.
 
 ### Tags e avaliações do evento
 

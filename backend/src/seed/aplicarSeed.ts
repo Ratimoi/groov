@@ -420,11 +420,13 @@ export async function aplicarSeed(prisma: PrismaClient | Prisma.TransactionClien
     await prisma.lote.createMany({ data: lotes });
     log(`${lotes.length} Lotes Cadastrados...`);
 
-    for (const [eventoId, usuarioIds] of Object.entries(atracoesPorEvento)) {
-        await prisma.evento.update({
-            where: { id: eventoId },
-            data: { atracoes: { set: usuarioIds.map(id => ({ id })) } }
-        });
-    }
+    const contasAtracao = new Map(atracoes.map(a => [a.id as string, a]));
+    const atracoesDosEventos = Object.entries(atracoesPorEvento).flatMap(([eventoId, usuarioIds]) =>
+        usuarioIds.map((usuarioId, ordem) => {
+            const conta = contasAtracao.get(usuarioId)!;
+            return { id: `atr-${eventoId}-${ordem}`, eventoId, nome: conta.nome, fotoUrl: conta.avatarUrl ?? null, usuarioId, ordem };
+        })
+    );
+    await prisma.atracao.createMany({ data: atracoesDosEventos, skipDuplicates: true });
     log(`Atrações vinculadas a ${Object.keys(atracoesPorEvento).length} Eventos...`);
 }

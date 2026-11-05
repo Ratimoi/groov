@@ -2,7 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { logadoComo } from "./helpers/auth";
 import { prismaError } from "./helpers/prismaErrors";
-import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
+import { prismaMock, resetPrismaMock, runTransactionCallbacks } from "./helpers/prismaMock";
 
 vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
@@ -292,6 +292,31 @@ describe("/eventos (escrita)", () => {
   });
 
   describe("DELETE /:id", () => {
+    beforeEach(() => {
+      runTransactionCallbacks();
+      prismaMock.pedido.count.mockResolvedValue(0);
+    });
+
+    it("evento com pedidos não é apagado (409) e nada é removido", async () => {
+      prismaMock.pedido.count.mockResolvedValue(2);
+
+      const res = await request(app).delete("/eventos/e1").set(criador());
+
+      expect(res.status).toBe(409);
+      expect(prismaMock.lote.deleteMany).not.toHaveBeenCalled();
+      expect(prismaMock.evento.delete).not.toHaveBeenCalled();
+    });
+
+    it("sem pedidos leva junto os lotes e as avaliações", async () => {
+      prismaMock.evento.delete.mockResolvedValue(salvo);
+
+      const res = await request(app).delete("/eventos/e1").set(criador());
+
+      expect(res.status).toBe(204);
+      expect(prismaMock.lote.deleteMany).toHaveBeenCalledWith({ where: { eventoId: "e1" } });
+      expect(prismaMock.avaliacaoEvento.deleteMany).toHaveBeenCalledWith({ where: { eventoId: "e1" } });
+    });
+
     it("o criador apaga (204, sem corpo)", async () => {
       prismaMock.evento.delete.mockResolvedValue(salvo);
 
@@ -361,5 +386,81 @@ describe("/eventos (escrita)", () => {
 
     expect((await request(app).get("/eventos")).status).toBe(200);
     expect((await request(app).get("/eventos/e1")).status).toBe(200);
+  });
+});
+
+describe("/eventos (atrações, lotes e local)", () => {
+  beforeEach(() => {
+    resetPrismaMock();
+    prismaMock.evento.create.mockImplementation(async ({ data }) => ({ id: "novo", ...data }));
+    prismaMock.evento.findUnique.mockResolvedValue({ id: "e1", criadoPorId: "c1", comecaEm: new Date("2026-12-01"), terminaEm: null });
+    prismaMock.evento.update.mockImplementation(async ({ data }) => ({ id: "e1", ...data }));
+  });
+
+  it("publica com atrações (nome livre, foto e conta marcada), lotes e local de uma vez", async () => {
+    const auth = logadoComo("CLIENTE", "c1");
+    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "c1", papel: "CLIENTE" }).mockResolvedValueOnce({ id: "u-dj" });
+
+    const res = await request(app)
+      .post("/eventos")
+      .set(auth)
+      .send({
+        ...valido,
+        endereco: "Rua A, 10",
+        latitude: -8.05,
+        longitude: -34.9,
+        atracoes: [
+          { nome: " DJ Lumen ", username: "@djlumen" },
+          { nome: "Banda Local", fotoUrl: "https://img.test/b.png" },
+        ],
+        lotes: [{ nome: "1º lote", preco: "50", quantidade: 100 }],
+      });
+
+    expect(res.status).toBe(201);
+    const { data } = prismaMock.evento.create.mock.calls[0][0];
+    expect(data).toMatchObject({ endereco: "Rua A, 10", latitude: -8.05, longitude: -34.9, criadoPorId: "c1" });
+    expect(data.atracoes.create).toEqual([
+      { nome: "DJ Lumen", fotoUrl: null, usuarioId: "u-dj", ordem: 0 },
+      { nome: "Banda Local", fotoUrl: "https://img.test/b.png", usuarioId: null, ordem: 1 },
+    ]);
+    expect(data.lotes.create).toEqual([{ nome: "1º lote", preco: "50.00", quantidade: 100 }]);
+  });
+
+  it("conta marcada inexistente é recusada e nada é gravado", async () => {
+    const auth = logadoComo("CLIENTE", "c1");
+    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "c1", papel: "CLIENTE" }).mockResolvedValueOnce(null);
+
+    const res = await request(app).post("/eventos").set(auth).send({ ...valido, atracoes: [{ nome: "X", username: "fantasma" }] });
+
+    expect(res.status).toBe(400);
+    expect(prismaMock.evento.create).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["atração sem nome", { atracoes: [{ nome: " " }] }],
+    ["foto inválida", { atracoes: [{ nome: "X", fotoUrl: "ftp://x" }] }],
+    ["atracoes não lista", { atracoes: "DJ" }],
+    ["lote inválido", { lotes: [{ nome: "A", preco: "-1", quantidade: 1 }] }],
+    ["só latitude", { latitude: -8 }],
+    ["latitude fora da faixa", { latitude: 91, longitude: 0 }],
+  ])("%s responde 400", async (_nome, extra) => {
+    const auth = logadoComo("CLIENTE", "c1");
+
+    const res = await request(app).post("/eventos").set(auth).send({ ...valido, ...extra });
+
+    expect(res.status).toBe(400);
+    expect(prismaMock.evento.create).not.toHaveBeenCalled();
+  });
+
+  it("PUT com atracoes troca a lista inteira", async () => {
+    const auth = logadoComo("CLIENTE", "c1");
+
+    const res = await request(app).put("/eventos/e1").set(auth).send({ atracoes: [{ nome: "Nova" }] });
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.evento.update.mock.calls[0][0].data.atracoes).toEqual({
+      deleteMany: {},
+      create: [{ nome: "Nova", fotoUrl: null, usuarioId: null, ordem: 0 }],
+    });
   });
 });

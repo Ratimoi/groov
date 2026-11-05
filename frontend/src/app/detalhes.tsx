@@ -212,7 +212,7 @@ export default function DetalhesEvento() {
                 >
                   <View className="aspect-square">
                     <Image
-                      source={{ uri: atracao.avatarUrl ?? "https://i.pravatar.cc/150" }}
+                      source={{ uri: atracao.fotoUrl ?? atracao.usuario?.avatarUrl ?? "https://i.pravatar.cc/150" }}
                       className="w-full h-full"
                       resizeMode="cover"
                     />
