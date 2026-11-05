@@ -50,7 +50,6 @@ export class TeamModel {
       comecaEm: true,
       nomeLocal: true,
       cidade: true,
-      status: true,
       ocultoEm: true,
     } as const;
     const [gerenciados, membros] = await Promise.all([

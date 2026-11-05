@@ -174,6 +174,18 @@ export default function Perfil() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              onPress={() => router.push("/meus-eventos")}
+              activeOpacity={0.8}
+              className="mt-3 flex-row items-center justify-between bg-surface-container-low border border-white/10 rounded-xl p-4"
+            >
+              <View className="flex-row items-center gap-3">
+                <MaterialIcons name="event" size={22} color="#ebb2ff" />
+                <Text className="font-body-md text-body-md font-bold text-white">Meus eventos</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color="#9d8ba0" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => router.push("/meus-dados")}
               activeOpacity={0.8}
               className="mt-3 flex-row items-center justify-between bg-surface-container-low border border-white/10 rounded-xl p-4"

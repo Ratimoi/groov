@@ -1,16 +1,40 @@
 import { Evento } from "@prisma/client";
-import { EventModel } from "../models/EventModel";
+import { EventModel, type AtracaoRow } from "../models/EventModel";
+import { UserModel } from "../models/UserModel";
+import { AppError } from "../utils/AppError";
 import type { AuthUser } from "../types/auth";
 import { EventServiceContract, EventoCompleto } from "../types/event";
 import { assertCanManageEvent } from "../utils/eventAccess";
-import { assertEndAfterStart, parseEventCreate, parseEventUpdate } from "../utils/eventInput";
+import {
+  assertEndAfterStart,
+  parseEventCreate,
+  parseEventExtras,
+  parseEventUpdate,
+  type AtracaoInput,
+} from "../utils/eventInput";
 import { Paginated, parsePagination, PaginationQuery, toPaginated } from "../utils/pagination";
 
 export class EventService implements EventServiceContract {
   private eventModel: EventModel;
 
-  constructor(eventModel: EventModel = new EventModel()) {
+  private userModel: UserModel;
+
+  constructor(eventModel: EventModel = new EventModel(), userModel: UserModel = new UserModel()) {
     this.eventModel = eventModel;
+    this.userModel = userModel;
+  }
+
+  // Atração com @username marca a conta: ela precisa existir.
+  private async resolveAtracoes(lista: AtracaoInput[] | undefined): Promise<AtracaoRow[] | undefined> {
+    if (!lista) return undefined;
+    return Promise.all(
+      lista.map(async ({ nome, fotoUrl, username }) => {
+        if (!username) return { nome, fotoUrl, usuarioId: null };
+        const usuarioId = await this.userModel.findIdByUsername(username);
+        if (!usuarioId) throw new AppError(`Usuário @${username} não encontrado`, 400);
+        return { nome, fotoUrl, usuarioId };
+      }),
+    );
   }
 
   async findAll(query: PaginationQuery): Promise<Paginated<EventoCompleto>> {
@@ -26,7 +50,10 @@ export class EventService implements EventServiceContract {
   }
 
   async create(body: unknown, actor: AuthUser): Promise<Evento> {
-    return this.eventModel.create(parseEventCreate(body), actor.id);
+    const data = parseEventCreate(body);
+    const extras = parseEventExtras(body, true);
+    const atracoes = await this.resolveAtracoes(extras.atracoes);
+    return this.eventModel.create(data, actor.id, { atracoes, lotes: extras.lotes });
   }
 
   async update(id: string, body: unknown, actor: AuthUser): Promise<Evento | null> {
@@ -39,7 +66,8 @@ export class EventService implements EventServiceContract {
       data.comecaEm ?? event.comecaEm,
       data.terminaEm !== undefined ? data.terminaEm : event.terminaEm,
     );
-    return this.eventModel.update(id, data);
+    const atracoes = await this.resolveAtracoes(parseEventExtras(body, false).atracoes);
+    return this.eventModel.update(id, data, atracoes);
   }
 
   async delete(id: string, actor: AuthUser): Promise<boolean> {
