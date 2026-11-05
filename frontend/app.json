@@ -2,7 +2,7 @@
   "expo": {
     "name": "Groov",
     "slug": "groov",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "groov",
@@ -41,6 +41,25 @@
         {
           "cameraPermission": "O Groov usa a câmera para ler o QR code dos ingressos na portaria.",
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O Groov usa a sua localização para mostrar eventos perto de você."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Groov acessa suas fotos para você escolher as imagens do evento e o seu avatar.",
+          "cameraPermission": "O Groov usa a câmera para você tirar a foto do evento ou do seu avatar."
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
         }
       ]
     ],
