@@ -30,7 +30,7 @@ export function CardEventoDestaque({ data }: { data: EventoType }) {
       <View className="p-4 flex-col gap-stack-sm">
         <Text className="font-body-sm text-body-sm text-secondary">{formatarDataHora(data.comecaEm).toUpperCase()}</Text>
         <Text className="font-headline-md text-headline-md text-on-surface" numberOfLines={1}>{data.titulo}</Text>
-        <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={1}>{data.nomeLocal}</Text>
+        <Text className="font-body-md text-body-md text-on-surface-variant" numberOfLines={1}>{data.nomeLocal}{data.distanciaKm != null ? ` • ${data.distanciaKm.toFixed(1).replace(".", ",")} km` : ""}</Text>
       </View>
     </TouchableOpacity>
   );

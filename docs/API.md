@@ -106,6 +106,18 @@ A senha nunca é devolvida. Para trocar a senha, envie `senha` no `PUT`.
 
 Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão `400`).
 
+Filtros opcionais (combinam entre si; valor inválido dá `400`):
+
+| Parâmetro | O que faz |
+|---|---|
+| `q` | Texto livre: procura em título, descrição, local, cidade e selos (sem diferenciar maiúsculas) |
+| `categoria`, `cidade` | Nome exato (sem diferenciar maiúsculas) |
+| `tag` | Eventos com esse selo |
+| `de`, `ate` | Intervalo do início do evento (data ISO) |
+| `gratis=true` | Eventos com algum lote de R$ 0 |
+| `precoMax` | Eventos com algum lote até esse valor |
+| `latitude`, `longitude`, `raioKm` | Perto de mim: só eventos com ponto marcado dentro do raio (padrão 25 km, máximo 500). Vem ordenado do mais perto para o mais longe e cada evento ganha `distanciaKm`. `latitude` e `longitude` andam juntas |
+
 ```json
 {
   "data": [

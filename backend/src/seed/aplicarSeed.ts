@@ -136,7 +136,7 @@ const categorias: Prisma.CategoriaCreateManyInput[] = [
 ];
 
 // Criando os Eventos
-const eventos: Prisma.EventoCreateManyInput[] = [
+const eventosBase: Prisma.EventoCreateManyInput[] = [
     // ---------- FESTAS ----------
     {
         id: "evt-festa-01",
@@ -342,6 +342,24 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         criadoPorId: "usr-produtor-01"
     }
 ];
+
+// Pontos no mapa: o centro de cada cidade com um pequeno deslocamento por evento, para os pinos não se sobreporem.
+const CENTRO_DA_CIDADE: Record<string, [number, number]> = {
+  "Porto Alegre": [-30.0346, -51.2177],
+  Florianópolis: [-27.5954, -48.548],
+  "Rio de Janeiro": [-22.9068, -43.1729],
+  Curitiba: [-25.4284, -49.2733],
+  Pelotas: [-31.7654, -52.3376],
+  "São Paulo": [-23.5505, -46.6333],
+  "Belo Horizonte": [-19.9167, -43.9345],
+};
+
+const eventos: Prisma.EventoCreateManyInput[] = eventosBase.map((evento, i) => {
+  const centro = CENTRO_DA_CIDADE[evento.cidade];
+  if (!centro || evento.latitude != null) return evento;
+  const desvio = ((i % 5) - 2) * 0.006;
+  return { ...evento, latitude: centro[0] + desvio, longitude: centro[1] - desvio };
+});
 
 // Criando os Lotes (ingressos à venda de cada evento)
 // Nas Festas, o lote "Inteira" aceita compra em grupo com desconto

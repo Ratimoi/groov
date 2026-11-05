@@ -14,8 +14,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { Campo } from "../components/Campo";
+import { SeletorPonto } from "../components/Mapa";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
+import { obterPosicao } from "../utils/localizacao";
 import { formatarReais } from "../utils/lote";
 import {
   corpoEvento,
@@ -68,6 +70,9 @@ export default function Publicar() {
   const [carregando, setCarregando] = useState(edicao);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [avisoLocal, setAvisoLocal] = useState("");
+  // Muda quando o ponto é limpo, para o mapa recomeçar sem marcador.
+  const [versaoMapa, setVersaoMapa] = useState(0);
   const [publicado, setPublicado] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
@@ -87,6 +92,13 @@ export default function Publicar() {
       cancelado = true;
     };
   }, [eventoId]);
+
+  const usarMinhaLocalizacao = async () => {
+    setAvisoLocal("");
+    const r = await obterPosicao();
+    if (!r.ok) return setAvisoLocal(r.motivo);
+    setForm((atual) => ({ ...atual, latitude: r.posicao.lat.toFixed(6), longitude: r.posicao.lng.toFixed(6) }));
+  };
 
   const alterar = <K extends keyof EventoForm>(campo: K, valor: EventoForm[K]) => {
     setErro("");
@@ -262,9 +274,35 @@ export default function Publicar() {
             <Campo rotulo="Nome do local" valor={form.nomeLocal} onChange={(v) => alterar("nomeLocal", v)} maxLength={200} capitalizar="words" placeholder="Ex.: Marco Zero" />
             <Campo rotulo="Endereço (opcional)" valor={form.endereco} onChange={(v) => alterar("endereco", v)} maxLength={300} capitalizar="words" placeholder="Rua, número, bairro" />
             <Campo rotulo="Cidade" valor={form.cidade} onChange={(v) => alterar("cidade", v)} maxLength={100} capitalizar="words" placeholder="Recife" />
-            <Text className="font-body-sm text-[12px] text-on-surface-variant">
-              Marcar o ponto exato no mapa chega com a busca por eventos perto de você.
-            </Text>
+            <View className="gap-3">
+              <Text className="font-body-md text-body-md text-on-surface">Local no mapa (opcional)</Text>
+              <Text className="font-body-sm text-[12px] text-on-surface-variant">
+                Toque no mapa para marcar o ponto exato. É assim que o evento aparece para quem busca perto de si.
+              </Text>
+              <SeletorPonto
+                key={versaoMapa}
+                ponto={form.latitude && form.longitude ? { lat: Number(form.latitude), lng: Number(form.longitude) } : null}
+                onEscolher={(p) => setForm((atual) => ({ ...atual, latitude: p.lat.toFixed(6), longitude: p.lng.toFixed(6) }))}
+              />
+              <View className="flex-row gap-3">
+                <TouchableOpacity onPress={usarMinhaLocalizacao} className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3 border border-primary-container">
+                  <MaterialIcons name="my-location" size={18} color="#ebb2ff" />
+                  <Text className="font-body-md text-primary">Usar onde estou</Text>
+                </TouchableOpacity>
+                {!!form.latitude && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setForm((atual) => ({ ...atual, latitude: "", longitude: "" }));
+                      setVersaoMapa((v) => v + 1);
+                    }}
+                    className="flex-row items-center justify-center gap-2 rounded-xl py-3 px-4 border border-white/20"
+                  >
+                    <Text className="font-body-md text-on-surface-variant">Limpar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {!!avisoLocal && <Text className="font-body-sm text-body-sm text-error">{avisoLocal}</Text>}
+            </View>
           </View>
         )}
 
