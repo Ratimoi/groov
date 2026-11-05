@@ -41,6 +41,7 @@ export type GroupPurchaseCreateData = {
   iniciadorId: string;
   expiraEm: Date;
   participantesIds: string[];
+  codigoAfiliado?: string;
 };
 
 export type GroupSharePaymentData = {
@@ -51,6 +52,9 @@ export type GroupSharePaymentData = {
   subtotalCents: number;
   descontoCents: number;
   taxaServicoCents: number;
+  promotorId?: string;
+  codigoAfiliado?: string;
+  comissaoCents?: number;
 };
 
 class InsufficientStockError extends Error {}
@@ -110,6 +114,9 @@ export class GroupPurchaseModel {
             taxaServico: fromCents(data.taxaServicoCents),
             valor: fromCents(valorCents),
             pagoEm: new Date(),
+            ...(data.promotorId
+              ? { promotorId: data.promotorId, codigoAfiliado: data.codigoAfiliado, comissao: fromCents(data.comissaoCents ?? 0) }
+              : {}),
           },
         });
 
@@ -218,6 +225,7 @@ export class GroupPurchaseModel {
             loteId: data.loteId,
             iniciadorId: data.iniciadorId,
             expiraEm: data.expiraEm,
+            codigoAfiliado: data.codigoAfiliado,
             participantes: {
               create: data.participantesIds.map((usuarioId) => ({ usuarioId })),
             },

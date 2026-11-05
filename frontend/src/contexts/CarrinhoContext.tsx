@@ -2,7 +2,12 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import type { GrupoEscolhido } from '../utils/lote';
 import type { ResultadoCompra } from '../utils/compras';
 
+// Código de promotor já conferido na API: dá desconto na compra do evento.
+export type Afiliado = { eventoId: string; codigo: string; desconto: number; promotor: string };
+
 type CarrinhoContextData = {
+  afiliado: Afiliado | null;
+  definirAfiliado: (afiliado: Afiliado | null) => void;
   carrinho: Record<string, number>;
   gruposPorLote: Record<string, GrupoEscolhido | undefined>;
   atualizaQuantidade: (loteId: string, quantidade: number) => void;
@@ -20,6 +25,7 @@ export function CarrinhoProvider({ children }: { children: ReactNode }) {
   const [carrinho, setCarrinho] = useState<Record<string, number>>({});
   const [gruposPorLote, setGruposPorLote] = useState<Record<string, GrupoEscolhido | undefined>>({});
   const [resultado, definirResultado] = useState<ResultadoCompra | null>(null);
+  const [afiliado, definirAfiliado] = useState<Afiliado | null>(null);
 
   const atualizaQuantidade = (loteId: string, quantidade: number) => {
     setCarrinho(prev => ({ ...prev, [loteId]: quantidade }));
@@ -36,11 +42,14 @@ export function CarrinhoProvider({ children }: { children: ReactNode }) {
   const limparCarrinho = () => {
     setCarrinho({});
     setGruposPorLote({});
+    definirAfiliado(null);
   };
 
   return (
     <CarrinhoContext.Provider
       value={{
+        afiliado,
+        definirAfiliado,
         carrinho,
         gruposPorLote,
         atualizaQuantidade,

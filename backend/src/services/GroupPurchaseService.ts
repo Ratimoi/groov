@@ -10,7 +10,8 @@ import type {
   GroupPurchaseServiceContract,
 } from "../types/groupPurchase";
 import { AppError } from "../utils/AppError";
-import { serviceFeeCents, toCents } from "../utils/money";
+import { fractionOfCents, serviceFeeCents, toCents } from "../utils/money";
+import { TeamService } from "./TeamService";
 
 const HOUR_IN_MS = 60 * 60 * 1000;
 
@@ -19,17 +20,20 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
   private groupModel: GroupModel;
   private groupMemberModel: GroupMemberModel;
   private lotModel: LotModel;
+  private teamService: TeamService;
 
   constructor(
     groupPurchaseModel: GroupPurchaseModel = new GroupPurchaseModel(),
     groupModel: GroupModel = new GroupModel(),
     groupMemberModel: GroupMemberModel = new GroupMemberModel(),
     lotModel: LotModel = new LotModel(),
+    teamService: TeamService = new TeamService(),
   ) {
     this.groupPurchaseModel = groupPurchaseModel;
     this.groupModel = groupModel;
     this.groupMemberModel = groupMemberModel;
     this.lotModel = lotModel;
+    this.teamService = teamService;
   }
 
   // O iniciador é sempre quem está logado. Como ele entra na lista de participantes, a regra de
@@ -80,7 +84,17 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
       );
     }
 
+    // Código de promotor opcional: confere já aqui para o app avisar antes de reservar.
+    let codigoAfiliado: string | undefined;
+    if (data.codigoAfiliado) {
+      if (typeof data.codigoAfiliado !== "string" || data.codigoAfiliado.length > 32) {
+        throw new AppError("codigoAfiliado inválido", 400);
+      }
+      codigoAfiliado = (await this.teamService.resolveAffiliate(lote.eventoId, data.codigoAfiliado, actor.id)).codigo;
+    }
+
     const purchase = await this.groupPurchaseModel.createWithReservation({
+      codigoAfiliado,
       grupoId: data.grupoId,
       loteId: data.loteId,
       iniciadorId: data.iniciadorId,
@@ -149,20 +163,30 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     const lote = await this.lotModel.findById(purchase.loteId);
     if (!lote) throw new AppError("Lote não encontrado", 404);
 
-    // Cada cota é o preço do lote com o desconto do grupo (o preço vem do banco).
+    // Cada cota é o preço do lote com o desconto (o preço vem do banco). Com código de promotor vale
+    // o maior entre o desconto do grupo e o do promotor (não somam); a comissão do promotor é
+    // registrada sempre que o código vale, pois foi ele quem trouxe a venda.
     const subtotalCents = toCents(lote.preco);
-    const cotaCents = Math.round(subtotalCents * (1 - Number(lote.descontoGrupo ?? 0)));
+    const descontoGrupo = Number(lote.descontoGrupo ?? 0);
 
     let atualizada: GroupPurchase | null = null;
     for (const devedor of devedores) {
+      const afiliado = purchase.codigoAfiliado
+        ? await this.teamService.lookupAffiliate(lote.eventoId, purchase.codigoAfiliado, devedor.usuarioId)
+        : null;
+      const descontoCents = fractionOfCents(subtotalCents, Math.max(descontoGrupo, afiliado?.desconto ?? 0));
+      const cotaCents = subtotalCents - descontoCents;
       const paid = await this.groupPurchaseModel.payShare({
         compraId: purchase.id,
         usuarioId: devedor.usuarioId,
         eventoId: lote.eventoId,
         loteId: lote.id,
         subtotalCents,
-        descontoCents: subtotalCents - cotaCents,
+        descontoCents,
         taxaServicoCents: serviceFeeCents(cotaCents),
+        ...(afiliado
+          ? { promotorId: afiliado.promotorId, codigoAfiliado: afiliado.codigo, comissaoCents: fractionOfCents(cotaCents, afiliado.comissao) }
+          : {}),
       });
       if (!paid) throw new AppError(devedor.usuarioId === actor.id ? "Você já pagou a sua parte" : "Uma das cotas já foi paga", 409);
       atualizada = paid;

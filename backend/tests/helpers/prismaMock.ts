@@ -4,6 +4,7 @@ const delegate = () => ({
   create: vi.fn(),
   findMany: vi.fn(),
   findUnique: vi.fn(),
+  findFirst: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
   deleteMany: vi.fn(),
@@ -12,6 +13,7 @@ const delegate = () => ({
   upsert: vi.fn(),
   aggregate: vi.fn(),
   count: vi.fn(),
+  groupBy: vi.fn(),
 });
 
 // Cliente Prisma falso: cada teste programa os retornos que precisa.
