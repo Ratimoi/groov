@@ -19,12 +19,13 @@ describe("/eventos/:id/equipe", () => {
   describe("GET", () => {
     it("o gerente lista a equipe", async () => {
       const auth = gerente();
-      prismaMock.eventoMembro.findMany.mockResolvedValue([{ id: "m1", cargo: "VALIDADOR" }]);
+      prismaMock.eventoMembro.findMany.mockResolvedValue([{ id: "m1", usuarioId: "u2", cargo: "VALIDADOR" }]);
+      prismaMock.pedido.groupBy.mockResolvedValue([]);
 
       const res = await request(app).get("/eventos/e1/equipe").set(auth);
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual([{ id: "m1", cargo: "VALIDADOR" }]);
+      expect(res.body).toEqual([{ id: "m1", usuarioId: "u2", cargo: "VALIDADOR", vendas: { pedidos: 0, ingressos: 0, comissao: "0.00" } }]);
     });
 
     it("quem não é o gerente recebe 403 (inclusive ADMIN)", async () => {
@@ -61,7 +62,12 @@ describe("/eventos/:id/equipe", () => {
 
       expect(res.status).toBe(201);
       expect(prismaMock.usuario.findUnique.mock.calls[1][0].where).toEqual({ username: "ana" });
-      expect(prismaMock.eventoMembro.upsert.mock.calls[0][0].create).toEqual({ eventoId: "e1", usuarioId: "u2", cargo: "PROMOTOR" });
+      expect(prismaMock.eventoMembro.upsert.mock.calls[0][0].create).toEqual({
+        eventoId: "e1",
+        usuarioId: "u2",
+        cargo: "PROMOTOR",
+        codigoAfiliado: expect.stringMatching(/^[A-Z2-9]{8}$/),
+      });
     });
 
     it.each([["GERENTE"], ["ADMIN"], [undefined], [1]])("cargo %s é recusado", async (cargo) => {

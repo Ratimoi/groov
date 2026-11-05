@@ -1,5 +1,6 @@
 import { PrismaClient, type CargoEvento } from "@prisma/client";
 import prisma from "../config/prisma";
+import { generateInviteCode } from "../utils/inviteCode";
 
 const usuarioPublico = { select: { id: true, nome: true, username: true, avatarUrl: true } } as const;
 
@@ -18,14 +19,59 @@ export class TeamModel {
     });
   }
 
-  // Um cargo por pessoa em cada evento: adicionar de novo troca o cargo.
+  // Um cargo por pessoa em cada evento: adicionar de novo troca o cargo. Só PROMOTOR tem código de
+  // afiliado; quem já tinha um mantém o mesmo ao ser readicionado.
   async upsert(eventoId: string, usuarioId: string, cargo: CargoEvento) {
+    const atual = await this.prismaClient.eventoMembro.findUnique({
+      where: { eventoId_usuarioId: { eventoId, usuarioId } },
+      select: { codigoAfiliado: true },
+    });
+    const codigoAfiliado = cargo === "PROMOTOR" ? (atual?.codigoAfiliado ?? generateInviteCode()) : null;
     return this.prismaClient.eventoMembro.upsert({
       where: { eventoId_usuarioId: { eventoId, usuarioId } },
-      create: { eventoId, usuarioId, cargo },
-      update: { cargo },
+      create: { eventoId, usuarioId, cargo, codigoAfiliado },
+      update: { cargo, codigoAfiliado },
       include: { usuario: usuarioPublico },
     });
+  }
+
+  // Promotor do evento dono do código (o código é único no sistema, mas só vale no evento dele).
+  async findAffiliate(eventoId: string, codigo: string) {
+    return this.prismaClient.eventoMembro.findFirst({
+      where: { eventoId, cargo: "PROMOTOR", codigoAfiliado: codigo },
+      select: {
+        usuarioId: true,
+        codigoAfiliado: true,
+        usuario: usuarioPublico,
+        evento: { select: { descontoAfiliado: true, comissaoPromotor: true } },
+      },
+    });
+  }
+
+  async findPromoter(eventoId: string, usuarioId: string) {
+    return this.prismaClient.eventoMembro.findFirst({
+      where: { eventoId, usuarioId, cargo: "PROMOTOR" },
+      select: {
+        codigoAfiliado: true,
+        evento: { select: { titulo: true, descontoAfiliado: true, comissaoPromotor: true } },
+      },
+    });
+  }
+
+  // Vendas pagas por promotor no evento: ingressos e comissão acumulada.
+  async salesByPromoter(eventoId: string) {
+    const grupos = await this.prismaClient.pedido.groupBy({
+      by: ["promotorId"],
+      where: { eventoId, status: "PAGO", promotorId: { not: null } },
+      _sum: { quantidade: true, comissao: true },
+      _count: true,
+    });
+    return grupos.map((g) => ({
+      promotorId: g.promotorId as string,
+      pedidos: g._count,
+      ingressos: g._sum.quantidade ?? 0,
+      comissao: g._sum.comissao ?? 0,
+    }));
   }
 
   async remove(eventoId: string, usuarioId: string): Promise<boolean> {

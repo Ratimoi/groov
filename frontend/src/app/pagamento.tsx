@@ -77,14 +77,16 @@ export default function Pagamento() {
   const insets = useSafeAreaInsets();
   const espacoNavBar = useEspacoNavBar();
   const { user, token } = useUser();
-  const { carrinho, gruposPorLote, atualizaQuantidade, escolherGrupo, definirResultado } = useCarrinho();
+  const { carrinho, gruposPorLote, atualizaQuantidade, escolherGrupo, definirResultado, afiliado: afiliadoSalvo } = useCarrinho();
+  // O código de promotor vale só para o evento em que foi conferido.
+  const afiliado = afiliadoSalvo && afiliadoSalvo.eventoId === eventoId ? afiliadoSalvo : null;
   const { lotes, carregando, erro, tentarDeNovo } = useLotesEvento(eventoId);
   const [metodo, setMetodo] = useState<MetodoId>("PIX");
   const [processando, setProcessando] = useState(false);
   const [coberturas, setCoberturas] = useState<Record<string, CoberturaGrupo>>({});
 
   const voltar = () => (router.canGoBack() ? router.back() : router.replace("/"));
-  const pedido = calcularPedido(lotes, carrinho, gruposPorLote, coberturas);
+  const pedido = calcularPedido(lotes, carrinho, gruposPorLote, coberturas, afiliado?.desconto ?? 0);
   const temItens = pedido.linhas.length > 0;
   const lotesComGrupo = lotes.filter((lote) => aceitaGrupo(lote) && gruposPorLote[lote.id]);
   const podePagar = temItens && !processando;
@@ -102,7 +104,7 @@ export default function Pagamento() {
       for (const lote of lotes) {
         const quantidade = carrinho[lote.id] ?? 0;
         if (quantidade < 1) continue;
-        pedidos.push(await api<PedidoApi>("/pedidos", { method: "POST", token, body: { loteId: lote.id, quantidade } }));
+        pedidos.push(await api<PedidoApi>("/pedidos", { method: "POST", token, body: { loteId: lote.id, quantidade, ...(afiliado ? { codigoAfiliado: afiliado.codigo } : {}) } }));
         atualizaQuantidade(lote.id, 0);
       }
 
@@ -114,7 +116,7 @@ export default function Pagamento() {
         const criada = await api<CompraGrupoApi>("/grupos/compras", {
           method: "POST",
           token,
-          body: { grupoId: grupo.id, loteId: lote.id, participantesIds },
+          body: { grupoId: grupo.id, loteId: lote.id, participantesIds, ...(afiliado ? { codigoAfiliado: afiliado.codigo } : {}) },
         });
         // "todos": quem iniciou a compra paga também a cota dos outros participantes.
         compraGrupo = await api<CompraGrupoApi>(`/grupos/compras/${criada.id}/pagar`, {
@@ -227,7 +229,7 @@ export default function Pagamento() {
                 <View className="gap-3" accessibilityRole="radiogroup">
                   {(["meu", "todos"] as const).map((opcao) => {
                     const ativo = (coberturas[lote.id] ?? "meu") === opcao;
-                    const { pessoas, total } = totalDoGrupo(lote, opcao);
+                    const { pessoas, total } = totalDoGrupo(lote, opcao, afiliado?.desconto ?? 0);
                     return (
                       <Pressable
                         key={opcao}

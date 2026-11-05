@@ -36,9 +36,14 @@ export function disponiveis(lote: LoteVenda): number {
   return Math.max(0, lote.quantidadeDisponivel ?? lote.quantidade);
 }
 
+// Desconto aplicado no pacote de grupo: o maior entre o do grupo e o do código de promotor (não somam).
+export function descontoDoGrupo(lote: LoteVenda, descontoAfiliado = 0): number {
+  return Math.max(Number(lote.descontoGrupo ?? 0), descontoAfiliado);
+}
+
 // Preço de cada ingresso quando a compra é em grupo.
-export function precoNoGrupo(lote: LoteVenda): number {
-  return arredondar(Number(lote.preco) * (1 - Number(lote.descontoGrupo ?? 0)));
+export function precoNoGrupo(lote: LoteVenda, descontoAfiliado = 0): number {
+  return arredondar(Number(lote.preco) * (1 - descontoDoGrupo(lote, descontoAfiliado)));
 }
 
 export function resumoGrupo(lote: LoteVenda) {
@@ -52,10 +57,10 @@ export function resumoGrupo(lote: LoteVenda) {
 // Quanto o pacote de grupo custa conforme quem paga: só a cota de quem compra ou a de todo o grupo.
 export type CoberturaGrupo = "meu" | "todos";
 
-export function totalDoGrupo(lote: LoteVenda, cobertura: CoberturaGrupo) {
+export function totalDoGrupo(lote: LoteVenda, cobertura: CoberturaGrupo, descontoAfiliado = 0) {
   const pessoas = cobertura === "todos" ? (lote.tamanhoGrupo ?? 1) : 1;
   const cheio = arredondar(Number(lote.preco) * pessoas);
-  const liquido = arredondar(precoNoGrupo(lote) * pessoas);
+  const liquido = arredondar(precoNoGrupo(lote, descontoAfiliado) * pessoas);
   const taxa = arredondar(liquido * TAXA_SERVICO);
   return { pessoas, cheio, liquido, taxa, total: arredondar(liquido + taxa) };
 }
@@ -68,6 +73,7 @@ export function calcularPedido(
   quantidades: Record<string, number>,
   gruposPorLote: Record<string, GrupoEscolhido | undefined>,
   coberturas: Record<string, CoberturaGrupo | undefined> = {},
+  descontoAfiliado = 0,
 ) {
   const linhas: LinhaPedido[] = [];
 
@@ -79,11 +85,20 @@ export function calcularPedido(
         descricao: `${quantidade}x ${lote.nome}`,
         valor: arredondar(Number(lote.preco) * quantidade),
       });
+      if (descontoAfiliado > 0) {
+        linhas.push({
+          chave: `afiliado-${lote.id}`,
+          descricao: `Desconto do promotor (${Math.round(descontoAfiliado * 100)}%)`,
+          valor: -arredondar(Number(lote.preco) * quantidade * descontoAfiliado),
+          desconto: true,
+        });
+      }
     }
 
     const grupo = gruposPorLote[lote.id];
     if (grupo && aceitaGrupo(lote)) {
-      const { pessoas, cheio, liquido } = totalDoGrupo(lote, coberturas[lote.id] ?? "meu");
+      const { pessoas, cheio, liquido } = totalDoGrupo(lote, coberturas[lote.id] ?? "meu", descontoAfiliado);
+      const doPromotor = descontoAfiliado > Number(lote.descontoGrupo ?? 0);
       linhas.push(
         {
           chave: `grupo-${lote.id}`,
@@ -92,7 +107,7 @@ export function calcularPedido(
         },
         {
           chave: `desconto-${lote.id}`,
-          descricao: `Desconto de grupo (${Math.round(Number(lote.descontoGrupo ?? 0) * 100)}%)`,
+          descricao: `${doPromotor ? "Desconto do promotor" : "Desconto de grupo"} (${Math.round(descontoDoGrupo(lote, descontoAfiliado) * 100)}%)`,
           valor: arredondar(liquido - cheio),
           desconto: true,
         },

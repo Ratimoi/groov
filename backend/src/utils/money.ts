@@ -10,6 +10,11 @@ export function fromCents(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+// Desconto/comissão por fração (0.1 = 10%) sobre um valor em centavos.
+export function fractionOfCents(cents: number, fraction: number): number {
+  return Math.round(cents * fraction);
+}
+
 export function serviceFeeCents(subtotalCents: number): number {
   return Math.round(subtotalCents * SERVICE_FEE_RATE);
 }

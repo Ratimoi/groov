@@ -29,6 +29,8 @@ router.put("/:id", authenticate, eventController.update);
 router.delete("/:id", authenticate, eventController.delete);
 router.post("/:eventoId/lotes", authenticate, lotController.create);
 
+router.get("/:id/afiliado/:codigo", authenticate, teamController.checkCode);
+router.get("/:id/promotor", authenticate, teamController.promoterPanel);
 router.get("/:id/equipe", authenticate, teamController.list);
 router.post("/:id/equipe", authenticate, teamController.add);
 router.delete("/:id/equipe/:usuarioId", authenticate, teamController.remove);

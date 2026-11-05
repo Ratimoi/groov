@@ -30,6 +30,22 @@ export class TeamController {
     }
   };
 
+  checkCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.teamService.checkCode(req.params.id, req.params.codigo, getAuthUser(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  promoterPanel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.status(200).json(await this.teamService.promoterPanel(req.params.id, getAuthUser(req)));
+    } catch (error) {
+      next(error);
+    }
+  };
+
   myEvents = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       res.status(200).json(await this.teamService.myEvents(getAuthUser(req)));
