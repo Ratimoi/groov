@@ -25,6 +25,9 @@ export type EventoForm = {
   nomeLocal: string;
   endereco: string;
   cidade: string;
+  // Ponto no mapa; vazio = sem ponto.
+  latitude: string;
+  longitude: string;
   atracoes: AtracaoForm[];
   lotes: LoteForm[];
 };
@@ -57,6 +60,8 @@ export const formVazio = (): EventoForm => ({
   nomeLocal: "",
   endereco: "",
   cidade: "",
+  latitude: "",
+  longitude: "",
   atracoes: [],
   lotes: [novoLote("1º lote")],
 });
@@ -191,6 +196,8 @@ export function corpoEvento(f: EventoForm, { edicao }: { edicao: boolean }) {
     nomeLocal: f.nomeLocal.trim(),
     endereco: f.endereco.trim() || null,
     cidade: f.cidade.trim(),
+    latitude: f.latitude ? Number(f.latitude) : null,
+    longitude: f.longitude ? Number(f.longitude) : null,
     tags: listaDeTags(f.tags),
     atracoes: f.atracoes.map((a) => ({
       nome: a.nome.trim(),
@@ -211,6 +218,8 @@ type EventoApi = {
   nomeLocal?: string | null;
   endereco?: string | null;
   cidade: string;
+  latitude?: number | null;
+  longitude?: number | null;
   tags?: string[];
   atracoes?: { nome: string; fotoUrl?: string | null; usuario?: { username: string } | null }[];
 };
@@ -231,6 +240,8 @@ export function formDoEvento(e: EventoApi): EventoForm {
     nomeLocal: e.nomeLocal ?? "",
     endereco: e.endereco ?? "",
     cidade: e.cidade,
+    latitude: e.latitude != null ? String(e.latitude) : "",
+    longitude: e.longitude != null ? String(e.longitude) : "",
     atracoes: (e.atracoes ?? []).map((a) => ({
       chave: novaChave(),
       nome: a.nome,

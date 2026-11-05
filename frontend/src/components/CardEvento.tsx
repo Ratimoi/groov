@@ -22,7 +22,7 @@ export function CardEvento({ data }: { data: EventoType }) {
         <Text className="font-body-lg text-body-lg text-on-surface mt-1" numberOfLines={1}>{data.titulo}</Text>
         <View className="flex-row justify-between items-center mt-2">
           <Text className="flex-1 font-body-sm text-body-sm text-on-surface-variant" numberOfLines={1}>
-            {data.nomeLocal}
+            {data.nomeLocal}{data.distanciaKm != null ? ` • ${data.distanciaKm.toFixed(1).replace(".", ",")} km` : ""}
           </Text>
           {preco !== "" && <Text className="font-label-caps text-label-caps text-primary">{preco}</Text>}
         </View>

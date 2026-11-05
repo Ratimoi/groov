@@ -1,7 +1,8 @@
-import { Evento, PrismaClient } from "@prisma/client";
+import { Evento, Prisma, PrismaClient } from "@prisma/client";
 import prisma from "../config/prisma";
 import type { EventCreateData, EventUpdateData } from "../utils/eventInput";
 import type { LotCreateData } from "../utils/lotInput";
+import { boundingBox, haversineKm, type EventFilters } from "../utils/eventFilters";
 import type { PaginationParams } from "../utils/pagination";
 import { AppError } from "../utils/AppError";
 import { isNotFoundError } from "../utils/prismaErrors";
@@ -75,17 +76,59 @@ export class EventModel {
     }
   }
 
-  async findPage({ page, limit }: PaginationParams): Promise<{ events: EventoCompleto[]; total: number }> {
+  private whereOf(filters: EventFilters): Prisma.EventoWhereInput {
+    const where: Prisma.EventoWhereInput = { ocultoEm: null };
+    const and: Prisma.EventoWhereInput[] = [];
+    if (filters.q) {
+      const contem = { contains: filters.q, mode: "insensitive" as const };
+      and.push({
+        OR: [{ titulo: contem }, { descricao: contem }, { nomeLocal: contem }, { cidade: contem }, { tags: { has: filters.q.toLowerCase() } }],
+      });
+    }
+    if (filters.categoria) where.categoria = { nome: { equals: filters.categoria, mode: "insensitive" } };
+    if (filters.cidade) where.cidade = { equals: filters.cidade, mode: "insensitive" };
+    if (filters.tag) where.tags = { has: filters.tag.toLowerCase() };
+    if (filters.de || filters.ate) where.comecaEm = { ...(filters.de && { gte: filters.de }), ...(filters.ate && { lte: filters.ate }) };
+    if (filters.gratis) and.push({ lotes: { some: { preco: 0 } } });
+    else if (filters.precoMax !== undefined) and.push({ lotes: { some: { preco: { lte: filters.precoMax } } } });
+    if (filters.near) {
+      const box = boundingBox(filters.near);
+      where.latitude = { gte: box.latMin, lte: box.latMax };
+      where.longitude = { gte: box.lonMin, lte: box.lonMax };
+    }
+    if (and.length) where.AND = and;
+    return where;
+  }
+
+  // Sem `near`, a ordem é por início. Com `near`, o banco filtra pela caixa do raio e o Haversine
+  // refina e ordena do mais perto para o mais longe (cada evento ganha `distanciaKm`).
+  async findPage(
+    { page, limit }: PaginationParams,
+    filters: EventFilters = {},
+  ): Promise<{ events: (EventoCompleto & { distanciaKm?: number })[]; total: number }> {
+    const where = this.whereOf(filters);
+    const { near } = filters;
+    if (near) {
+      const candidatos = await this.prismaClient.evento.findMany({ where, take: 500, include: eventoInclude });
+      const perto = candidatos
+        .map((e) => ({
+          ...e,
+          distanciaKm: Math.round(haversineKm(near.latitude, near.longitude, e.latitude as number, e.longitude as number) * 10) / 10,
+        }))
+        .filter((e) => e.distanciaKm <= near.raioKm)
+        .sort((a, b) => a.distanciaKm - b.distanciaKm || a.comecaEm.getTime() - b.comecaEm.getTime());
+      return { events: perto.slice((page - 1) * limit, page * limit), total: perto.length };
+    }
     const [events, total] = await Promise.all([
       this.prismaClient.evento.findMany({
-        where: { ocultoEm: null },
+        where,
         // O id desempata eventos que começam juntos; sem ele as páginas podem repetir ou perder itens.
         orderBy: [{ comecaEm: "asc" }, { id: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
         include: eventoInclude,
       }),
-      this.prismaClient.evento.count({ where: { ocultoEm: null } }),
+      this.prismaClient.evento.count({ where }),
     ]);
     return { events, total };
   }

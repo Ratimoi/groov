@@ -39,4 +39,6 @@ export type EventoType = {
   latitude?: number | null;
   longitude?: number | null;
   tags?: string[];
+  // Só vem na busca por proximidade.
+  distanciaKm?: number;
 };
