@@ -20,6 +20,7 @@ import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { BarraSegmentada } from "../components/BarraSegmentada";
+import { MenuOpcoes, type OpcaoMenu } from "../components/MenuOpcoes";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { useContagem } from "../hooks/useContagem";
 import { formatarDataHora, formatarRestante } from "../utils/evento";
@@ -251,22 +252,33 @@ function CardCompra({
 
 function CardGrupo({
   grupo,
+  opcoes,
+  onAbrir,
   onEscolherEvento,
   onConvidar,
 }: {
   grupo: Grupo;
+  opcoes: OpcaoMenu[];
+  onAbrir: () => void;
   onEscolherEvento: () => void;
   onConvidar: () => void;
 }) {
+  // Tocar no card abre o grupo; o "…" e os botões internos ficam com o próprio toque.
   return (
-    <View className="bg-surface-container-low border border-white/10 rounded-xl p-4 gap-3">
-      <View className="flex-row items-center justify-between">
+    <Pressable
+      onPress={onAbrir}
+      accessibilityRole="button"
+      accessibilityLabel={`Abrir grupo ${grupo.nome}`}
+      className="bg-surface-container-low border border-white/10 rounded-xl p-4 gap-3"
+    >
+      <View className="flex-row items-center justify-between gap-2">
         <Text className="flex-1 font-headline-md text-headline-md text-primary" numberOfLines={1}>
           {grupo.nome}
         </Text>
         {grupo.souLider && (
           <Text className="font-label-caps text-[10px] text-secondary-container">LÍDER</Text>
         )}
+        <MenuOpcoes opcoes={opcoes} rotulo={`Opções do grupo ${grupo.nome}`} />
       </View>
       <View className="flex-row items-center gap-2">
         <View className="flex-row">
@@ -297,7 +309,7 @@ function CardGrupo({
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -366,6 +378,60 @@ export default function Grupos() {
     } catch (error) {
       Alert.alert("Convite", error instanceof ApiError ? error.message : "Não foi possível gerar o convite.");
     }
+  };
+
+  const confirmar = (titulo: string, mensagem: string, acao: string, executar: () => Promise<void>) =>
+    Alert.alert(titulo, mensagem, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: acao,
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await executar();
+          } catch (error) {
+            Alert.alert(titulo, error instanceof ApiError ? error.message : "Tente de novo.");
+          }
+          await carregar();
+        },
+      },
+    ]);
+
+  const excluir = (grupo: Grupo) =>
+    confirmar("Excluir grupo?", `${grupo.nome} será apagado para todos os membros.`, "Excluir", () =>
+      api(`/grupos/${grupo.id}`, { method: "DELETE", token }),
+    );
+
+  const sair = (grupo: Grupo) =>
+    confirmar("Sair do grupo?", `Você deixa de fazer parte de ${grupo.nome}.`, "Sair", () =>
+      api(`/grupos/${grupo.id}/members/${user?.id}`, { method: "DELETE", token }),
+    );
+
+  // A API ainda não barra mudança de membros com pedido em andamento; a tela evita por enquanto.
+  const temPedidoPendente = (grupoId: string) =>
+    compras.some((compra) => compra.grupoId === grupoId && pendenteAtiva(compra, agora));
+
+  // Para o líder é a tela de edição; para os demais, a lista de membros.
+  const abrirGrupo = (grupo: Grupo) => router.push({ pathname: "/editar-grupo", params: { id: grupo.id } });
+
+  const opcoesDoGrupo = (grupo: Grupo): OpcaoMenu[] => {
+    const editar = () => abrirGrupo(grupo);
+    if (grupo.souLider) {
+      return [
+        { rotulo: "Editar grupo", icone: "edit", onPress: editar },
+        { rotulo: "Excluir grupo", icone: "delete-outline", onPress: () => excluir(grupo), destrutiva: true },
+      ];
+    }
+    return [
+      { rotulo: "Ver membros", icone: "group", onPress: editar },
+      {
+        rotulo: "Sair do grupo",
+        icone: "logout",
+        onPress: () => sair(grupo),
+        destrutiva: true,
+        desabilitada: temPedidoPendente(grupo.id),
+      },
+    ];
   };
 
   const nomeDoGrupo = (grupoId: string) => grupos.find((grupo) => grupo.id === grupoId)?.nome;
@@ -479,6 +545,8 @@ export default function Grupos() {
               <CardGrupo
                 key={grupo.id}
                 grupo={grupo}
+                opcoes={opcoesDoGrupo(grupo)}
+                onAbrir={() => abrirGrupo(grupo)}
                 onEscolherEvento={() => router.push("/")}
                 onConvidar={() => convidar(grupo)}
               />
