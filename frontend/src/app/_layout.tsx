@@ -50,6 +50,7 @@ function Conteudo() {
       <Tabs.Screen name="escanear" />
       <Tabs.Screen name="meus-dados" />
       <Tabs.Screen name="entrar-grupo" />
+      <Tabs.Screen name="editar-grupo" />
     </Tabs>
   );
 }
