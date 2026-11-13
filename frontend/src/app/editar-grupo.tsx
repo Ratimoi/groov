@@ -7,6 +7,7 @@ import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { MIN_TERMO_BUSCA, useBuscaUsuarios } from "../hooks/useBuscaUsuarios";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
+import { compartilharConvite } from "../utils/convite";
 import type { CompraGrupoApi, PessoaApi } from "../utils/compras";
 
 type GrupoApi = { id: string; nome: string; liderId: string };
@@ -41,6 +42,7 @@ export default function EditarGrupo() {
   const [grupo, setGrupo] = useState<GrupoApi | null>(null);
   const [membros, setMembros] = useState<MembroApi[]>([]);
   const [pedidoPendente, setPedidoPendente] = useState(false);
+  const [temPedidos, setTemPedidos] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
   const [nome, setNome] = useState("");
@@ -59,14 +61,14 @@ export default function EditarGrupo() {
         api<CompraGrupoApi[]>("/grupos/compras", { token }),
       ]);
       const agora = Date.now();
+      const doGrupo = compras.filter((compra) => compra.grupoId === id);
       setGrupo(grupoApi);
       setNome(grupoApi.nome);
       setMembros(membrosApi);
       setPedidoPendente(
-        compras.some(
-          (compra) => compra.grupoId === id && compra.status === "PENDENTE" && new Date(compra.expiraEm).getTime() > agora,
-        ),
+        doGrupo.some((compra) => compra.status === "PENDENTE" && new Date(compra.expiraEm).getTime() > agora),
       );
+      setTemPedidos(doGrupo.length > 0);
       setErro(false);
     } catch (error) {
       console.error("Erro ao carregar grupo:", error);
@@ -123,25 +125,40 @@ export default function EditarGrupo() {
       },
     ]);
 
-  const sair = () =>
-    Alert.alert("Sair do grupo?", `Você deixa de fazer parte de ${grupo?.nome}.`, [
+  const confirmarESair = (titulo: string, mensagem: string, acao: string, caminho: string) =>
+    Alert.alert(titulo, mensagem, [
       { text: "Cancelar", style: "cancel" },
       {
-        text: "Sair",
+        text: acao,
         style: "destructive",
         onPress: async () => {
           setOcupado(true);
           try {
-            await api(`/grupos/${id}/members/${user?.id}`, { method: "DELETE", token });
+            await api(caminho, { method: "DELETE", token });
             router.replace("/grupos");
           } catch (error) {
-            Alert.alert("Sair do grupo", error instanceof ApiError ? error.message : "Tente de novo.");
+            Alert.alert(titulo, error instanceof ApiError ? error.message : "Tente de novo.");
           } finally {
             setOcupado(false);
           }
         },
       },
     ]);
+
+  const sair = () =>
+    confirmarESair("Sair do grupo?", `Você deixa de fazer parte de ${grupo?.nome}.`, "Sair", `/grupos/${id}/members/${user?.id}`);
+
+  const excluir = () =>
+    confirmarESair("Excluir grupo?", `${grupo?.nome} será apagado para todos os membros.`, "Excluir", `/grupos/${id}`);
+
+  const convidar = async () => {
+    if (!grupo) return;
+    try {
+      await compartilharConvite(grupo.id, grupo.nome, token);
+    } catch (error) {
+      Alert.alert("Convite", error instanceof ApiError ? error.message : "Não foi possível gerar o convite.");
+    }
+  };
 
   const idsMembros = new Set(membros.map((membro) => membro.usuarioId));
   const candidatos = resultados.filter((pessoa) => !idsMembros.has(pessoa.id));
@@ -243,6 +260,17 @@ export default function EditarGrupo() {
             </View>
 
             {souLider && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={convidar}
+                className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-surface-container py-3.5"
+              >
+                <MaterialIcons name="share" size={18} color="#ebb2ff" />
+                <Text className="font-body-md text-body-md font-bold text-primary">Convidar por link</Text>
+              </TouchableOpacity>
+            )}
+
+            {souLider && (
               <>
                 <Text className="font-body-md text-body-md font-bold text-on-surface mt-8 mb-3">Adicionar Membros</Text>
                 <View
@@ -301,6 +329,26 @@ export default function EditarGrupo() {
                 <MaterialIcons name="logout" size={18} color="#ffb4ab" />
                 <Text className="font-body-md text-body-md font-bold text-error">Sair do grupo</Text>
               </TouchableOpacity>
+            )}
+
+            {souLider && (
+              <>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={temPedidos || ocupado}
+                  onPress={excluir}
+                  className="mt-8 flex-row items-center justify-center gap-2 rounded-xl border border-error/40 py-3.5"
+                  style={{ opacity: temPedidos || ocupado ? 0.5 : 1 }}
+                >
+                  <MaterialIcons name="delete-outline" size={18} color="#ffb4ab" />
+                  <Text className="font-body-md text-body-md font-bold text-error">Excluir grupo</Text>
+                </TouchableOpacity>
+                {temPedidos && (
+                  <Text className="font-body-sm text-[12px] text-on-surface-variant text-center mt-2">
+                    O grupo já tem pedidos, então não pode ser excluído.
+                  </Text>
+                )}
+              </>
             )}
           </>
         )}
