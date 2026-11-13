@@ -8,6 +8,7 @@ export type OpcaoMenu = {
   onPress: () => void;
   destrutiva?: boolean;
   desabilitada?: boolean;
+  motivo?: string;
 };
 
 type Props = { opcoes: OpcaoMenu[]; rotulo?: string };
@@ -61,9 +62,14 @@ export function MenuOpcoes({ opcoes, rotulo = "Mais opções" }: Props) {
                   style={{ opacity: opcao.desabilitada ? 0.4 : 1 }}
                 >
                   <MaterialIcons name={opcao.icone} size={18} color={opcao.destrutiva ? "#ffb4ab" : "#ebb2ff"} />
-                  <Text className={`font-body-md text-body-md ${opcao.destrutiva ? "text-error" : "text-on-surface"}`}>
-                    {opcao.rotulo}
-                  </Text>
+                  <View className="flex-1">
+                    <Text className={`font-body-md text-body-md ${opcao.destrutiva ? "text-error" : "text-on-surface"}`}>
+                      {opcao.rotulo}
+                    </Text>
+                    {opcao.desabilitada && !!opcao.motivo && (
+                      <Text className="font-body-sm text-[11px] text-on-surface-variant">{opcao.motivo}</Text>
+                    )}
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>

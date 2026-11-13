@@ -410,6 +410,7 @@ export default function Grupos() {
   // A API ainda não barra mudança de membros com pedido em andamento; a tela evita por enquanto.
   const temPedidoPendente = (grupoId: string) =>
     compras.some((compra) => compra.grupoId === grupoId && pendenteAtiva(compra, agora));
+  const temPedidos = (grupoId: string) => compras.some((compra) => compra.grupoId === grupoId);
 
   // Para o líder é a tela de edição; para os demais, a lista de membros.
   const abrirGrupo = (grupo: Grupo) => router.push({ pathname: "/editar-grupo", params: { id: grupo.id } });
@@ -419,7 +420,14 @@ export default function Grupos() {
     if (grupo.souLider) {
       return [
         { rotulo: "Editar grupo", icone: "edit", onPress: editar },
-        { rotulo: "Excluir grupo", icone: "delete-outline", onPress: () => excluir(grupo), destrutiva: true },
+        {
+          rotulo: "Excluir grupo",
+          icone: "delete-outline",
+          onPress: () => excluir(grupo),
+          destrutiva: true,
+          desabilitada: temPedidos(grupo.id),
+          motivo: "O grupo tem pedido ativo",
+        },
       ];
     }
     return [
@@ -430,6 +438,7 @@ export default function Grupos() {
         onPress: () => sair(grupo),
         destrutiva: true,
         desabilitada: temPedidoPendente(grupo.id),
+        motivo: "Há um pedido em andamento",
       },
     ];
   };
