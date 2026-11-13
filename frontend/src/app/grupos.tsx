@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
@@ -33,6 +33,21 @@ type Grupo = {
   souLider: boolean;
   membros: { usuarioId: string; usuario: Pessoa }[];
 };
+
+type Aba = "grupos" | "pedidos";
+
+const ehAba = (valor: unknown): valor is Aba => valor === "grupos" || valor === "pedidos";
+
+const pendenteAtiva = (compra: CompraGrupo, agora: number) =>
+  compra.status === "PENDENTE" && new Date(compra.expiraEm).getTime() > agora;
+
+// Pendentes primeiro (a que vence antes no topo), depois confirmadas, depois expiradas.
+function ordenarCompras(compras: CompraGrupo[], agora: number) {
+  const peso = (compra: CompraGrupo) => (pendenteAtiva(compra, agora) ? 0 : compra.status === "CONFIRMADA" ? 1 : 2);
+  return [...compras].sort(
+    (a, b) => peso(a) - peso(b) || new Date(a.expiraEm).getTime() - new Date(b.expiraEm).getTime(),
+  );
+}
 
 const ROTULO_STATUS: Record<Participante["status"], string> = {
   PAGO: "PAGO",
@@ -234,8 +249,63 @@ function CardCompra({
   );
 }
 
+function CardGrupo({
+  grupo,
+  onEscolherEvento,
+  onConvidar,
+}: {
+  grupo: Grupo;
+  onEscolherEvento: () => void;
+  onConvidar: () => void;
+}) {
+  return (
+    <View className="bg-surface-container-low border border-white/10 rounded-xl p-4 gap-3">
+      <View className="flex-row items-center justify-between">
+        <Text className="flex-1 font-headline-md text-headline-md text-primary" numberOfLines={1}>
+          {grupo.nome}
+        </Text>
+        {grupo.souLider && (
+          <Text className="font-label-caps text-[10px] text-secondary-container">LÍDER</Text>
+        )}
+      </View>
+      <View className="flex-row items-center gap-2">
+        <View className="flex-row">
+          {grupo.membros.slice(0, 5).map((membro, indice) => (
+            <View key={membro.usuarioId} style={{ marginLeft: indice === 0 ? 0 : -8 }}>
+              <Avatar pessoa={membro.usuario} />
+            </View>
+          ))}
+        </View>
+        <Text className="font-body-sm text-body-sm text-on-surface-variant">
+          {grupo.membros.length} {grupo.membros.length === 1 ? "participante" : "participantes"}
+        </Text>
+      </View>
+      <View className="flex-row flex-wrap gap-2">
+        <TouchableOpacity
+          onPress={onEscolherEvento}
+          className="px-4 py-2 rounded-full border border-primary-container/50 bg-primary-container/10"
+        >
+          <Text className="font-label-caps text-label-caps text-primary">ESCOLHER EVENTO</Text>
+        </TouchableOpacity>
+        {grupo.souLider && (
+          <TouchableOpacity
+            onPress={onConvidar}
+            className="flex-row items-center gap-1.5 px-4 py-2 rounded-full border border-white/15"
+          >
+            <MaterialIcons name="share" size={14} color="#ebb2ff" />
+            <Text className="font-label-caps text-label-caps text-primary">CONVIDAR</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
 export default function Grupos() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ aba?: string }>();
+  // A aba vive na rota para dar para abrir direto em /grupos?aba=pedidos.
+  const aba: Aba = ehAba(params.aba) ? params.aba : "grupos";
   const { user, token } = useUser();
   const { definirResultado } = useCarrinho();
   const [pagandoId, setPagandoId] = useState<string | null>(null);
@@ -245,6 +315,8 @@ export default function Grupos() {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState(false);
+  // Momento do último carregamento, usado para separar pendentes de expiradas.
+  const [agora, setAgora] = useState(() => Date.now());
 
   const carregar = useCallback(async () => {
     if (!user) return;
@@ -255,6 +327,7 @@ export default function Grupos() {
       ]);
       setGrupos(gruposApi);
       setCompras(comprasApi);
+      setAgora(Date.now());
       setErro(false);
     } catch (error) {
       console.error("Erro ao carregar grupos:", error);
@@ -287,7 +360,6 @@ export default function Grupos() {
     }
   };
 
-  const gruposSemCompra = grupos.filter((grupo) => !compras.some((compra) => compra.grupoId === grupo.id));
   const convidar = async (grupo: Grupo) => {
     try {
       await compartilharConvite(grupo.id, grupo.nome, token);
@@ -297,7 +369,18 @@ export default function Grupos() {
   };
 
   const nomeDoGrupo = (grupoId: string) => grupos.find((grupo) => grupo.id === grupoId)?.nome;
-  const vazio = !carregando && !erro && grupos.length === 0;
+  const pronto = !carregando && !erro;
+  const comprasOrdenadas = ordenarCompras(compras, agora);
+  const cotasPendentes = compras.filter(
+    (compra) =>
+      pendenteAtiva(compra, agora) &&
+      compra.participantes.some((participante) => participante.usuarioId === user?.id && participante.status === "PENDENTE"),
+  ).length;
+
+  const abas: { id: Aba; rotulo: string }[] = [
+    { id: "grupos", rotulo: "Grupos" },
+    { id: "pedidos", rotulo: cotasPendentes > 0 ? `Pedidos (${cotasPendentes})` : "Pedidos" },
+  ];
 
   return (
     <View className="flex-1 bg-background">
@@ -305,6 +388,25 @@ export default function Grupos() {
         esquerda={{ icone: "arrow-back", onPress: () => (router.canGoBack() ? router.back() : router.replace("/")), rotulo: "Voltar" }}
         direita={{ icone: "group-add", onPress: () => router.push("/criar-grupo"), rotulo: "Criar grupo" }}
       />
+      <View className="flex-row gap-6 px-5 pt-4 border-b border-white/10">
+        {abas.map((item) => {
+          const ativa = item.id === aba;
+          return (
+            <TouchableOpacity
+              key={item.id}
+              onPress={() => router.setParams({ aba: item.id })}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: ativa }}
+              className="pb-3"
+              style={{ borderBottomWidth: 2, borderBottomColor: ativa ? "#bc13fe" : "transparent" }}
+            >
+              <Text className={`font-body-md text-body-md ${ativa ? "text-primary-container font-bold" : "text-on-surface-variant"}`}>
+                {item.rotulo}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: espacoNavBar }}
         showsVerticalScrollIndicator={false}
@@ -313,18 +415,22 @@ export default function Grupos() {
               carregar();
             }} tintColor="#bc13fe" />}
       >
-        <Text className="font-headline-lg-mobile text-headline-lg-mobile text-primary">Meus Grupos</Text>
-        <Text className="font-body-md text-body-md text-on-surface-variant mt-1 mb-6">
-          Gerencie suas compras coletivas ativas.
+        <Text className="font-headline-lg-mobile text-headline-lg-mobile text-primary">
+          {aba === "grupos" ? "Meus Grupos" : "Pedidos em Grupo"}
         </Text>
-        <TouchableOpacity
-          onPress={() => router.push("/entrar-grupo")}
-          activeOpacity={0.8}
-          className="self-start flex-row items-center gap-2 -mt-3 mb-6 px-4 py-2 rounded-full border border-white/15"
-        >
-          <MaterialIcons name="vpn-key" size={14} color="#ebb2ff" />
-          <Text className="font-label-caps text-label-caps text-primary uppercase">Entrar com código</Text>
-        </TouchableOpacity>
+        <Text className="font-body-md text-body-md text-on-surface-variant mt-1 mb-6">
+          {aba === "grupos" ? "Gerencie seus grupos e convide a galera." : "Acompanhe suas compras coletivas."}
+        </Text>
+        {aba === "grupos" && (
+          <TouchableOpacity
+            onPress={() => router.push("/entrar-grupo")}
+            activeOpacity={0.8}
+            className="self-start flex-row items-center gap-2 -mt-3 mb-6 px-4 py-2 rounded-full border border-white/15"
+          >
+            <MaterialIcons name="vpn-key" size={14} color="#ebb2ff" />
+            <Text className="font-label-caps text-label-caps text-primary uppercase">Entrar com código</Text>
+          </TouchableOpacity>
+        )}
 
         {carregando && <ActivityIndicator color="#bc13fe" className="my-10" />}
 
@@ -343,7 +449,7 @@ export default function Grupos() {
           </View>
         )}
 
-        {vazio && (
+        {pronto && aba === "grupos" && grupos.length === 0 && (
           <View className="items-center gap-4 py-10">
             <MaterialIcons name="groups" size={48} color="#504254" />
             <Text className="font-body-md text-body-md text-on-surface-variant text-center">
@@ -355,9 +461,34 @@ export default function Grupos() {
           </View>
         )}
 
-        {!carregando && !erro && (
+        {pronto && aba === "pedidos" && compras.length === 0 && (
+          <View className="items-center gap-4 py-10">
+            <MaterialIcons name="receipt-long" size={48} color="#504254" />
+            <Text className="font-body-md text-body-md text-on-surface-variant text-center">
+              Nenhum pedido em grupo ainda. Escolha um evento e compre com seu grupo.
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/")} className="bg-primary-container rounded-xl px-6 py-3">
+              <Text className="font-label-caps text-label-caps text-white uppercase">Escolher evento</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {pronto && aba === "grupos" && (
           <View className="gap-6">
-            {compras.map((compra) => (
+            {grupos.map((grupo) => (
+              <CardGrupo
+                key={grupo.id}
+                grupo={grupo}
+                onEscolherEvento={() => router.push("/")}
+                onConvidar={() => convidar(grupo)}
+              />
+            ))}
+          </View>
+        )}
+
+        {pronto && aba === "pedidos" && (
+          <View className="gap-6">
+            {comprasOrdenadas.map((compra) => (
               <CardCompra
                 key={compra.id}
                 compra={compra}
@@ -367,48 +498,6 @@ export default function Grupos() {
                 pagando={pagandoId === compra.id}
                 onVerIngresso={() => router.push("/perfil")}
               />
-            ))}
-
-            {gruposSemCompra.map((grupo) => (
-              <View key={grupo.id} className="bg-surface-container-low border border-white/10 rounded-xl p-4 gap-3">
-                <View className="flex-row items-center justify-between">
-                  <Text className="flex-1 font-headline-md text-headline-md text-primary" numberOfLines={1}>
-                    {grupo.nome}
-                  </Text>
-                  {grupo.souLider && (
-                    <Text className="font-label-caps text-[10px] text-secondary-container">LÍDER</Text>
-                  )}
-                </View>
-                <View className="flex-row items-center gap-2">
-                  <View className="flex-row">
-                    {grupo.membros.slice(0, 5).map((membro, indice) => (
-                      <View key={membro.usuarioId} style={{ marginLeft: indice === 0 ? 0 : -8 }}>
-                        <Avatar pessoa={membro.usuario} />
-                      </View>
-                    ))}
-                  </View>
-                  <Text className="font-body-sm text-body-sm text-on-surface-variant">
-                    {grupo.membros.length} {grupo.membros.length === 1 ? "participante" : "participantes"}
-                  </Text>
-                </View>
-                <View className="flex-row flex-wrap gap-2">
-                  <TouchableOpacity
-                    onPress={() => router.push("/")}
-                    className="px-4 py-2 rounded-full border border-primary-container/50 bg-primary-container/10"
-                  >
-                    <Text className="font-label-caps text-label-caps text-primary">ESCOLHER EVENTO</Text>
-                  </TouchableOpacity>
-                  {grupo.souLider && (
-                    <TouchableOpacity
-                      onPress={() => convidar(grupo)}
-                      className="flex-row items-center gap-1.5 px-4 py-2 rounded-full border border-white/15"
-                    >
-                      <MaterialIcons name="share" size={14} color="#ebb2ff" />
-                      <Text className="font-label-caps text-label-caps text-primary">CONVIDAR</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
             ))}
           </View>
         )}
