@@ -6,8 +6,8 @@ Aplicativo de eventos e ingressos com compra em grupo. Usuários descobrem event
 
 | Parte | Tecnologias |
 |---|---|
-| Backend | Node 24, Express 4, TypeScript, Prisma 6, PostgreSQL, Vitest |
-| Frontend | React Native 0.86, Expo 57 (Expo Router), TypeScript, NativeWind (Tailwind CSS) |
+| Backend | Node 24, Express 4, TypeScript, Prisma 7, PostgreSQL, Vitest |
+| Frontend | React Native 0.88, Expo 58 (Expo Router), TypeScript, NativeWind (Tailwind CSS) |
 | CI | GitHub Actions |
 
 ## Estrutura do projeto
@@ -125,6 +125,17 @@ npx expo start
 ```
 
 Outros scripts: `npm run android`, `npm run ios`, `npm run web`, `npm run lint` e `npm run typecheck`.
+
+`EXPO_PUBLIC_API_URL` é o endereço da API (local: `http://<IP-da-sua-máquina>:3000`; em produção: `https://groov-api.onrender.com`).
+
+## Começando a trabalhar (passo a passo)
+
+1. `nvm use` (Node 24).
+2. Backend: `cd backend`, `npm ci`, `cp .env.example .env` (preencha `DATABASE_URL` e `JWT_SECRET`), `npx prisma migrate dev`, `npm test`.
+3. Frontend: `cd frontend`, `npm ci`, `cp .env.example .env` (preencha `EXPO_PUBLIC_API_URL`), `npm run typecheck`, `npm run lint`, `npx expo start`.
+4. Crie sua branch a partir da `dev` (`git checkout dev && git pull && git checkout -b feature/minha-mudanca`) e abra o PR para a `dev`.
+
+O backend não tem script de lint: a checagem dele é `npm run typecheck` + `npm test`. Os hooks do commit rodam lint e typecheck sozinhos.
 
 ## Fluxo de contribuição
 
