@@ -105,7 +105,7 @@ export default function Perfil() {
   const confirmarReset = () =>
     Alert.alert(
       "Resetar para o seed?",
-      "Apaga TODOS os dados (usuários, grupos, pedidos e ingressos), menos a sua conta, e recria os dados de demonstração.",
+      "Apaga TODOS os dados (usuários, grupos, pedidos e ingressos), menos as contas liberadas para resetar (os eventos delas também são apagados), e recria os dados de demonstração.",
       [
         { text: "Cancelar", style: "cancel" },
         {

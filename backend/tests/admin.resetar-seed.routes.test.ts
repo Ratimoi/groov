@@ -51,11 +51,11 @@ describe("POST /admin/resetar-seed", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it("conta liberada apaga tudo menos a própria conta e recria o seed", async () => {
+  it("conta liberada apaga tudo menos as contas com podeResetarSeed e recria o seed", async () => {
     const res = await resetar();
 
     expect(res.status).toBe(200);
-    expect(prismaMock.usuario.deleteMany).toHaveBeenCalledWith({ where: { id: { not: "adm" } } });
+    expect(prismaMock.usuario.deleteMany).toHaveBeenCalledWith({ where: { podeResetarSeed: false } });
     expect(prismaMock.ingresso.deleteMany).toHaveBeenCalled();
     expect(prismaMock.evento.deleteMany).toHaveBeenCalled();
     expect(prismaMock.evento.createMany).toHaveBeenCalled();
