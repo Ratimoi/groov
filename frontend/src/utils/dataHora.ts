@@ -39,3 +39,13 @@ export function lerPreco(texto: string): string | null {
   if (!/^\d+(\.\d{1,2})?$/.test(limpo)) return null;
   return Number(limpo).toFixed(2);
 }
+
+const dois = (n: number) => String(n).padStart(2, "0");
+
+// Inverso de `lerDataHora`: ISO (ou Date) -> "DD/MM/AAAA" e "HH:MM" no horário do aparelho.
+export function camposDeDataHora(valor: string | Date | null | undefined): { data: string; hora: string } {
+  if (!valor) return { data: "", hora: "" };
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return { data: "", hora: "" };
+  return { data: `${dois(d.getDate())}/${dois(d.getMonth() + 1)}/${d.getFullYear()}`, hora: `${dois(d.getHours())}:${dois(d.getMinutes())}` };
+}
