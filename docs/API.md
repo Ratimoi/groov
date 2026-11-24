@@ -406,6 +406,6 @@ Não há administrador geral: cada evento tem a sua equipe. Quem cria o evento v
 
 | Rota | O que faz |
 |---|---|
-| `POST /admin/resetar-seed` | **só contas com `podeResetarSeed`** (ligado direto no banco). Apaga todos os dados, menos a conta de quem pediu, e recria o seed de demonstração |
+| `POST /admin/resetar-seed` | **só contas com `podeResetarSeed`** (ligado direto no banco). Apaga todos os dados (inclusive os eventos dessas contas), menos as próprias contas com `podeResetarSeed`, e recria o seed de demonstração |
 
 Responde `200 { "mensagem" }`. Recusado com `403` quando `NODE_ENV=production` (o banco real nunca é zerado pela API) e com `500` se `SEED_PASSWORD` não estiver definida no servidor, pois é a senha das contas do seed. Os dados são apagados e recriados numa única transação: se algo falhar, nada muda.

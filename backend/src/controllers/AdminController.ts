@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { getAuthUser } from "../middlewares/auth";
 import type { AdminService } from "../services/AdminService";
 
 export class AdminController {
@@ -11,7 +10,7 @@ export class AdminController {
 
   resetSeed = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.status(200).json(await this.adminService.resetarSeed(getAuthUser(req)));
+      res.status(200).json(await this.adminService.resetarSeed());
     } catch (error) {
       next(error);
     }

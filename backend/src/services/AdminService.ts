@@ -1,12 +1,12 @@
 import prisma from "../config/prisma";
 import { aplicarSeed } from "../seed/aplicarSeed";
-import type { AuthUser } from "../types/auth";
 import { AppError } from "../utils/AppError";
 
 export class AdminService {
-  // Apaga todos os dados, menos a conta de quem pediu, e recria os dados de demonstração do seed.
+  // Apaga todos os dados (inclusive os eventos das contas liberadas), menos as próprias contas com
+  // `podeResetarSeed`, e recria os dados de demonstração do seed.
   // Recusado em produção: o banco real nunca deve ser zerado por uma chamada da API.
-  async resetarSeed(actor: AuthUser): Promise<{ mensagem: string }> {
+  async resetarSeed(): Promise<{ mensagem: string }> {
     if (process.env.NODE_ENV === "production") {
       throw new AppError("Resetar o banco não é permitido em produção", 403);
     }
@@ -29,7 +29,8 @@ export class AdminService {
         await tx.lote.deleteMany();
         await tx.evento.deleteMany();
         await tx.categoria.deleteMany();
-        await tx.usuario.deleteMany({ where: { id: { not: actor.id } } });
+        // Eventos, pedidos e grupos já foram apagados acima, então as contas liberadas ficam sem vínculos.
+        await tx.usuario.deleteMany({ where: { podeResetarSeed: false } });
 
         await aplicarSeed(tx, process.env.SEED_PASSWORD);
       },
