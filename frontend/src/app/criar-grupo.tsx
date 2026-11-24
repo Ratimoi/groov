@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCarrinho } from "@/contexts/CarrinhoContext";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
+import { useBuscaUsuarios } from "../hooks/useBuscaUsuarios";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { compartilharConvite } from "../utils/convite";
@@ -12,7 +13,6 @@ import { compartilharConvite } from "../utils/convite";
 type PessoaBusca = { id: string; nome: string; username: string; avatarUrl: string | null };
 
 const MAX_CONVIDADOS_PADRAO = 49;
-const ESPERA_BUSCA_MS = 400;
 
 export default function CriarGrupo() {
   // `tamanho` vem do pacote de grupo do lote (você + convidados); sem ele não há limite além do máximo.
@@ -27,40 +27,17 @@ export default function CriarGrupo() {
 
   const [nome, setNome] = useState("");
   const [busca, setBusca] = useState("");
-  const [resultados, setResultados] = useState<PessoaBusca[]>([]);
-  const [buscando, setBuscando] = useState(false);
   const [selecionados, setSelecionados] = useState<PessoaBusca[]>([]);
   const [criando, setCriando] = useState(false);
   const [erro, setErro] = useState("");
 
-  useEffect(() => {
-    const termo = busca.trim();
-    if (termo.length < 2) return;
-    let cancelado = false;
-    const espera = setTimeout(async () => {
-      setBuscando(true);
-      try {
-        const dados = await api<PessoaBusca[]>(`/usuarios/busca?q=${encodeURIComponent(termo)}`, { token });
-        if (!cancelado) setResultados(dados);
-      } catch (error) {
-        console.error("Erro na busca de usuários:", error);
-        if (!cancelado) setResultados([]);
-      } finally {
-        if (!cancelado) setBuscando(false);
-      }
-    }, ESPERA_BUSCA_MS);
-    return () => {
-      cancelado = true;
-      clearTimeout(espera);
-    };
-  }, [busca, token]);
+  const { resultados, buscando } = useBuscaUsuarios(busca);
 
   useFocusEffect(
     useCallback(
       () => () => {
         setNome("");
         setBusca("");
-        setResultados([]);
         setSelecionados([]);
         setCriando(false);
         setErro("");

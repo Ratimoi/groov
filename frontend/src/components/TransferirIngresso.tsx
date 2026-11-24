@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, Alert, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useUser } from "@/contexts/UserContext";
 import { api, ApiError } from "../utils/api";
+import { useBuscaUsuarios } from "../hooks/useBuscaUsuarios";
 import type { IngressoApi, PessoaApi } from "../utils/compras";
-
-const ESPERA_BUSCA_MS = 400;
 
 type Props = { ingresso: IngressoApi; aoTransferir: () => void };
 
@@ -15,31 +14,9 @@ export function TransferirIngresso({ ingresso, aoTransferir }: Props) {
   const { token } = useUser();
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
-  const [resultados, setResultados] = useState<PessoaApi[]>([]);
-  const [buscando, setBuscando] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => {
-    const termo = busca.trim();
-    if (!aberto || termo.length < 2) return;
-    let cancelado = false;
-    const espera = setTimeout(async () => {
-      setBuscando(true);
-      try {
-        const dados = await api<PessoaApi[]>(`/usuarios/busca?q=${encodeURIComponent(termo)}`, { token });
-        if (!cancelado) setResultados(dados);
-      } catch (error) {
-        console.error("Erro na busca de usuários:", error);
-        if (!cancelado) setResultados([]);
-      } finally {
-        if (!cancelado) setBuscando(false);
-      }
-    }, ESPERA_BUSCA_MS);
-    return () => {
-      cancelado = true;
-      clearTimeout(espera);
-    };
-  }, [aberto, busca, token]);
+  const { resultados, buscando } = useBuscaUsuarios(busca, aberto);
 
   const transferir = async (pessoa: PessoaApi) => {
     setEnviando(true);

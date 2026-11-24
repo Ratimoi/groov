@@ -29,7 +29,7 @@ export default function PagamentoConfirmado() {
   const { resultado, definirResultado } = useCarrinho();
   const espacoNavBar = useEspacoNavBar();
 
-  const sair = (destino: "/" | "/perfil" | "/grupos") => {
+  const sair = (destino: "/" | "/perfil" | "/grupos?aba=pedidos") => {
     definirResultado(null);
     router.replace(destino);
   };
@@ -176,7 +176,7 @@ export default function PagamentoConfirmado() {
             </TouchableOpacity>
           )}
           {compraGrupo && (
-            <TouchableOpacity onPress={() => sair("/grupos")} className="rounded-xl bg-surface-container-high py-4 flex-row items-center justify-center gap-2">
+            <TouchableOpacity onPress={() => sair("/grupos?aba=pedidos")} className="rounded-xl bg-surface-container-high py-4 flex-row items-center justify-center gap-2">
               <MaterialIcons name="groups" size={18} color="#ebb2ff" />
               <Text className="font-label-caps text-label-caps text-primary uppercase">Ver progresso do grupo</Text>
             </TouchableOpacity>
