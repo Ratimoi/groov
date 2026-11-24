@@ -14,7 +14,7 @@ export type UsuarioType = {
   avatarUrl?: string | null;
   email: string;
   senha: string;
-  papel: "CLIENTE" | "PRODUTOR" | "ADMIN";
+  podeResetarSeed: boolean;
   criadoEm: Date;
   pedidos: PedidoType[];
   ingressos: IngressoType[];

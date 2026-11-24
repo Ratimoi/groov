@@ -47,7 +47,7 @@ function transacaoDePagamento(faltamPagar: number) {
 describe("POST /grupos/compras/:id/pagar", () => {
   beforeEach(() => {
     resetPrismaMock();
-    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", papel: "CLIENTE" });
+    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", podeResetarSeed: false });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -75,12 +75,12 @@ describe("POST /grupos/compras/:id/pagar", () => {
     expect(prismaMock.pedido.create).not.toHaveBeenCalled();
   });
 
-  it("ADMIN que não participa recebe 403", async () => {
+  it("conta liberada para resetar o seed, mas que não participa, também recebe 404", async () => {
     prismaMock.compraGrupo.findUnique.mockResolvedValue(compra({ participantes: [participante("u2")] }));
 
-    const res = await request(app).post("/grupos/compras/c1/pagar").set(logadoComo("ADMIN", "adm"));
+    const res = await request(app).post("/grupos/compras/c1/pagar").set(logadoComo("adm", true));
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 
   it("paga a cota com o desconto do grupo e a taxa, e move a reserva para vendido", async () => {
@@ -222,7 +222,7 @@ describe("POST /grupos/compras/:id/pagar", () => {
 describe("expiração ao consultar as compras", () => {
   beforeEach(() => {
     resetPrismaMock();
-    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", papel: "CLIENTE" });
+    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", podeResetarSeed: false });
   });
   afterEach(() => vi.useRealTimers());
 

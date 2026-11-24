@@ -59,7 +59,7 @@ describe("POST /eventos/:id/avaliacoes", () => {
   beforeEach(resetPrismaMock);
 
   const avaliar = (corpo: unknown, id = "c1") =>
-    request(app).post("/eventos/e1/avaliacoes").set(logadoComo("CLIENTE", id)).send(corpo as object);
+    request(app).post("/eventos/e1/avaliacoes").set(logadoComo(id)).send(corpo as object);
 
   it("sem token responde 401", async () => {
     const res = await request(app).post("/eventos/e1/avaliacoes").send({ nota: 5 });

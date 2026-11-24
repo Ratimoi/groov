@@ -7,8 +7,9 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
 
-const resetar = (papel: "ADMIN" | "PRODUTOR" | "CLIENTE" = "ADMIN") =>
-  request(app).post("/admin/resetar-seed").set(logadoComo(papel, "adm"));
+// Só contas com `podeResetarSeed` (ligado direto no banco) podem resetar.
+const resetar = (podeResetarSeed = true) =>
+  request(app).post("/admin/resetar-seed").set(logadoComo("adm", podeResetarSeed));
 
 describe("POST /admin/resetar-seed", () => {
   beforeEach(() => {
@@ -25,8 +26,8 @@ describe("POST /admin/resetar-seed", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it.each(["CLIENTE", "PRODUTOR"] as const)("%s recebe 403 e nada é apagado", async (papel) => {
-    const res = await resetar(papel);
+  it("conta sem permissão recebe 403 e nada é apagado", async () => {
+    const res = await resetar(false);
 
     expect(res.status).toBe(403);
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
@@ -50,7 +51,7 @@ describe("POST /admin/resetar-seed", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it("ADMIN apaga tudo menos a própria conta e recria o seed", async () => {
+  it("conta liberada apaga tudo menos a própria conta e recria o seed", async () => {
     const res = await resetar();
 
     expect(res.status).toBe(200);
@@ -60,5 +61,6 @@ describe("POST /admin/resetar-seed", () => {
     expect(prismaMock.evento.createMany).toHaveBeenCalled();
     expect(prismaMock.lote.createMany).toHaveBeenCalled();
     expect(prismaMock.usuario.createMany).toHaveBeenCalledTimes(2);
+    expect(prismaMock.membroEvento.createMany).toHaveBeenCalled();
   });
 });

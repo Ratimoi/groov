@@ -4,7 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { hashPassword } from "../src/utils/password";
 import { verifyToken } from "../src/utils/token";
 import { bearer, logadoComo } from "./helpers/auth";
-import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
+import { prismaMock, resetPrismaMock, runTransactionCallbacks } from "./helpers/prismaMock";
 
 vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
@@ -13,7 +13,7 @@ const { default: app } = await import("../src/app");
 const SENHA = "senha-segura-123";
 const SEGREDO = process.env.JWT_SECRET as string;
 
-const publico = { id: "u1", nome: "Ana", username: "ana", email: "ana@example.com", papel: "CLIENTE" };
+const publico = { id: "u1", nome: "Ana", username: "ana", email: "ana@example.com" };
 let usuarioComSenha: typeof publico & { senha: string };
 
 function base64url(value: object): string {
@@ -207,15 +207,17 @@ describe("autenticação", () => {
       expect(res.status).toBe(401);
     });
 
-    it("o papel vale o do banco no momento da requisição, não o de quando o token foi emitido", async () => {
+    it("a permissão vale a do banco no momento da requisição, não a de quando o token foi emitido", async () => {
       const auth = bearer("u1");
-      prismaMock.usuario.findMany.mockResolvedValue([]);
+      runTransactionCallbacks();
+      vi.stubEnv("SEED_PASSWORD", "senha-do-seed-1");
 
-      prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "ADMIN" });
-      expect((await request(app).get("/usuarios").set(auth)).status).toBe(200);
+      prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", podeResetarSeed: true });
+      expect((await request(app).post("/admin/resetar-seed").set(auth)).status).toBe(200);
 
-      prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }); // rebaixado
-      expect((await request(app).get("/usuarios").set(auth)).status).toBe(403);
+      prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", podeResetarSeed: false }); // revogada
+      expect((await request(app).post("/admin/resetar-seed").set(auth)).status).toBe(403);
+      vi.unstubAllEnvs();
     });
   });
 
@@ -226,7 +228,8 @@ describe("autenticação", () => {
       ["GET", "/grupos/g1"],
       ["GET", "/grupos/compras"],
       ["POST", "/grupos/compras"],
-      ["GET", "/usuarios"],
+      ["GET", "/eventos/meus"],
+      ["GET", "/usuarios/busca"],
     ])("%s %s sem token responde 401", async (metodo, caminho) => {
       const res = await request(app)[metodo.toLowerCase() as "get" | "post"](caminho);
 
@@ -248,7 +251,7 @@ describe("autenticação", () => {
     it("com token válido a rota de grupos é liberada", async () => {
       prismaMock.grupo.findMany.mockResolvedValue([]);
 
-      const res = await request(app).get("/grupos").set(logadoComo("CLIENTE", "u1"));
+      const res = await request(app).get("/grupos").set(logadoComo("u1"));
 
       expect(res.status).toBe(200);
     });

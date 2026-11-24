@@ -11,6 +11,7 @@ const delegate = () => ({
   createMany: vi.fn(),
   upsert: vi.fn(),
   aggregate: vi.fn(),
+  groupBy: vi.fn(),
   count: vi.fn(),
 });
 
@@ -28,6 +29,7 @@ export const prismaMock = {
   conviteGrupo: delegate(),
   avaliacaoEvento: delegate(),
   evento: delegate(),
+  membroEvento: delegate(),
   categoria: delegate(),
   $queryRaw: vi.fn(),
   $transaction: vi.fn(),

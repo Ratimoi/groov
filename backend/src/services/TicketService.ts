@@ -1,9 +1,11 @@
+import { EventModel } from "../models/EventModel";
 import { TicketModel } from "../models/TicketModel";
 import { UserModel } from "../models/UserModel";
 import type { AuthUser } from "../types/auth";
 import type { Ticket, TicketServiceContract, TicketTransferBody, TicketValidateBody, TicketValidation, ValidationReason } from "../types/ticket";
 import { AppError } from "../utils/AppError";
 import { asObject, fail } from "../utils/validation";
+import { EventAccessService } from "./EventAccessService";
 
 const MENSAGENS: Record<ValidationReason, string> = {
   OK: "Entrada liberada",
@@ -17,22 +19,33 @@ export class TicketService implements TicketServiceContract {
   private ticketModel: TicketModel;
   private userModel: UserModel;
 
-  constructor(ticketModel: TicketModel = new TicketModel(), userModel: UserModel = new UserModel()) {
+  private eventModel: EventModel;
+  private access: EventAccessService;
+
+  constructor(
+    ticketModel: TicketModel = new TicketModel(),
+    userModel: UserModel = new UserModel(),
+    eventModel: EventModel = new EventModel(),
+    access: EventAccessService = new EventAccessService(),
+  ) {
     this.ticketModel = ticketModel;
     this.userModel = userModel;
+    this.eventModel = eventModel;
+    this.access = access;
   }
 
-  // Só ADMIN valida (a rota exige o papel). `eventoId` é opcional: quando vem, ingresso de outro
-  // evento é recusado.
-  async validate(body: TicketValidateBody, actor: AuthUser): Promise<TicketValidation> {
-    const { codigo, eventoId } = asObject(body);
-
+  // Quem lê o QR é a equipe do próprio evento (dono, produtor ou porteiro). Um ingresso de outro
+  // evento é recusado, mesmo que a pessoa seja da equipe de ambos.
+  async validate(eventoId: string, body: TicketValidateBody, actor: AuthUser): Promise<TicketValidation> {
+    const { codigo } = asObject(body);
     if (typeof codigo !== "string" || codigo.trim() === "" || codigo.length > 64) fail("codigo é obrigatório");
-    if (eventoId !== undefined && (typeof eventoId !== "string" || eventoId.trim() === "")) fail("eventoId inválido");
+
+    if (!(await this.eventModel.findById(eventoId))) throw new AppError("Evento não encontrado", 404);
+    await this.access.exigir(eventoId, actor, "VALIDAR_INGRESSO");
 
     const { resultado, motivo, ingresso } = await this.ticketModel.validate(
       codigo.trim().toUpperCase(),
-      eventoId as string | undefined,
+      eventoId,
       actor.id,
       new Date(),
     );

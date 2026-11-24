@@ -22,7 +22,7 @@ export class TicketModel {
   // condicional (updateMany), então duas leituras simultâneas do mesmo código nunca passam as duas.
   async validate(
     codigo: string,
-    eventoId: string | undefined,
+    eventoId: string,
     validadoPorId: string,
     now: Date,
   ): Promise<{ resultado: ValidationResult; motivo: ValidationReason; ingresso: Ticket | null }> {
@@ -32,10 +32,10 @@ export class TicketModel {
 
       const registrar = (resultado: ValidationResult) =>
         tx.validacaoIngresso.create({
-          data: { codigoLido: codigo, ingressoId: ingresso.id, eventoId: ingresso.eventoId, validadoPorId, resultado },
+          data: { codigoLido: codigo, ingressoId: ingresso.id, eventoId, validadoPorId, resultado },
         });
 
-      if (eventoId && ingresso.eventoId !== eventoId) {
+      if (ingresso.eventoId !== eventoId) {
         await registrar("INVALIDO");
         return { resultado: "INVALIDO", motivo: "OUTRO_EVENTO", ingresso };
       }

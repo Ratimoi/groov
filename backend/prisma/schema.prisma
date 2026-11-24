@@ -13,13 +13,15 @@ model Usuario {
   username  String  @unique
   avatarUrl String?
 
-  email    String   @unique
-  senha    String
+  email           String   @unique
+  senha           String
   // Só dígitos. Nulo em contas anteriores à exigência do CPF; nunca sai nas respostas da API.
-  cpf      String?  @unique
-  papel    Papel    @default(CLIENTE)
-  criadoEm DateTime @default(now())
+  cpf             String?  @unique
+  // Liberado só direto no banco: permite chamar /admin/resetar-seed (nunca em produção).
+  podeResetarSeed Boolean  @default(false)
+  criadoEm        DateTime @default(now())
 
+  equipes             MembroEvento[]
   pedidos             Pedido[]
   ingressos           Ingresso[]           @relation("DonoIngresso")
   validacoes          ValidacaoIngresso[]  @relation("ValidadoPor")
@@ -39,19 +41,20 @@ model Categoria {
 }
 
 model Evento {
-  id        String    @id @default(cuid())
+  id        String         @id @default(cuid())
   titulo    String
   descricao String?
   imagemUrl String?
   comecaEm  DateTime
   terminaEm DateTime?
-  horario   DateTime? @db.Time
+  horario   DateTime?      @db.Time
   nomeLocal String?
   cidade    String
-  destaque  Boolean?  @default(false)
+  destaque  Boolean?       @default(false)
   // Selos de classificação do evento (ex.: "18+", "open bar"), definidos por quem cria o evento.
-  tags      String[]  @default([])
-  atracoes  Usuario[] @relation("AtracoesEvento")
+  tags      String[]       @default([])
+  atracoes  Usuario[]      @relation("AtracoesEvento")
+  equipe    MembroEvento[]
 
   categoriaId String?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
@@ -222,6 +225,7 @@ model Ingresso {
 }
 
 model ValidacaoIngresso {
+
   id String @id @default(cuid())
 
   codigoLido String
@@ -236,14 +240,9 @@ model ValidacaoIngresso {
   resultado     ResultadoValidacao
   criadoEm      DateTime           @default(now())
 
+  @@index([eventoId, criadoEm])
   @@index([ingressoId])
   @@index([eventoId])
-}
-
-enum Papel {
-  CLIENTE
-  PRODUTOR
-  ADMIN
 }
 
 enum StatusEvento {
@@ -299,4 +298,26 @@ model AvaliacaoEvento {
 
   @@unique([eventoId, usuarioId])
   @@index([eventoId])
+}
+
+enum FuncaoEvento {
+  DONO
+  PRODUTOR
+  PORTEIRO
+}
+
+// Quem pode o quê em cada evento. Não há administrador geral: toda autoridade vem daqui.
+model MembroEvento {
+  id String @id @default(cuid())
+
+  eventoId  String
+  evento    Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  funcao   FuncaoEvento
+  criadoEm DateTime     @default(now())
+
+  @@unique([eventoId, usuarioId])
+  @@index([usuarioId])
 }

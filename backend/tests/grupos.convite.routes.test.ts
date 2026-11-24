@@ -23,7 +23,7 @@ describe("POST /grupos/:id/convite", () => {
     prismaMock.grupo.findUnique.mockResolvedValue(grupo);
     prismaMock.conviteGrupo.upsert.mockResolvedValue({ codigo: "ABCD2345", grupoId: "g1" });
 
-    const res = await request(app).post("/grupos/g1/convite").set(logadoComo("CLIENTE", "u1"));
+    const res = await request(app).post("/grupos/g1/convite").set(logadoComo("u1"));
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ codigo: "ABCD2345" });
@@ -37,7 +37,7 @@ describe("POST /grupos/:id/convite", () => {
     prismaMock.grupo.findUnique.mockResolvedValue(grupo);
     prismaMock.membroGrupo.findUnique.mockResolvedValue({ grupoId: "g1" });
 
-    const res = await request(app).post("/grupos/g1/convite").set(logadoComo("CLIENTE", "u2"));
+    const res = await request(app).post("/grupos/g1/convite").set(logadoComo("u2"));
 
     expect(res.status).toBe(403);
     expect(prismaMock.conviteGrupo.upsert).not.toHaveBeenCalled();
@@ -47,7 +47,7 @@ describe("POST /grupos/:id/convite", () => {
     prismaMock.grupo.findUnique.mockResolvedValue(grupo);
     prismaMock.membroGrupo.findUnique.mockResolvedValue(null);
 
-    const res = await request(app).post("/grupos/g1/convite").set(logadoComo("CLIENTE", "u3"));
+    const res = await request(app).post("/grupos/g1/convite").set(logadoComo("u3"));
 
     expect(res.status).toBe(404);
   });
@@ -69,7 +69,7 @@ describe("POST /grupos/entrar", () => {
     ["codigo numérico", { codigo: 1 }],
     ["codigo gigante", { codigo: "A".repeat(33) }],
   ])("%s responde 400", async (_nome, corpo) => {
-    const res = await request(app).post("/grupos/entrar").set(logadoComo("CLIENTE", "u2")).send(corpo as object);
+    const res = await request(app).post("/grupos/entrar").set(logadoComo("u2")).send(corpo as object);
 
     expect(res.status).toBe(400);
     expect(prismaMock.conviteGrupo.findUnique).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe("POST /grupos/entrar", () => {
   it("código desconhecido responde 404", async () => {
     prismaMock.conviteGrupo.findUnique.mockResolvedValue(null);
 
-    const res = await request(app).post("/grupos/entrar").set(logadoComo("CLIENTE", "u2")).send({ codigo: "NAOEXIST" });
+    const res = await request(app).post("/grupos/entrar").set(logadoComo("u2")).send({ codigo: "NAOEXIST" });
 
     expect(res.status).toBe(404);
     expect(prismaMock.membroGrupo.create).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ describe("POST /grupos/entrar", () => {
     prismaMock.membroGrupo.findUnique.mockResolvedValue(null);
     prismaMock.membroGrupo.create.mockResolvedValue({ id: "m1" });
 
-    const res = await request(app).post("/grupos/entrar").set(logadoComo("CLIENTE", "u2")).send({ codigo: " abcd2345 " });
+    const res = await request(app).post("/grupos/entrar").set(logadoComo("u2")).send({ codigo: " abcd2345 " });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ grupo: { id: "g1", nome: "Rolê" }, jaEraMembro: false });
@@ -101,7 +101,7 @@ describe("POST /grupos/entrar", () => {
     prismaMock.conviteGrupo.findUnique.mockResolvedValue({ codigo: "ABCD2345", grupoId: "g1", grupo: { id: "g1", nome: "Rolê" } });
     prismaMock.membroGrupo.findUnique.mockResolvedValue({ grupoId: "g1" });
 
-    const res = await request(app).post("/grupos/entrar").set(logadoComo("CLIENTE", "u2")).send({ codigo: "ABCD2345" });
+    const res = await request(app).post("/grupos/entrar").set(logadoComo("u2")).send({ codigo: "ABCD2345" });
 
     expect(res.status).toBe(200);
     expect(res.body.jaEraMembro).toBe(true);

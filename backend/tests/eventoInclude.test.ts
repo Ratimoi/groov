@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eventoInclude } from "../src/types/event";
 
 // As rotas de eventos são públicas. Toda relação com Usuario precisa listar os campos
-// (`select`), porque `true` devolve a linha inteira: senha (hash), e-mail e papel.
+// (`select`), porque `true` devolve a linha inteira: senha (hash), e-mail e podeResetarSeed.
 const CAMPOS_PUBLICOS = ["avatarUrl", "id", "nome", "username"];
 
 describe("eventoInclude (rotas públicas de eventos)", () => {
@@ -18,7 +18,7 @@ describe("eventoInclude (rotas públicas de eventos)", () => {
       Object.keys((config as { select: object }).select),
     );
 
-    for (const sensivel of ["senha", "email", "papel", "criadoEm"]) {
+    for (const sensivel of ["senha", "email", "podeResetarSeed", "criadoEm"]) {
       expect(selecionados).not.toContain(sensivel);
     }
   });

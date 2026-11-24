@@ -21,11 +21,11 @@ export type TicketValidation = {
 };
 
 export type TicketTransferBody = { username?: unknown };
-export type TicketValidateBody = { codigo?: unknown; eventoId?: unknown };
+export type TicketValidateBody = { codigo?: unknown };
 
 export interface TicketServiceContract {
   transfer(id: string, body: TicketTransferBody, actor: AuthUser): Promise<Ticket>;
-  validate(body: TicketValidateBody, actor: AuthUser): Promise<TicketValidation>;
+  validate(eventoId: string, body: TicketValidateBody, actor: AuthUser): Promise<TicketValidation>;
   findAll(actor: AuthUser): Promise<Ticket[]>;
   findById(id: string, actor: AuthUser): Promise<Ticket | null>;
 }

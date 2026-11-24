@@ -12,10 +12,11 @@ const { default: app } = await import("../src/app");
 const grupo = { id: "g1", nome: "Rolê", liderId: "u1" };
 const membro = { grupoId: "g1", usuarioId: "u2", usuario: { id: "u2", nome: "Bia" } };
 
-const lider = () => logadoComo("CLIENTE", "u1");
-const membroComum = () => logadoComo("CLIENTE", "u2");
-const estranho = () => logadoComo("CLIENTE", "u9");
-const admin = () => logadoComo("ADMIN", "adm");
+const lider = () => logadoComo("u1");
+const membroComum = () => logadoComo("u2");
+const estranho = () => logadoComo("u9");
+// Conta liberada para resetar o seed: não ganha nenhum acesso especial a grupos de outras pessoas.
+const admin = () => logadoComo("adm", true);
 
 describe("/grupos", () => {
   beforeEach(() => {
@@ -71,13 +72,17 @@ describe("/grupos", () => {
       });
     });
 
-    it("ADMIN vê todos os grupos", async () => {
-      prismaMock.grupo.findMany.mockResolvedValue([grupo]);
+  });
 
-      const res = await request(app).get("/grupos").set(admin());
+  describe("sem administrador geral", () => {
+    it("conta liberada para resetar o seed não vê grupo alheio nem o lista", async () => {
+      prismaMock.grupo.findMany.mockResolvedValue([]);
+      const lista = await request(app).get("/grupos").set(admin());
+      expect(lista.status).toBe(200);
+      expect(prismaMock.grupo.findMany).toHaveBeenCalledWith({ where: { membros: { some: { usuarioId: "adm" } } } });
 
-      expect(res.status).toBe(200);
-      expect(prismaMock.grupo.findMany).toHaveBeenCalledWith();
+      const um = await request(app).get("/grupos/g1").set(admin());
+      expect(um.status).toBe(404);
     });
   });
 
@@ -85,7 +90,6 @@ describe("/grupos", () => {
     it.each([
       ["o líder", lider],
       ["um membro", membroComum],
-      ["um ADMIN", admin],
     ])("%s vê o grupo", async (_nome, quem) => {
       const res = await request(app).get("/grupos/g1").set(quem());
 
@@ -119,12 +123,6 @@ describe("/grupos", () => {
 
       expect(res.status).toBe(200);
       expect(prismaMock.grupo.update).toHaveBeenCalledWith({ where: { id: "g1" }, data: { nome: "Novo" } });
-    });
-
-    it("ADMIN também renomeia", async () => {
-      const res = await request(app).put("/grupos/g1").set(admin()).send({ nome: "Novo" });
-
-      expect(res.status).toBe(200);
     });
 
     it("membro que não é líder recebe 403", async () => {
@@ -163,14 +161,6 @@ describe("/grupos", () => {
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
     });
 
-    it("ADMIN apaga qualquer grupo", async () => {
-      prismaMock.$transaction.mockResolvedValue([]);
-
-      const res = await request(app).delete("/grupos/g1").set(admin());
-
-      expect(res.status).toBe(204);
-    });
-
     it("membro que não é líder recebe 403 e nada é apagado", async () => {
       const res = await request(app).delete("/grupos/g1").set(membroComum());
 
@@ -207,8 +197,7 @@ describe("/grupos", () => {
       it.each([
         ["o líder", lider],
         ["um membro", membroComum],
-        ["um ADMIN", admin],
-      ])("%s vê os membros", async (_nome, quem) => {
+        ])("%s vê os membros", async (_nome, quem) => {
         prismaMock.membroGrupo.findMany.mockResolvedValue([membro]);
 
         const res = await request(app).get("/grupos/g1/members").set(quem());
@@ -246,12 +235,6 @@ describe("/grupos", () => {
         expect(prismaMock.membroGrupo.create).toHaveBeenCalledWith(
           expect.objectContaining({ data: { grupoId: "g1", usuarioId: "u2" } }),
         );
-      });
-
-      it("ADMIN adiciona um membro", async () => {
-        const res = await request(app).post("/grupos/g1/members").set(admin()).send({ usuarioId: "u2" });
-
-        expect(res.status).toBe(201);
       });
 
       it("membro que não é líder recebe 403 (não pode convidar)", async () => {
@@ -311,12 +294,6 @@ describe("/grupos", () => {
         });
       });
 
-      it("ADMIN remove um membro", async () => {
-        const res = await request(app).delete("/grupos/g1/members/u2").set(admin());
-
-        expect(res.status).toBe(204);
-      });
-
       it("um membro pode sair do grupo sozinho", async () => {
         const res = await request(app).delete("/grupos/g1/members/u2").set(membroComum());
 
@@ -343,12 +320,6 @@ describe("/grupos", () => {
         expect(res.status).toBe(400);
         expect(res.body).toEqual({ message: "O líder não pode ser removido do grupo" });
         expect(prismaMock.membroGrupo.delete).not.toHaveBeenCalled();
-      });
-
-      it("ADMIN também não remove o líder", async () => {
-        const res = await request(app).delete("/grupos/g1/members/u1").set(admin());
-
-        expect(res.status).toBe(400);
       });
 
       it("remover quem não é membro responde 404", async () => {
