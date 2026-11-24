@@ -33,7 +33,7 @@ describe("/ingressos", () => {
       expect(Object.keys(args.include.dono.select).sort()).toEqual(["id", "nome", "username"]);
     });
 
-    it("ADMIN também vê só os próprios ingressos", async () => {
+    it("a conta do seed também vê só os próprios ingressos", async () => {
       prismaMock.ingresso.findMany.mockResolvedValue([]);
 
       await request(app).get("/ingressos").set(logadoComo("adm"));
@@ -52,7 +52,7 @@ describe("/ingressos", () => {
       expect(res.body.codigoQr).toBe("GRV-ABCDEFGHJKLM");
     });
 
-    it("ingresso de outra pessoa responde 404 (nem o ADMIN vê o código)", async () => {
+    it("ingresso de outra pessoa responde 404 (nem a conta do seed vê o código)", async () => {
       prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
 
       const comum = await request(app).get("/ingressos/i1").set(logadoComo("u2"));

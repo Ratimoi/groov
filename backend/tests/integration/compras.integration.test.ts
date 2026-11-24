@@ -55,6 +55,10 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
     return { evento, lote: criado };
   }
 
+  // Não existe administrador geral: quem lê QR é da equipe do próprio evento.
+  const colocarNaEquipe = (eventoId: string, usuario: Usuario, funcao: "DONO" | "PRODUTOR" | "PORTEIRO" = "PORTEIRO") =>
+    prisma.membroEvento.create({ data: { eventoId, usuarioId: usuario.id, funcao } });
+
   const estoque = async (loteId: string) =>
     prisma.lote.findUniqueOrThrow({ where: { id: loteId }, select: { quantidadeVendida: true, quantidadeReservada: true } });
 
@@ -196,13 +200,13 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   describe("validação na portaria", () => {
     it("dá baixa uma única vez, mesmo com leituras simultâneas do mesmo código", async () => {
       const [adm, u] = [await criarUsuario("jade"), await criarUsuario("kau")];
-      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
       const { lote, evento } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      await colocarNaEquipe(evento.id, adm);
       const pedido = await request(app).post("/pedidos").set(auth(u)).send({ loteId: lote.id, quantidade: 1 });
       const codigo = pedido.body.ingressos[0].codigoQr as string;
 
       const respostas = await Promise.all(
-        Array.from({ length: 5 }, () => request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo, eventoId: evento.id })),
+        Array.from({ length: 5 }, () => request(app).post(`/eventos/${evento.id}/validar`).set(auth(adm)).send({ codigo })),
       );
 
       const status = respostas.map((res) => res.status).sort();
@@ -212,7 +216,7 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
       expect(await prisma.validacaoIngresso.count({ where: { codigoLido: codigo, resultado: "VALIDO" } })).toBe(1);
       expect(await prisma.validacaoIngresso.count({ where: { codigoLido: codigo } })).toBe(5);
 
-      const comum = await request(app).post("/ingressos/validar").set(auth(u)).send({ codigo });
+      const comum = await request(app).post(`/eventos/${evento.id}/validar`).set(auth(u)).send({ codigo });
       expect(comum.status).toBe(403);
     });
   });
@@ -241,8 +245,9 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   describe("transferência de ingresso", () => {
     it("troca o dono e o código; o QR antigo deixa de valer e ingresso usado não transfere", async () => {
       const [adm, de, para] = [await criarUsuario("olga"), await criarUsuario("pedro"), await criarUsuario("rita")];
-      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
-      const { lote } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      const { lote, evento } = await criarEventoComLote({ preco: "10.00", quantidade: 5 });
+      await colocarNaEquipe(evento.id, adm);
+      const validar = (codigo: string) => request(app).post(`/eventos/${evento.id}/validar`).set(auth(adm)).send({ codigo });
       const pedido = await request(app).post("/pedidos").set(auth(de)).send({ loteId: lote.id, quantidade: 2 });
       const [primeiro, segundo] = pedido.body.ingressos as { id: string; codigoQr: string }[];
 
@@ -253,12 +258,12 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
 
       expect((await request(app).get("/ingressos").set(auth(para))).body).toHaveLength(1);
       expect((await request(app).get(`/ingressos/${primeiro.id}`).set(auth(de))).status).toBe(404);
-      expect((await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: primeiro.codigoQr })).status).toBe(404);
-      expect((await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: res.body.codigoQr })).status).toBe(200);
+      expect((await validar(primeiro.codigoQr)).status).toBe(404);
+      expect((await validar(res.body.codigoQr)).status).toBe(200);
 
       // Quem já transferiu não é mais dono; ingresso já validado não transfere.
       expect((await request(app).post(`/ingressos/${primeiro.id}/transferir`).set(auth(de)).send({ username: `rita-${run}` })).status).toBe(404);
-      await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: segundo.codigoQr });
+      await validar(segundo.codigoQr);
       expect((await request(app).post(`/ingressos/${segundo.id}/transferir`).set(auth(de)).send({ username: `rita-${run}` })).status).toBe(409);
     });
   });
@@ -266,9 +271,10 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
   describe("avaliações", () => {
     it("só quem foi ao evento avalia, uma nota por pessoa, e a média do organizador soma os eventos dele", async () => {
       const [adm, org, a, b] = [await criarUsuario("sol"), await criarUsuario("tito"), await criarUsuario("uma"), await criarUsuario("vera")];
-      await prisma.usuario.update({ where: { id: adm.id }, data: { papel: "ADMIN" } });
       const evento1 = await prisma.evento.create({ data: { titulo: `Av1 ${run}`, cidade: "Recife", comecaEm: new Date(Date.now() + 86_400_000), criadoPorId: org.id } });
       const evento2 = await prisma.evento.create({ data: { titulo: `Av2 ${run}`, cidade: "Recife", comecaEm: new Date(Date.now() + 86_400_000), criadoPorId: org.id } });
+      await colocarNaEquipe(evento1.id, adm);
+      await colocarNaEquipe(evento2.id, adm);
       const lote1 = await prisma.lote.create({ data: { eventoId: evento1.id, nome: "Pista", preco: "10.00", quantidade: 5 } });
       const lote2 = await prisma.lote.create({ data: { eventoId: evento2.id, nome: "Pista", preco: "10.00", quantidade: 5 } });
 
@@ -280,8 +286,8 @@ describe.skipIf(!url)("fluxo de compra com Postgres real", () => {
       // Com o ingresso ainda não usado, não pode avaliar.
       expect((await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(a)).send({ nota: 5 })).status).toBe(403);
 
-      await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: codigoA1 });
-      await request(app).post("/ingressos/validar").set(auth(adm)).send({ codigo: codigoB2 });
+      await request(app).post(`/eventos/${evento1.id}/validar`).set(auth(adm)).send({ codigo: codigoA1 });
+      await request(app).post(`/eventos/${evento2.id}/validar`).set(auth(adm)).send({ codigo: codigoB2 });
 
       expect((await request(app).post(`/eventos/${evento1.id}/avaliacoes`).set(auth(a)).send({ nota: 5 })).status).toBe(200);
       expect((await request(app).post(`/eventos/${evento2.id}/avaliacoes`).set(auth(b)).send({ nota: 2, comentario: "ok" })).status).toBe(200);

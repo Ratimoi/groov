@@ -37,7 +37,7 @@ describe("POST /ingressos/:id/transferir", () => {
     prismaMock.ingresso.findUnique
       .mockResolvedValueOnce(ingresso)
       .mockResolvedValueOnce({ ...ingresso, donoId: "u2", codigoQr: "GRV-NOVOCODIGO00" });
-    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }).mockResolvedValueOnce({ id: "u2" });
+    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", podeResetarSeed: false }).mockResolvedValueOnce({ id: "u2" });
     runTransactionCallbacks();
     prismaMock.ingresso.updateMany.mockResolvedValue({ count: 1 });
 
@@ -73,7 +73,7 @@ describe("POST /ingressos/:id/transferir", () => {
 
   it("destinatário inexistente responde 404", async () => {
     prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
-    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }).mockResolvedValueOnce(null);
+    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", podeResetarSeed: false }).mockResolvedValueOnce(null);
 
     const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("u1")).send({ username: "ninguem" });
 
@@ -83,7 +83,7 @@ describe("POST /ingressos/:id/transferir", () => {
 
   it("transferir para si mesmo responde 400", async () => {
     prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
-    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }).mockResolvedValueOnce({ id: "u1" });
+    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", podeResetarSeed: false }).mockResolvedValueOnce({ id: "u1" });
 
     const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("u1")).send({ username: "eu" });
 
@@ -92,7 +92,7 @@ describe("POST /ingressos/:id/transferir", () => {
 
   it("perde a corrida (ingresso foi usado ou transferido no meio): 409", async () => {
     prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
-    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }).mockResolvedValueOnce({ id: "u2" });
+    prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", podeResetarSeed: false }).mockResolvedValueOnce({ id: "u2" });
     runTransactionCallbacks();
     prismaMock.ingresso.updateMany.mockResolvedValue({ count: 0 });
 

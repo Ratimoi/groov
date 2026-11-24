@@ -47,7 +47,7 @@ function transacaoDePagamento(faltamPagar: number) {
 describe("POST /grupos/compras/:id/pagar", () => {
   beforeEach(() => {
     resetPrismaMock();
-    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", papel: "CLIENTE" });
+    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", podeResetarSeed: false });
   });
   afterEach(() => vi.useRealTimers());
 
@@ -222,7 +222,7 @@ describe("POST /grupos/compras/:id/pagar", () => {
 describe("expiração ao consultar as compras", () => {
   beforeEach(() => {
     resetPrismaMock();
-    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", papel: "CLIENTE" });
+    prismaMock.usuario.findUnique.mockResolvedValue({ id: "u1", podeResetarSeed: false });
   });
   afterEach(() => vi.useRealTimers());
 
