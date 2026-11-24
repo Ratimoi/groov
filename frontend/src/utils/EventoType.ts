@@ -12,7 +12,6 @@ export type EventoType = {
   imagemUrl?: string | null;
   comecaEm: Date;
   terminaEm?: Date | null;
-  horario: Date;
   nomeLocal?: string | null;
   cidade: string;
   categoriaId?: string | null;

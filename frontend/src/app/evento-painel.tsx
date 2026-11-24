@@ -112,6 +112,29 @@ export default function EventoPainel() {
               )}
             </View>
 
+            {painel.funcao !== "PORTEIRO" && (
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({ pathname: "/lotes-evento", params: { eventoId: painel.evento.id, titulo: painel.evento.titulo } })
+                  }
+                  activeOpacity={0.8}
+                  className="flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border border-primary-container/60 bg-primary-container/10"
+                >
+                  <MaterialIcons name="confirmation-number" size={20} color="#ebb2ff" />
+                  <Text className="font-label-caps text-label-caps text-primary uppercase">Lotes</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: "/editar-evento", params: { eventoId: painel.evento.id, funcao: painel.funcao } })}
+                  activeOpacity={0.8}
+                  className="flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border border-primary-container/60 bg-primary-container/10"
+                >
+                  <MaterialIcons name="edit" size={20} color="#ebb2ff" />
+                  <Text className="font-label-caps text-label-caps text-primary uppercase">Editar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <Text className="font-label-caps text-label-caps text-on-surface-variant">INGRESSOS</Text>
             <View className="flex-row gap-3">
               <Numero rotulo="EMITIDOS" valor={painel.ingressos.emitidos} />

@@ -1,43 +1,13 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
+import { CampoTexto as Campo } from "../components/CampoTexto";
+import { SeletorCategoria } from "../components/SeletorCategoria";
 import { useEspacoNavBar } from "../hooks/useEspacoNavBar";
 import { api, ApiError } from "../utils/api";
 import { lerDataHora, lerPreco, mascararData, mascararHora } from "../utils/dataHora";
-
-type CampoProps = {
-  rotulo: string;
-  valor: string;
-  onChange: (texto: string) => void;
-  placeholder?: string;
-  teclado?: "default" | "numeric" | "url";
-  ajuda?: string;
-  multilinha?: boolean;
-};
-
-function Campo({ rotulo, valor, onChange, placeholder, teclado = "default", ajuda, multilinha }: CampoProps) {
-  return (
-    <View className="gap-2">
-      <Text className="font-body-sm text-body-sm text-on-surface">{rotulo}</Text>
-      <TextInput
-        value={valor}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor="#7d7080"
-        keyboardType={teclado}
-        autoCapitalize={teclado === "url" ? "none" : "sentences"}
-        autoCorrect={false}
-        multiline={multilinha}
-        textAlignVertical={multilinha ? "top" : "center"}
-        className="bg-surface-container rounded-xl border border-glass-border px-4 py-3 text-white font-body-md"
-        style={multilinha ? { minHeight: 96 } : undefined}
-      />
-      {!!ajuda && <Text className="font-body-sm text-[12px] text-on-surface-variant">{ajuda}</Text>}
-    </View>
-  );
-}
 
 const Secao = ({ titulo }: { titulo: string }) => (
   <Text className="font-label-caps text-label-caps text-on-surface-variant mt-2">{titulo}</Text>
@@ -55,6 +25,7 @@ export default function CriarEvento() {
   const [descricao, setDescricao] = useState("");
   const [imagemUrl, setImagemUrl] = useState("");
   const [tags, setTags] = useState("");
+  const [categoriaId, setCategoriaId] = useState<string | null>(null);
   const [data, setData] = useState("");
   const [hora, setHora] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -105,6 +76,7 @@ export default function CriarEvento() {
           ...(descricao.trim() ? { descricao: descricao.trim() } : {}),
           ...(imagemUrl.trim() ? { imagemUrl: imagemUrl.trim() } : {}),
           ...(listaTags.length ? { tags: listaTags } : {}),
+          ...(categoriaId ? { categoriaId } : {}),
         },
       });
       eventoId = evento.id;
@@ -149,6 +121,7 @@ export default function CriarEvento() {
         <Campo rotulo="Local" valor={local} onChange={setLocal} placeholder="Ex.: Arena Pulse" />
         <Campo rotulo="Descrição" valor={descricao} onChange={setDescricao} multilinha placeholder="Conte o que vai rolar" />
         <Campo rotulo="Imagem (link)" valor={imagemUrl} onChange={setImagemUrl} teclado="url" placeholder="https://..." />
+        <SeletorCategoria valor={categoriaId} onChange={setCategoriaId} />
         <Campo
           rotulo="Selos"
           valor={tags}
