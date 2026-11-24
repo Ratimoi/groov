@@ -54,7 +54,7 @@ describe("POST /pedidos", () => {
   it("cria o pedido pago, calcula a taxa de 12,5% e emite um ingresso por unidade", async () => {
     lojaComEstoque();
 
-    const res = await request(app).post("/pedidos").set(logadoComo("CLIENTE", "u1")).send({ loteId: "l1", quantidade: 2 });
+    const res = await request(app).post("/pedidos").set(logadoComo("u1")).send({ loteId: "l1", quantidade: 2 });
 
     expect(res.status).toBe(201);
     expect(prismaMock.lote.update).toHaveBeenCalledWith({
@@ -97,7 +97,7 @@ describe("POST /pedidos", () => {
 
     await request(app)
       .post("/pedidos")
-      .set(logadoComo("CLIENTE", "u1"))
+      .set(logadoComo("u1"))
       .send({ loteId: "l1", quantidade: 1, usuarioId: "u9", valor: "0.01", subtotal: "0.01", status: "PENDENTE" });
 
     const { data } = prismaMock.pedido.create.mock.calls[0][0];

@@ -4,7 +4,7 @@ import { LotModel } from "../models/LotModel";
 import type { AuthUser } from "../types/auth";
 import type { LotDto, LotServiceContract } from "../types/lot";
 import { AppError } from "../utils/AppError";
-import { assertCanManageEvent } from "../utils/eventAccess";
+import { EventAccessService } from "./EventAccessService";
 import { assertGroupConfig, parseLotCreate, parseLotUpdate } from "../utils/lotInput";
 
 export function toLotDto(lote: Lote): LotDto {
@@ -33,9 +33,16 @@ export class LotService implements LotServiceContract {
   private lotModel: LotModel;
   private eventModel: EventModel;
 
-  constructor(lotModel: LotModel = new LotModel(), eventModel: EventModel = new EventModel()) {
+  private access: EventAccessService;
+
+  constructor(
+    lotModel: LotModel = new LotModel(),
+    eventModel: EventModel = new EventModel(),
+    access: EventAccessService = new EventAccessService(),
+  ) {
     this.lotModel = lotModel;
     this.eventModel = eventModel;
+    this.access = access;
   }
 
   async findByEvent(eventoId: string): Promise<LotDto[]> {
@@ -49,15 +56,15 @@ export class LotService implements LotServiceContract {
   }
 
   async create(eventoId: string, body: unknown, actor: AuthUser): Promise<LotDto> {
-    const event = await this.findEventOrThrow(eventoId);
-    assertCanManageEvent(event.criadoPorId, actor);
+    await this.findEventOrThrow(eventoId);
+    await this.access.exigir(eventoId, actor, "GERENCIAR_LOTES");
     return toLotDto(await this.lotModel.create(eventoId, parseLotCreate(body)));
   }
 
   async update(id: string, body: unknown, actor: AuthUser): Promise<LotDto | null> {
-    const lote = await this.lotModel.findByIdWithEventOwner(id);
+    const lote = await this.lotModel.findById(id);
     if (!lote) return null;
-    assertCanManageEvent(lote.evento.criadoPorId, actor);
+    await this.access.exigir(lote.eventoId, actor, "GERENCIAR_LOTES");
 
     const data = parseLotUpdate(body);
 
@@ -89,9 +96,9 @@ export class LotService implements LotServiceContract {
   }
 
   async delete(id: string, actor: AuthUser): Promise<boolean> {
-    const lote = await this.lotModel.findByIdWithEventOwner(id);
+    const lote = await this.lotModel.findById(id);
     if (!lote) return false;
-    assertCanManageEvent(lote.evento.criadoPorId, actor);
+    await this.access.exigir(lote.eventoId, actor, "GERENCIAR_LOTES");
 
     if (lote.quantidadeVendida > 0 || lote.quantidadeReservada > 0) {
       throw new AppError("Lote com ingressos vendidos ou reservados não pode ser apagado", 409);

@@ -20,10 +20,6 @@ export class UserModel {
     });
   }
 
-  async findAll(): Promise<PublicUser[]> {
-    return this.prismaClient.usuario.findMany({ omit: omitPassword });
-  }
-
   async findById(id: string): Promise<PublicUser | null> {
     return this.prismaClient.usuario.findUnique({
       where: { id },

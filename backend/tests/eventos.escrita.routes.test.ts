@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { logadoComo } from "./helpers/auth";
+import { programaEquipe } from "./helpers/equipe";
 import { prismaError } from "./helpers/prismaErrors";
 import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
 
@@ -8,7 +9,7 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
 
-// p1 é o produtor que criou o evento salvo; p2 é outro produtor.
+// p1 é o dono do evento salvo, p2 é produtor dele, p3 é porteiro dele; c1 e adm não são da equipe.
 const salvo = {
   id: "e1",
   titulo: "Show",
@@ -19,10 +20,12 @@ const salvo = {
 };
 const valido = { titulo: "Festival", cidade: "Olinda", comecaEm: "2026-12-10T20:00:00Z" };
 
-const criador = () => logadoComo("PRODUTOR", "p1");
-const outroProdutor = () => logadoComo("PRODUTOR", "p2");
-const admin = () => logadoComo("ADMIN", "adm");
-const cliente = () => logadoComo("CLIENTE", "c1");
+const dono = () => logadoComo("p1");
+const produtor = () => logadoComo("p2");
+const porteiro = () => logadoComo("p3");
+const estranho = () => logadoComo("c1");
+// Conta liberada para resetar o seed: não ganha nenhum poder sobre eventos.
+const contaDoSeed = () => logadoComo("adm", true);
 
 const FORMATO_DATA = "deve ser uma data ISO 8601 (ex.: 2026-12-31T22:00:00Z)";
 
@@ -30,6 +33,7 @@ describe("/eventos (escrita)", () => {
   beforeEach(() => {
     resetPrismaMock();
     prismaMock.evento.findUnique.mockResolvedValue(salvo);
+    programaEquipe({ p1: "DONO", p2: "PRODUTOR", p3: "PORTEIRO" });
   });
 
   describe("POST", () => {
@@ -37,28 +41,27 @@ describe("/eventos (escrita)", () => {
       prismaMock.evento.create.mockImplementation(async ({ data }) => ({ id: "novo", ...data }));
     });
 
-    it("PRODUTOR cria; o criador é o usuário logado e as datas viram Date", async () => {
-      const res = await request(app).post("/eventos").set(criador()).send(valido);
+    it("cria; o usuário logado vira o criador e o DONO, e as datas viram Date", async () => {
+      const res = await request(app).post("/eventos").set(dono()).send(valido);
 
       expect(res.status).toBe(201);
       expect(prismaMock.evento.create).toHaveBeenCalledWith({
-        data: { titulo: "Festival", cidade: "Olinda", comecaEm: new Date("2026-12-10T20:00:00Z"), criadoPorId: "p1" },
+        data: {
+          titulo: "Festival",
+          cidade: "Olinda",
+          comecaEm: new Date("2026-12-10T20:00:00Z"),
+          criadoPorId: "p1",
+          equipe: { create: { usuarioId: "p1", funcao: "DONO" } },
+        },
       });
       expect(res.body).toMatchObject({ id: "novo", titulo: "Festival", criadoPorId: "p1" });
     });
 
-    it("ADMIN também cria", async () => {
-      const res = await request(app).post("/eventos").set(admin()).send(valido);
+    it("qualquer pessoa logada cria um evento (não existe papel de produtor global)", async () => {
+      const res = await request(app).post("/eventos").set(estranho()).send(valido);
 
       expect(res.status).toBe(201);
-      expect(prismaMock.evento.create.mock.calls[0][0].data.criadoPorId).toBe("adm");
-    });
-
-    it("CLIENTE recebe 403 e nada é gravado", async () => {
-      const res = await request(app).post("/eventos").set(cliente()).send(valido);
-
-      expect(res.status).toBe(403);
-      expect(prismaMock.evento.create).not.toHaveBeenCalled();
+      expect(prismaMock.evento.create.mock.calls[0][0].data.equipe).toEqual({ create: { usuarioId: "c1", funcao: "DONO" } });
     });
 
     it("sem token responde 401", async () => {
@@ -70,7 +73,7 @@ describe("/eventos (escrita)", () => {
     it("ignora id, criadoPorId, criadoEm e atualizadoEm vindos do corpo", async () => {
       await request(app)
         .post("/eventos")
-        .set(criador())
+        .set(dono())
         .send({ ...valido, id: "forjado", criadoPorId: "outro", criadoEm: "2000-01-01", atualizadoEm: "2000-01-01" });
 
       const { data } = prismaMock.evento.create.mock.calls[0][0];
@@ -83,7 +86,7 @@ describe("/eventos (escrita)", () => {
     it("aceita os campos opcionais e remove espaços das pontas", async () => {
       const res = await request(app)
         .post("/eventos")
-        .set(criador())
+        .set(dono())
         .send({
           ...valido,
           titulo: "  Festival  ",
@@ -123,7 +126,7 @@ describe("/eventos (escrita)", () => {
     ])("%s responde 400 sem gravar", async (_nome, alteracao, mensagem) => {
       const res = await request(app)
         .post("/eventos")
-        .set(criador())
+        .set(dono())
         .send({ ...valido, ...alteracao });
 
       expect(res.status).toBe(400);
@@ -132,7 +135,7 @@ describe("/eventos (escrita)", () => {
     });
 
     it("corpo que não é um objeto responde 400", async () => {
-      const res = await request(app).post("/eventos").set(criador()).send([valido]);
+      const res = await request(app).post("/eventos").set(dono()).send([valido]);
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ message: "O corpo deve ser um objeto JSON" });
@@ -141,7 +144,7 @@ describe("/eventos (escrita)", () => {
     it("terminaEm null é aceito", async () => {
       const res = await request(app)
         .post("/eventos")
-        .set(criador())
+        .set(dono())
         .send({ ...valido, terminaEm: null });
 
       expect(res.status).toBe(201);
@@ -152,7 +155,7 @@ describe("/eventos (escrita)", () => {
 
       const res = await request(app)
         .post("/eventos")
-        .set(criador())
+        .set(dono())
         .send({ ...valido, categoriaId: "nada" });
 
       expect(res.status).toBe(400);
@@ -165,33 +168,30 @@ describe("/eventos (escrita)", () => {
       prismaMock.evento.update.mockImplementation(async ({ data }) => ({ ...salvo, ...data }));
     });
 
-    it("o criador atualiza só os campos enviados", async () => {
-      const res = await request(app).put("/eventos/e1").set(criador()).send({ titulo: "Show 2" });
+    it("o dono atualiza só os campos enviados", async () => {
+      const res = await request(app).put("/eventos/e1").set(dono()).send({ titulo: "Show 2" });
 
       expect(res.status).toBe(200);
       expect(res.body.titulo).toBe("Show 2");
       expect(prismaMock.evento.update).toHaveBeenCalledWith({ where: { id: "e1" }, data: { titulo: "Show 2" } });
     });
 
-    it("ADMIN atualiza evento de outro criador", async () => {
-      const res = await request(app).put("/eventos/e1").set(admin()).send({ cidade: "Caruaru" });
+    it("o produtor do evento também edita", async () => {
+      const res = await request(app).put("/eventos/e1").set(produtor()).send({ cidade: "Caruaru" });
 
       expect(res.status).toBe(200);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é alterado", async () => {
-      const res = await request(app).put("/eventos/e1").set(outroProdutor()).send({ titulo: "Roubado" });
+    it.each([
+      ["o porteiro", porteiro],
+      ["quem não é da equipe", estranho],
+      ["a conta liberada para resetar o seed", contaDoSeed],
+    ])("%s recebe 403 e nada é alterado", async (_nome, quem) => {
+      const res = await request(app).put("/eventos/e1").set(quem()).send({ titulo: "Roubado" });
 
       expect(res.status).toBe(403);
-      expect(res.body).toEqual({ message: "Somente o criador do evento pode fazer isso" });
+      expect(res.body).toEqual({ message: "Você não tem permissão para isso neste evento" });
       expect(prismaMock.evento.update).not.toHaveBeenCalled();
-    });
-
-    it("CLIENTE recebe 403 sem consultar o evento", async () => {
-      const res = await request(app).put("/eventos/e1").set(cliente()).send({ titulo: "X" });
-
-      expect(res.status).toBe(403);
-      expect(prismaMock.evento.findUnique).not.toHaveBeenCalled();
     });
 
     it("sem token responde 401", async () => {
@@ -201,13 +201,13 @@ describe("/eventos (escrita)", () => {
     });
 
     it("não deixa transferir o evento: criadoPorId e id do corpo são ignorados", async () => {
-      await request(app).put("/eventos/e1").set(criador()).send({ titulo: "Show 2", criadoPorId: "p2", id: "e9" });
+      await request(app).put("/eventos/e1").set(dono()).send({ titulo: "Show 2", criadoPorId: "p2", id: "e9" });
 
       expect(prismaMock.evento.update.mock.calls[0][0].data).toEqual({ titulo: "Show 2" });
     });
 
-    it("a checagem de dono vem antes da validação (corpo inválido de quem não é dono dá 403)", async () => {
-      const res = await request(app).put("/eventos/e1").set(outroProdutor()).send({ titulo: "" });
+    it("a checagem de permissão vem antes da validação (corpo inválido de quem não pode editar dá 403)", async () => {
+      const res = await request(app).put("/eventos/e1").set(estranho()).send({ titulo: "" });
 
       expect(res.status).toBe(403);
     });
@@ -215,7 +215,7 @@ describe("/eventos (escrita)", () => {
     it("evento inexistente responde 404", async () => {
       prismaMock.evento.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).put("/eventos/nada").set(admin()).send({ titulo: "X" });
+      const res = await request(app).put("/eventos/nada").set(dono()).send({ titulo: "X" });
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Event not found" });
@@ -224,13 +224,13 @@ describe("/eventos (escrita)", () => {
     it("evento apagado entre a leitura e a gravação responde 404 (P2025)", async () => {
       prismaMock.evento.update.mockRejectedValue(prismaError("P2025"));
 
-      const res = await request(app).put("/eventos/e1").set(criador()).send({ titulo: "X" });
+      const res = await request(app).put("/eventos/e1").set(dono()).send({ titulo: "X" });
 
       expect(res.status).toBe(404);
     });
 
     it("corpo sem nenhum campo válido responde 400", async () => {
-      const res = await request(app).put("/eventos/e1").set(criador()).send({ criadoPorId: "p2" });
+      const res = await request(app).put("/eventos/e1").set(dono()).send({ criadoPorId: "p2" });
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ message: "Nenhum campo para atualizar" });
@@ -240,7 +240,7 @@ describe("/eventos (escrita)", () => {
     it("null limpa os campos opcionais", async () => {
       const res = await request(app)
         .put("/eventos/e1")
-        .set(criador())
+        .set(dono())
         .send({ descricao: null, imagemUrl: null, terminaEm: null, nomeLocal: null, categoriaId: null });
 
       expect(res.status).toBe(200);
@@ -260,7 +260,7 @@ describe("/eventos (escrita)", () => {
       ["comecaEm null", { comecaEm: null }, `comecaEm ${FORMATO_DATA}`],
       ["imagemUrl inválida", { imagemUrl: "javascript:alert(1)" }, "imagemUrl deve ser uma URL http ou https válida"],
     ])("%s responde 400", async (_nome, corpo, mensagem) => {
-      const res = await request(app).put("/eventos/e1").set(criador()).send(corpo);
+      const res = await request(app).put("/eventos/e1").set(dono()).send(corpo);
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ message: mensagem });
@@ -268,14 +268,14 @@ describe("/eventos (escrita)", () => {
     });
 
     it("mover o início para depois do fim já salvo responde 400", async () => {
-      const res = await request(app).put("/eventos/e1").set(criador()).send({ comecaEm: "2026-12-05T00:00:00Z" });
+      const res = await request(app).put("/eventos/e1").set(dono()).send({ comecaEm: "2026-12-05T00:00:00Z" });
 
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ message: "terminaEm não pode ser anterior a comecaEm" });
     });
 
     it("pôr o fim antes do início já salvo responde 400", async () => {
-      const res = await request(app).put("/eventos/e1").set(criador()).send({ terminaEm: "2026-11-30T00:00:00Z" });
+      const res = await request(app).put("/eventos/e1").set(dono()).send({ terminaEm: "2026-11-30T00:00:00Z" });
 
       expect(res.status).toBe(400);
     });
@@ -283,7 +283,7 @@ describe("/eventos (escrita)", () => {
     it("mover início e fim juntos para um período válido é aceito", async () => {
       const res = await request(app)
         .put("/eventos/e1")
-        .set(criador())
+        .set(dono())
         .send({ comecaEm: "2027-01-10T20:00:00Z", terminaEm: "2027-01-11T02:00:00Z" });
 
       expect(res.status).toBe(200);
@@ -291,33 +291,23 @@ describe("/eventos (escrita)", () => {
   });
 
   describe("DELETE /:id", () => {
-    it("o criador apaga (204, sem corpo)", async () => {
+    it("o dono apaga (204, sem corpo)", async () => {
       prismaMock.evento.delete.mockResolvedValue(salvo);
 
-      const res = await request(app).delete("/eventos/e1").set(criador());
+      const res = await request(app).delete("/eventos/e1").set(dono());
 
       expect(res.status).toBe(204);
       expect(res.text).toBe("");
       expect(prismaMock.evento.delete).toHaveBeenCalledWith({ where: { id: "e1" } });
     });
 
-    it("ADMIN apaga evento de outro criador", async () => {
-      prismaMock.evento.delete.mockResolvedValue(salvo);
-
-      const res = await request(app).delete("/eventos/e1").set(admin());
-
-      expect(res.status).toBe(204);
-    });
-
-    it("outro PRODUTOR recebe 403 e nada é apagado", async () => {
-      const res = await request(app).delete("/eventos/e1").set(outroProdutor());
-
-      expect(res.status).toBe(403);
-      expect(prismaMock.evento.delete).not.toHaveBeenCalled();
-    });
-
-    it("CLIENTE recebe 403", async () => {
-      const res = await request(app).delete("/eventos/e1").set(cliente());
+    it.each([
+      ["o produtor (só o dono apaga)", produtor],
+      ["o porteiro", porteiro],
+      ["quem não é da equipe", estranho],
+      ["a conta liberada para resetar o seed", contaDoSeed],
+    ])("%s recebe 403 e nada é apagado", async (_nome, quem) => {
+      const res = await request(app).delete("/eventos/e1").set(quem());
 
       expect(res.status).toBe(403);
       expect(prismaMock.evento.delete).not.toHaveBeenCalled();
@@ -329,18 +319,18 @@ describe("/eventos (escrita)", () => {
       expect(res.status).toBe(401);
     });
 
-    it("evento sem criador registrado só pode ser apagado por ADMIN", async () => {
+    it("evento sem dono na equipe não pode ser apagado por ninguém", async () => {
       prismaMock.evento.findUnique.mockResolvedValue({ ...salvo, criadoPorId: null });
-      prismaMock.evento.delete.mockResolvedValue(salvo);
+      programaEquipe({});
 
-      expect((await request(app).delete("/eventos/e1").set(criador())).status).toBe(403);
-      expect((await request(app).delete("/eventos/e1").set(admin())).status).toBe(204);
+      expect((await request(app).delete("/eventos/e1").set(dono())).status).toBe(403);
+      expect(prismaMock.evento.delete).not.toHaveBeenCalled();
     });
 
     it("evento inexistente responde 404", async () => {
       prismaMock.evento.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).delete("/eventos/nada").set(admin());
+      const res = await request(app).delete("/eventos/nada").set(dono());
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Event not found" });
@@ -349,7 +339,7 @@ describe("/eventos (escrita)", () => {
     it("evento com lotes ou pedidos responde 409 (não perde vendas)", async () => {
       prismaMock.evento.delete.mockRejectedValue(prismaError("P2003", { constraint: "fk" }));
 
-      const res = await request(app).delete("/eventos/e1").set(criador());
+      const res = await request(app).delete("/eventos/e1").set(dono());
 
       expect(res.status).toBe(409);
     });

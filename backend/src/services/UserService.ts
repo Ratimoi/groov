@@ -1,4 +1,3 @@
-import { Papel } from "@prisma/client";
 import { UserModel } from "../models/UserModel";
 import type {
   PublicUser,
@@ -11,7 +10,7 @@ import { AppError } from "../utils/AppError";
 import { normalizeCpf } from "../utils/cpf";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "../utils/password";
 
-// Só estes campos entram no banco; o resto do corpo (id, criadoEm, papel no cadastro...) é ignorado.
+// Só estes campos entram no banco; o resto do corpo (id, criadoEm...) é ignorado.
 function pick<T extends object, K extends keyof T>(data: T, keys: readonly K[]): Partial<Pick<T, K>> {
   const result: Partial<Pick<T, K>> = {};
   for (const key of keys) {
@@ -41,10 +40,6 @@ export class UserService implements UserServiceContract {
     return this.userModel.create({ ...pick(data, PROFILE_FIELDS), cpf, senha } as UserCreateRequest);
   }
 
-  async findAll(): Promise<PublicUser[]> {
-    return this.userModel.findAll();
-  }
-
   async findById(id: string): Promise<PublicUser | null> {
     return this.userModel.findById(id);
   }
@@ -59,11 +54,8 @@ export class UserService implements UserServiceContract {
   }
 
   async update(id: string, data: UserUpdateRequest): Promise<PublicUser | null> {
-    const changes: UserUpdateRequest = pick(data, [...PROFILE_FIELDS, "papel"] as const);
+    const changes: UserUpdateRequest = pick(data, PROFILE_FIELDS);
 
-    if (changes.papel !== undefined && !Object.values(Papel).includes(changes.papel)) {
-      throw new AppError("papel inválido", 400);
-    }
     if (data.cpf !== undefined) {
       const cpf = normalizeCpf(data.cpf);
       if (!cpf) throw new AppError("cpf inválido", 400);

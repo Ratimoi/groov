@@ -1,4 +1,3 @@
-import type { Papel } from "@prisma/client";
 import type { NextFunction, Request, Response } from "express";
 import { UserModel } from "../models/UserModel";
 import type { AuthUser } from "../types/auth";
@@ -20,7 +19,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       throw new AppError("Token inválido ou expirado", 401);
     }
 
-    req.user = { id: user.id, papel: user.papel };
+    req.user = { id: user.id, podeResetarSeed: user.podeResetarSeed };
     next();
   } catch (error) {
     next(error);
@@ -35,20 +34,18 @@ export function getAuthUser(req: Request): AuthUser {
   return req.user;
 }
 
-// Usar depois de `authenticate`.
-export function requireRole(...papeis: Papel[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user || !papeis.includes(req.user.papel)) {
-      next(new AppError("Acesso negado", 403));
-      return;
-    }
-    next();
-  };
+// Só contas liberadas direto no banco (`podeResetarSeed`). Usar depois de `authenticate`.
+export function requireSeedReset(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user?.podeResetarSeed) {
+    next(new AppError("Acesso negado", 403));
+    return;
+  }
+  next();
 }
 
-// O próprio usuário (`:id` da rota) ou um ADMIN. Usar depois de `authenticate`.
-export function authorizeSelfOrAdmin(req: Request, res: Response, next: NextFunction): void {
-  if (!req.user || (req.user.id !== req.params.id && req.user.papel !== "ADMIN")) {
+// Só o próprio usuário (`:id` da rota). Usar depois de `authenticate`.
+export function authorizeSelf(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user || req.user.id !== req.params.id) {
     next(new AppError("Acesso negado", 403));
     return;
   }

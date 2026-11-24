@@ -12,7 +12,7 @@ export class TicketController {
   // 200 liberado; 409 recusado com o ingresso conhecido (usado, cancelado, outro evento); 404 código inexistente.
   validate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const validacao = await this.ticketService.validate(req.body, getAuthUser(req));
+      const validacao = await this.ticketService.validate(req.params.eventoId, req.body, getAuthUser(req));
       const status = validacao.resultado === "VALIDO" ? 200 : validacao.ingresso ? 409 : 404;
       res.status(status).json(validacao);
     } catch (error) {

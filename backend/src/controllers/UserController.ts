@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import type { UserServiceContract } from "../types/user";
 import { getAuthUser } from "../middlewares/auth";
-import { AppError } from "../utils/AppError";
 
 export class UserController {
   private userService: UserServiceContract;
@@ -14,14 +13,6 @@ export class UserController {
     try {
       const user = await this.userService.create(req.body);
       res.status(201).json(user);
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      res.status(200).json(await this.userService.findAll());
     } catch (error) {
       next(error);
     }
@@ -50,10 +41,6 @@ export class UserController {
 
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Só um ADMIN muda papéis; senão qualquer um se promoveria.
-      if (req.body?.papel !== undefined && req.user?.papel !== "ADMIN") {
-        throw new AppError("Somente um ADMIN pode alterar o papel de um usuário", 403);
-      }
       const user = await this.userService.update(req.params.id, req.body);
       if (!user) {
         res.status(404).json({ message: "User not found" });
