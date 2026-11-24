@@ -1,13 +1,23 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "../utils/password";
+import { generateTicketCode } from "../utils/ticketCode";
 
-const hora = (hhmm: string) => new Date(`1970-01-01T${hhmm}:00.000Z`);
+const HORA_MS = 3_600_000;
+const DIA_MS = 24 * HORA_MS;
+const AGORA = Date.now();
+
+// As datas dos eventos são recalculadas a cada seed para nunca ficarem no passado: o primeiro evento
+// "de agenda" (Cultural 01) cai daqui a pelo menos 1 dia e os demais mantêm a distância entre si,
+// sempre em múltiplos de dia (o horário de cada evento não muda).
+const ANCORA_AGENDA = new Date("2026-11-20T20:00:00-03:00").getTime();
+const DESLOCAMENTO_MS = Math.ceil((AGORA + DIA_MS - ANCORA_AGENDA) / DIA_MS) * DIA_MS;
+const deslocar = (iso: string) => new Date(new Date(iso).getTime() + DESLOCAMENTO_MS);
 
 const usuarios: Prisma.UsuarioCreateManyInput[] = [
     {
-        id: "usr-admin-01",
+        id: "usr-produtor-02",
         nome: "Carlos Mendes",
-        username: "carlos.admin",
+        username: "carlos.produtor",
         avatarUrl: "https://i.pravatar.cc/150?img=12",
         email: "carlos.mendes@eventos.com",
         senha: ""
@@ -117,7 +127,7 @@ const membrosPorGrupo: Record<string, string[]> = {
     "grp-03": ["usr-atracao-08", "usr-atracao-09", "usr-atracao-10", "usr-atracao-11", "usr-atracao-14"],
     "grp-04": ["usr-atracao-12", "usr-atracao-13", "usr-cliente-02", "usr-cliente-03"],
     "grp-05": ["usr-atracao-15", "usr-atracao-16", "usr-atracao-17", "usr-atracao-18", "usr-atracao-19", "usr-atracao-20"],
-    "grp-06": ["usr-produtor-01", "usr-admin-01", "usr-cliente-01"]
+    "grp-06": ["usr-produtor-01", "usr-produtor-02", "usr-cliente-01"]
 };
 
 const membrosGrupo: Prisma.MembroGrupoCreateManyInput[] = Object.entries(membrosPorGrupo)
@@ -138,9 +148,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Noite Eletrônica Neon",
         descricao: "Prepare-se para uma noite inteira de música eletrônica comandada pelos principais DJs da cena nacional, passando por house, techno e progressive até o amanhecer. A Arena Pulse será transformada em um verdadeiro túnel de luzes neon, com projeções mapeadas, lasers sincronizados com a batida e um sistema de som de alta potência. O evento conta ainda com área lounge para descanso, bares espalhados por todo o espaço e food trucks com opções variadas. Venha com roupas claras ou fluorescentes e aproveite cada detalhe dessa experiência sensorial que promete ser a festa mais brilhante do ano.",
         imagemUrl: "https://images.unsplash.com/photo-1574391884720-bbc3740c59d1",
-        comecaEm: new Date("2026-11-14T23:00:00-03:00"),
-        terminaEm: new Date("2026-11-15T06:00:00-03:00"),
-        horario: hora("23:00"),
+        comecaEm: new Date(AGORA - 2 * HORA_MS), // acontecendo agora: serve para testar leitura de QR e painel
+        terminaEm: new Date(AGORA + 6 * HORA_MS),
         destaque: true,
         nomeLocal: "Arena Pulse",
         cidade: "Porto Alegre",
@@ -152,9 +161,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Baile do Havaí",
         descricao: "O Clube Atlântico vira um pedaço do Havaí em uma festa temática à beira da piscina, com decoração tropical, tochas, flores e muito clima de verão. A noite tem open bar de drinks tropicais, como piña colada, caipirinhas de frutas e mai tai, além de mesa de frutas frescas durante todo o evento. Na programação musical, bandas de axé, pagode e sertanejo se revezam no palco, intercaladas com DJ tocando os hits do momento. Cada participante recebe um colar havaiano na entrada, e as melhores fantasias temáticas concorrem a prêmios ao longo da noite.",
         imagemUrl: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3",
-        comecaEm: new Date("2026-12-05T21:00:00-03:00"),
-        terminaEm: new Date("2026-12-06T04:00:00-03:00"),
-        horario: hora("21:00"),
+        comecaEm: deslocar("2026-12-05T21:00:00-03:00"),
+        terminaEm: deslocar("2026-12-06T04:00:00-03:00"),
         nomeLocal: "Clube Atlântico",
         cidade: "Florianópolis",
         categoriaId: "cat-festas",
@@ -165,9 +173,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Réveillon Estrelas 2027",
         descricao: "Celebre a chegada de 2027 em grande estilo na Orla Central, com uma estrutura completa montada de frente para o mar. A festa conta com shows ao vivo de artistas nacionais, DJ após a meia-noite e uma queima de fogos de 15 minutos que promete iluminar todo o céu da cidade. Os convidados do camarote têm acesso a ceia completa, open bar premium e área exclusiva com vista privilegiada para os fogos. O evento oferece ainda segurança reforçada, banheiros climatizados e pontos de transporte organizados para a volta, para que você só se preocupe em comemorar.",
         imagemUrl: "https://images.unsplash.com/photo-1467810563316-b5476525c0f9",
-        comecaEm: new Date("2026-12-31T22:00:00-03:00"),
-        terminaEm: new Date("2027-01-01T06:00:00-03:00"),
-        horario: hora("22:00"),
+        comecaEm: deslocar("2026-12-31T22:00:00-03:00"),
+        terminaEm: deslocar("2027-01-01T06:00:00-03:00"),
         destaque: true,
         nomeLocal: "Orla Central",
         cidade: "Rio de Janeiro",
@@ -179,9 +186,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Festa Anos 2000",
         descricao: "Volte no tempo com a Festa Anos 2000, uma noite dedicada aos maiores sucessos que marcaram a década, do pop internacional ao rock nacional, passando pelo funk melody e pelas músicas que tocavam sem parar nas rádios. O Galpão Retrô ganha decoração inspirada na época, com cenários para fotos, telas exibindo clipes clássicos e uma pista de dança cheia de nostalgia. Durante a festa acontece um concurso de fantasias, premiando quem melhor representar os ícones e a moda daquele período. Separe sua calça de cintura baixa, seu boné de aba reta e venha reviver os melhores momentos dessa geração.",
         imagemUrl: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30",
-        comecaEm: new Date("2027-01-23T22:00:00-03:00"),
-        terminaEm: new Date("2027-01-24T05:00:00-03:00"),
-        horario: hora("22:00"),
+        comecaEm: deslocar("2027-01-23T22:00:00-03:00"),
+        terminaEm: deslocar("2027-01-24T05:00:00-03:00"),
         nomeLocal: "Galpão Retrô",
         cidade: "Curitiba",
         categoriaId: "cat-festas",
@@ -192,9 +198,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Bloco Carnavalesco Folia Sul",
         descricao: "O Bloco Carnavalesco Folia Sul abre a temporada de carnaval com um grande esquenta no Largo do Mercado, reunindo foliões de todas as idades. A programação traz bateria de escola de samba ao vivo, marchinhas tradicionais e um trio elétrico que percorre as ruas do centro histórico ao longo da tarde. Quem adquirir o abadá terá acesso à área reservada próxima ao trio, com bebidas inclusas e banheiros exclusivos. Capriche na fantasia, chame os amigos e venha aproveitar uma das festas de rua mais animadas da região.",
         imagemUrl: "https://images.unsplash.com/photo-1518998053901-5348d3961a04",
-        comecaEm: new Date("2027-02-06T15:00:00-03:00"),
-        terminaEm: new Date("2027-02-06T23:00:00-03:00"),
-        horario: hora("15:00"),
+        comecaEm: deslocar("2027-02-06T15:00:00-03:00"),
+        terminaEm: deslocar("2027-02-06T23:00:00-03:00"),
         nomeLocal: "Largo do Mercado",
         cidade: "Pelotas",
         categoriaId: "cat-festas",
@@ -207,9 +212,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Orquestra Sinfônica: Clássicos do Cinema",
         descricao: "A Orquestra Sinfônica sobe ao palco do Theatro São Pedro para um concerto especial dedicado às trilhas sonoras mais marcantes da história do cinema. O repertório inclui temas de grandes compositores de Hollywood, passando por aventuras épicas, romances clássicos e ficções científicas que conquistaram gerações. Durante a apresentação, cenas dos filmes são projetadas em um telão, criando uma experiência que une música e imagem de forma emocionante. Um programa ideal para os amantes da sétima arte e para quem deseja conhecer a música orquestral de uma forma leve e envolvente.",
         imagemUrl: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6",
-        comecaEm: new Date("2026-11-20T20:00:00-03:00"),
-        terminaEm: new Date("2026-11-20T22:00:00-03:00"),
-        horario: hora("20:00"),
+        comecaEm: deslocar("2026-11-20T20:00:00-03:00"),
+        terminaEm: deslocar("2026-11-20T22:00:00-03:00"),
         destaque: true,
         nomeLocal: "Theatro São Pedro",
         cidade: "Porto Alegre",
@@ -221,9 +225,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Exposição Arte Contemporânea Brasileira",
         descricao: "O Museu de Arte Moderna recebe uma grande mostra dedicada à produção de artistas brasileiros contemporâneos, reunindo pinturas, esculturas, fotografias e obras digitais. A exposição está organizada em núcleos temáticos que discutem identidade, cidade, natureza e tecnologia, mostrando a diversidade da arte produzida no país nas últimas décadas. Além das obras tradicionais, o público pode interagir com instalações imersivas que reagem ao movimento e ao som dos visitantes. Visitas guiadas acontecem diariamente, e aos fins de semana há oficinas gratuitas para crianças e adultos.",
         imagemUrl: "https://images.unsplash.com/photo-1531058020387-3be344556be6",
-        comecaEm: new Date("2026-11-28T10:00:00-03:00"),
-        terminaEm: new Date("2026-12-20T18:00:00-03:00"),
-        horario: hora("10:00"),
+        comecaEm: deslocar("2026-11-28T10:00:00-03:00"),
+        terminaEm: deslocar("2026-12-20T18:00:00-03:00"),
         nomeLocal: "Museu de Arte Moderna",
         cidade: "São Paulo",
         categoriaId: "cat-culturais",
@@ -234,9 +237,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Peça Teatral: O Auto da Compadecida",
         descricao: "O Teatro Guaíra apresenta uma nova montagem do clássico de Ariano Suassuna, acompanhando as aventuras de João Grilo e Chicó pelo sertão nordestino. Com muito humor e personagens inesquecíveis, a peça mistura crítica social, religiosidade popular e situações hilárias que conquistam o público de todas as idades. O espetáculo conta com cenário inspirado na xilogravura e na literatura de cordel, além de trilha sonora executada ao vivo com instrumentos regionais. Uma oportunidade imperdível de rever ou conhecer uma das obras mais queridas da dramaturgia brasileira.",
         imagemUrl: "https://images.unsplash.com/photo-1503095396549-807759245b35",
-        comecaEm: new Date("2026-12-10T20:30:00-03:00"),
-        terminaEm: new Date("2026-12-10T22:30:00-03:00"),
-        horario: hora("20:30"),
+        comecaEm: deslocar("2026-12-10T20:30:00-03:00"),
+        terminaEm: deslocar("2026-12-10T22:30:00-03:00"),
         nomeLocal: "Teatro Guaíra",
         cidade: "Curitiba",
         categoriaId: "cat-culturais",
@@ -247,9 +249,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Festival de Música Nativista",
         descricao: "Durante três dias, o Parque da Harmonia recebe o Festival de Música Nativista, uma celebração da cultura e das tradições gaúchas. A programação reúne apresentações de músicos regionais, concursos de composição, invernadas artísticas com danças tradicionais e rodas de chimarrão ao ar livre. A área gastronômica oferece pratos típicos como churrasco de fogo de chão, arroz carreteiro e doces campeiros. O festival também conta com feira de artesanato, exposição de trajes típicos e espaço infantil, tornando o evento ideal para toda a família.",
         imagemUrl: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a",
-        comecaEm: new Date("2027-01-15T18:00:00-03:00"),
-        terminaEm: new Date("2027-01-17T23:00:00-03:00"),
-        horario: hora("18:00"),
+        comecaEm: deslocar("2027-01-15T18:00:00-03:00"),
+        terminaEm: deslocar("2027-01-17T23:00:00-03:00"),
         nomeLocal: "Parque da Harmonia",
         cidade: "Porto Alegre",
         categoriaId: "cat-culturais",
@@ -260,9 +261,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Mostra de Cinema Nacional",
         descricao: "A Mostra de Cinema Nacional reúne, ao longo de quatro dias, uma seleção de filmes brasileiros premiados em festivais nacionais e internacionais. A programação inclui longas de ficção, documentários e curtas-metragens de diferentes regiões do país, mostrando a diversidade do audiovisual brasileiro. Após as principais sessões, o público participa de debates com diretores, roteiristas e atores, conhecendo os bastidores das produções. A mostra oferece ainda oficinas de roteiro e crítica cinematográfica para quem deseja se aprofundar no universo do cinema.",
         imagemUrl: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba",
-        comecaEm: new Date("2027-02-18T19:00:00-03:00"),
-        terminaEm: new Date("2027-02-21T23:00:00-03:00"),
-        horario: hora("19:00"),
+        comecaEm: deslocar("2027-02-18T19:00:00-03:00"),
+        terminaEm: deslocar("2027-02-21T23:00:00-03:00"),
         nomeLocal: "Cine Cultura",
         cidade: "Belo Horizonte",
         categoriaId: "cat-culturais",
@@ -275,9 +275,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Workshop de Programação Web",
         descricao: "Workshop intensivo e totalmente prático para quem quer dar os primeiros passos no desenvolvimento web. Durante o dia, os participantes aprendem os fundamentos de HTML para estruturar páginas, CSS para estilização e layouts responsivos, e JavaScript para adicionar interatividade. As atividades são conduzidas por desenvolvedores experientes, com exercícios guiados e acompanhamento individual. Ao final, os participantes desenvolvem em grupo um projeto completo de site, publicado online, e recebem certificado de participação.",
         imagemUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97",
-        comecaEm: new Date("2026-11-21T09:00:00-03:00"),
-        terminaEm: new Date("2026-11-21T17:00:00-03:00"),
-        horario: hora("09:00"),
+        comecaEm: deslocar("2026-11-21T09:00:00-03:00"),
+        terminaEm: deslocar("2026-11-21T17:00:00-03:00"),
         nomeLocal: "Hub de Inovação Tecnopuc",
         cidade: "Porto Alegre",
         categoriaId: "cat-educativos",
@@ -288,9 +287,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Palestra: Educação Financeira para Jovens",
         descricao: "Palestra voltada para jovens que desejam aprender a cuidar melhor do próprio dinheiro desde cedo. O encontro aborda de forma simples e prática como montar um orçamento pessoal, controlar gastos, evitar dívidas e criar o hábito de poupar todos os meses. Também são apresentados os conceitos básicos de investimentos, como reserva de emergência, renda fixa e juros compostos, com exemplos do dia a dia. Ao final, há um momento aberto para perguntas, e os participantes recebem uma planilha de controle financeiro para começar a aplicar o que aprenderam.",
         imagemUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f",
-        comecaEm: new Date("2026-12-03T19:00:00-03:00"),
-        terminaEm: new Date("2026-12-03T21:00:00-03:00"),
-        horario: hora("19:00"),
+        comecaEm: deslocar("2026-12-03T19:00:00-03:00"),
+        terminaEm: deslocar("2026-12-03T21:00:00-03:00"),
         nomeLocal: "Auditório Central",
         cidade: "Pelotas",
         categoriaId: "cat-educativos",
@@ -301,9 +299,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Congresso de Inteligência Artificial",
         descricao: "O Congresso de Inteligência Artificial reúne pesquisadores, profissionais de tecnologia e empresas em dois dias de palestras, painéis e workshops sobre o avanço da IA. Entre os temas abordados estão aprendizado de máquina, modelos de linguagem, visão computacional, ética no uso de dados e o impacto da automação no mercado de trabalho. A programação inclui estudos de caso de empresas que já aplicam IA em seus processos e uma área de exposição com startups apresentando suas soluções. O evento é uma excelente oportunidade de atualização profissional e networking com especialistas da área.",
         imagemUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87",
-        comecaEm: new Date("2027-01-28T08:30:00-03:00"),
-        terminaEm: new Date("2027-01-29T18:00:00-03:00"),
-        horario: hora("08:30"),
+        comecaEm: deslocar("2027-01-28T08:30:00-03:00"),
+        terminaEm: deslocar("2027-01-29T18:00:00-03:00"),
         destaque: true,
         nomeLocal: "Centro de Convenções",
         cidade: "São Paulo",
@@ -315,9 +312,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Feira de Ciências e Astronomia",
         descricao: "A Feira de Ciências e Astronomia transforma o Planetário Municipal em um grande laboratório aberto ao público, com atividades para crianças, jovens e adultos. Os visitantes podem participar de experimentos interativos de física e química, conhecer projetos desenvolvidos por estudantes e assistir a sessões especiais na cúpula do planetário. Ao anoitecer, telescópios são montados na área externa para a observação da Lua, de planetas e de constelações, com explicações de astrônomos. Oficinas de construção de foguetes e lunetas completam a programação, tornando o dia uma experiência educativa e divertida para toda a família.",
         imagemUrl: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa",
-        comecaEm: new Date("2027-02-13T10:00:00-03:00"),
-        terminaEm: new Date("2027-02-13T20:00:00-03:00"),
-        horario: hora("10:00"),
+        comecaEm: deslocar("2027-02-13T10:00:00-03:00"),
+        terminaEm: deslocar("2027-02-13T20:00:00-03:00"),
         nomeLocal: "Planetário Municipal",
         cidade: "Florianópolis",
         categoriaId: "cat-educativos",
@@ -328,9 +324,8 @@ const eventos: Prisma.EventoCreateManyInput[] = [
         titulo: "Curso de Fotografia com Celular",
         descricao: "Curso prático para quem deseja tirar fotos de qualidade profissional usando apenas o celular. Os participantes aprendem técnicas de composição, como regra dos terços e linhas de condução, além de como aproveitar a luz natural e configurar o modo manual da câmera. Na segunda parte do curso, é realizada uma saída fotográfica pelos arredores do Espaço Criativo para colocar em prática o que foi ensinado. O encontro termina com uma aula de edição em aplicativos gratuitos, ensinando a ajustar cores, contraste e enquadramento para deixar as fotos prontas para as redes sociais.",
         imagemUrl: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d",
-        comecaEm: new Date("2027-03-06T14:00:00-03:00"),
-        terminaEm: new Date("2027-03-06T18:00:00-03:00"),
-        horario: hora("14:00"),
+        comecaEm: deslocar("2027-03-06T14:00:00-03:00"),
+        terminaEm: deslocar("2027-03-06T18:00:00-03:00"),
         nomeLocal: "Espaço Criativo",
         cidade: "Rio de Janeiro",
         categoriaId: "cat-educativos",
@@ -378,6 +373,29 @@ const lotes: Prisma.LoteCreateManyInput[] = [
     { eventoId: "evt-educativo-05", nome: "Geral", preco: 90.00, quantidade: 25 }
 ];
 
+// Id fixo por lote, para as vendas de demonstração poderem apontar para eles.
+const semAcento = (texto: string) => texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+export const idLote = (eventoId: string, nome: string) =>
+    `lote-${eventoId.replace("evt-", "")}-${semAcento(nome).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+const lotesComId: Prisma.LoteCreateManyInput[] = lotes.map((lote) => ({ ...lote, id: idLote(lote.eventoId, lote.nome) }));
+
+// Equipe de demonstração (o criador de cada evento já entra como DONO): produtor e porteiro.
+const equipeExtra: Prisma.MembroEventoCreateManyInput[] = [
+    { eventoId: "evt-festa-01", usuarioId: "usr-produtor-02", funcao: "PRODUTOR" },
+    { eventoId: "evt-festa-01", usuarioId: "usr-cliente-03", funcao: "PORTEIRO" },
+    { eventoId: "evt-festa-02", usuarioId: "usr-produtor-02", funcao: "PRODUTOR" }
+];
+
+// Vendas de demonstração na festa que "está acontecendo agora": dão vida ao painel do evento.
+// `usados` diz, para cada ingresso do pedido, se já passou pela portaria.
+const vendasDemo = [
+    { id: "ped-demo-01", usuarioId: "usr-cliente-01", lote: idLote("evt-festa-01", "Inteira"), preco: 80, usados: [true, false] },
+    { id: "ped-demo-02", usuarioId: "usr-cliente-02", lote: idLote("evt-festa-01", "Inteira"), preco: 80, usados: [true] },
+    { id: "ped-demo-03", usuarioId: "usr-cliente-02", lote: idLote("evt-festa-01", "Meia-Entrada"), preco: 40, usados: [false] }
+];
+const PORTEIRO_DEMO = "usr-cliente-03";
+const TAXA_SERVICO = 0.125;
+
 // As contas do seed são de demonstração. A senha vem do ambiente (nunca fica no repositório) e é
 // gravada já com hash; sem hash o login recusa a conta.
 export function validarSenhaSeed(senha: string | undefined): string {
@@ -414,12 +432,16 @@ export async function aplicarSeed(prisma: PrismaClient | Prisma.TransactionClien
 
     // Quem criou o evento é o DONO dele (como acontece ao criar um evento pela API).
     await prisma.membroEvento.createMany({
-        data: eventos.flatMap((evento) => (evento.criadoPorId ? [{ eventoId: evento.id as string, usuarioId: evento.criadoPorId, funcao: "DONO" as const }] : [])),
+        data: [
+            ...eventos.flatMap((evento) => (evento.criadoPorId ? [{ eventoId: evento.id as string, usuarioId: evento.criadoPorId, funcao: "DONO" as const }] : [])),
+            ...equipeExtra,
+        ],
         skipDuplicates: true,
     });
+    log(`Equipes dos eventos montadas (dono, produtores e porteiro)...`);
 
-    await prisma.lote.createMany({ data: lotes });
-    log(`${lotes.length} Lotes Cadastrados...`);
+    await prisma.lote.createMany({ data: lotesComId, skipDuplicates: true });
+    log(`${lotesComId.length} Lotes Cadastrados...`);
 
     for (const [eventoId, usuarioIds] of Object.entries(atracoesPorEvento)) {
         await prisma.evento.update({
@@ -428,4 +450,51 @@ export async function aplicarSeed(prisma: PrismaClient | Prisma.TransactionClien
         });
     }
     log(`Atrações vinculadas a ${Object.keys(atracoesPorEvento).length} Eventos...`);
+
+    const eventoDemo = "evt-festa-01";
+    const pagoEm = new Date(AGORA - 3 * HORA_MS);
+    const usadoEm = new Date(AGORA - HORA_MS);
+    const ingressosDemo: Prisma.IngressoCreateManyInput[] = [];
+    const validacoesDemo: Prisma.ValidacaoIngressoCreateManyInput[] = [];
+
+    await prisma.pedido.createMany({
+        data: vendasDemo.map((venda) => {
+            const subtotal = venda.preco * venda.usados.length;
+            const taxa = Math.round(subtotal * TAXA_SERVICO * 100) / 100;
+            venda.usados.forEach((usado, i) => {
+                const id = `ing-${venda.id}-${i + 1}`;
+                const codigoQr = generateTicketCode();
+                ingressosDemo.push({
+                    id, codigoQr, eventoId: eventoDemo, loteId: venda.lote, pedidoId: venda.id, donoId: venda.usuarioId,
+                    status: usado ? "USADO" : "VALIDO", usadoEm: usado ? usadoEm : null,
+                });
+                if (usado) {
+                    validacoesDemo.push({
+                        id: `val-${id}`, codigoLido: codigoQr, ingressoId: id, eventoId: eventoDemo,
+                        validadoPorId: PORTEIRO_DEMO, resultado: "VALIDO", criadoEm: usadoEm,
+                    });
+                }
+            });
+            return {
+                id: venda.id, usuarioId: venda.usuarioId, eventoId: eventoDemo, loteId: venda.lote,
+                quantidade: venda.usados.length, status: "PAGO" as const, pagoEm,
+                subtotal: subtotal.toFixed(2), taxaServico: taxa.toFixed(2), valor: (subtotal + taxa).toFixed(2),
+            };
+        }),
+        skipDuplicates: true,
+    });
+    await prisma.ingresso.createMany({ data: ingressosDemo, skipDuplicates: true });
+    await prisma.validacaoIngresso.createMany({ data: validacoesDemo, skipDuplicates: true });
+
+    // O estoque vendido acompanha as vendas de demonstração.
+    const vendidosPorLote = new Map<string, number>();
+    for (const venda of vendasDemo) vendidosPorLote.set(venda.lote, (vendidosPorLote.get(venda.lote) ?? 0) + venda.usados.length);
+    for (const [id, quantidadeVendida] of vendidosPorLote) await prisma.lote.update({ where: { id }, data: { quantidadeVendida } });
+
+    // Quem já entrou pode avaliar o evento.
+    await prisma.avaliacaoEvento.createMany({
+        data: [{ eventoId: eventoDemo, usuarioId: "usr-cliente-01", nota: 5, comentario: "Som e luz incríveis!" }],
+        skipDuplicates: true,
+    });
+    log(`${vendasDemo.length} Pedidos de demonstração (${ingressosDemo.length} ingressos, ${validacoesDemo.length} já validados)...`);
 }

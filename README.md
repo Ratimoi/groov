@@ -91,6 +91,7 @@ Rotas disponíveis:
 | `PUT /eventos/:id` (`DONO`/`PRODUTOR`), `DELETE /eventos/:id` (`DONO`) | equipe do evento | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
 | `GET /eventos/:eventoId/lotes`, `GET /lotes/:id` | público | Lotes de um evento (preço, quantidade e disponibilidade) e um lote |
 | `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | `DONO` ou `PRODUTOR` do evento | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
+| `GET /categorias` | público | Categorias disponíveis para os eventos |
 | `GET /eventos/meus` | logado | Eventos em que você tem função (dono, produtor ou porteiro) |
 | `POST /eventos/:eventoId/validar` | equipe do evento | Lê o QR de um ingresso desse evento (só a equipe dele; ingresso de outro evento é recusado) |
 | `GET /eventos/:eventoId/dashboard` | equipe do evento | Painel do evento (receita só para dono e produtor) |
