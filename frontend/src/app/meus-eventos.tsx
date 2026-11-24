@@ -50,6 +50,15 @@ export default function MeusEventos() {
           Eventos em que você é dono, produtor ou porteiro. Cada evento tem a sua equipe, o seu painel e o seu leitor de QR.
         </Text>
 
+        <TouchableOpacity
+          onPress={() => router.push("/criar-evento")}
+          activeOpacity={0.8}
+          className="flex-row items-center justify-center gap-2 py-3.5 rounded-xl bg-primary-container"
+        >
+          <MaterialIcons name="add" size={20} color="#ffffff" />
+          <Text className="font-label-caps text-label-caps text-white uppercase">Criar evento</Text>
+        </TouchableOpacity>
+
         {carregando && <ActivityIndicator color="#bc13fe" className="my-6" />}
 
         {erro && !carregando && (
@@ -71,7 +80,7 @@ export default function MeusEventos() {
           <View className="items-center gap-3 py-6">
             <MaterialIcons name="event-busy" size={40} color="#504254" />
             <Text className="font-body-md text-body-md text-on-surface-variant text-center">
-              Você ainda não faz parte da equipe de nenhum evento. Quem cria um evento vira o dono, e o dono pode te chamar
+              Você ainda não faz parte da equipe de nenhum evento. Crie o seu, ou peça ao dono de um evento para te chamar
               para a equipe.
             </Text>
           </View>
