@@ -8,6 +8,7 @@ import groupRoutes from './routes/GroupRoutes';
 import groupPurchaseRoutes from './routes/GroupPurchaseRoutes';
 import eventRoutes from './routes/EventRoutes'
 import lotRoutes from './routes/LotRoutes';
+import categoryRoutes from './routes/CategoryRoutes';
 import orderRoutes from './routes/OrderRoutes';
 import ticketRoutes from './routes/TicketRoutes';
 import adminRoutes from './routes/AdminRoutes';
@@ -42,6 +43,7 @@ app.use('/grupos/compras', authenticate, groupPurchaseRoutes);
 app.use('/grupos', authenticate, groupRoutes);
 app.use('/eventos', eventRoutes)
 app.use('/lotes', lotRoutes);
+app.use('/categorias', categoryRoutes);
 app.use('/pedidos', authenticate, orderRoutes);
 app.use('/ingressos', authenticate, ticketRoutes);
 app.use('/admin', authenticate, adminRoutes);

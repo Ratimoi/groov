@@ -16,8 +16,7 @@ export function formatarPreco(valor: number | string | null | undefined): string
   return `R$ ${texto}`;
 }
 
-// `comecaEm` e `terminaEm` já carregam data e hora; `horario` é um TIME em UTC e
-// aparece deslocado no fuso do aparelho, então não é usado para exibir.
+// `comecaEm` e `terminaEm` já carregam data e hora.
 export function formatarDataHora(comecaEm?: Date | string | null): string {
   if (!comecaEm) return "";
   return format(new Date(comecaEm), "dd MMM • HH:mm", { locale: ptBR });

@@ -110,7 +110,7 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
   "data": [
     {
       "id": "clx...", "titulo": "Neon Dreams", "descricao": null, "imagemUrl": "https://...",
-      "comecaEm": "2026-12-01T22:00:00.000Z", "terminaEm": null, "horario": null, "destaque": false,
+      "comecaEm": "2026-12-01T22:00:00.000Z", "terminaEm": null, "destaque": false,
       "nomeLocal": "Sector 7G", "cidade": "Recife",
       "categoriaId": "clx...", "criadoPorId": "clx...",
       "criadoEm": "...", "atualizadoEm": "...",
@@ -129,7 +129,7 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
 - Para carregar mais (scroll infinito): peça `page + 1` enquanto `page < totalPages`.
 - Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `atracoes` e `criadoPor` trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail ou senha.
 - **Atenção ao formato dos lotes embutidos:** dentro do evento eles vêm **crus**, com `preco` como `"180"` (sem casas fixas) e **sem** `quantidadeDisponivel`. Para o formato completo (`"180.00"` e a disponibilidade calculada), use `GET /eventos/:eventoId/lotes` (veja a seção Lotes). Não misture os dois formatos na mesma tela.
-- `horario` (hora do dia, sem data) e `destaque` (se o evento aparece em destaque) são campos do evento; `destaque` pode ser `null` em eventos antigos.
+- `destaque` (se o evento aparece em destaque) é campo do evento e pode ser `null` em eventos antigos. A data e a hora do evento já estão em `comecaEm` e `terminaEm`.
 
 ### `GET /eventos/:id` (público)
 Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não existir.
@@ -394,6 +394,7 @@ Não há administrador geral: cada evento tem a sua equipe. Quem cria o evento v
 
 | Rota | O que faz |
 |---|---|
+| `GET /categorias` | público. Lista as categorias `[{ id, nome }]`, para escolher ao criar ou editar um evento (`categoriaId`) |
 | `GET /eventos/meus` | eventos em que você tem função: `[{ funcao, evento: { id, titulo, imagemUrl, comecaEm, terminaEm, cidade } }]` |
 | `GET /eventos/:eventoId/equipe` | só `DONO`. Lista `[{ usuarioId, funcao, usuario: { id, nome, username, avatarUrl } }]` |
 | `POST /eventos/:eventoId/equipe` | só `DONO`. Corpo `{ "username": "bia", "funcao": "PRODUTOR" | "PORTEIRO" }` (aceita `@`). Se a pessoa já é da equipe, troca a função. Devolve a equipe. `409` para tentar mudar o dono |
