@@ -38,7 +38,7 @@ function cenarioValido() {
 describe("/grupos/compras", () => {
   beforeEach(() => {
     resetPrismaMock();
-    AUTH = logadoComo("CLIENTE", "u1");
+    AUTH = logadoComo("u1");
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -76,7 +76,7 @@ describe("/grupos/compras", () => {
 
       const res = await request(app)
         .post("/grupos/compras")
-        .set(logadoComo("CLIENTE", "u2"))
+        .set(logadoComo("u2"))
         .send({ ...corpo, iniciadorId: "u4", participantesIds: ["u1", "u3"] });
 
       expect(res.status).toBe(201);
@@ -95,7 +95,7 @@ describe("/grupos/compras", () => {
 
       const res = await request(app)
         .post("/grupos/compras")
-        .set(logadoComo("CLIENTE", "u9"))
+        .set(logadoComo("u9"))
         .send({ ...corpo, participantesIds: ["u1", "u2"] });
 
       expect(res.status).toBe(400);
@@ -245,7 +245,7 @@ describe("/grupos/compras", () => {
     it("usuário comum lista só as compras de que participa", async () => {
       prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
 
-      const res = await request(app).get("/grupos/compras").set(logadoComo("CLIENTE", "u2"));
+      const res = await request(app).get("/grupos/compras").set(logadoComo("u2"));
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual([compra]);
@@ -259,7 +259,7 @@ describe("/grupos/compras", () => {
     it("inclui o evento do lote (para a tela Meus Grupos) sem dados sensíveis", async () => {
       prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
 
-      await request(app).get("/grupos/compras").set(logadoComo("CLIENTE", "u2"));
+      await request(app).get("/grupos/compras").set(logadoComo("u2"));
 
       const { include } = prismaMock.compraGrupo.findMany.mock.calls[0][0];
       expect(Object.keys(include.lote.select.evento.select).sort()).toEqual([
@@ -270,15 +270,6 @@ describe("/grupos/compras", () => {
       });
     });
 
-    it("ADMIN lista todas as compras", async () => {
-      prismaMock.compraGrupo.findMany.mockResolvedValue([compra]);
-
-      const res = await request(app).get("/grupos/compras").set(logadoComo("ADMIN", "adm"));
-
-      expect(res.status).toBe(200);
-      expect(prismaMock.compraGrupo.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: undefined }));
-    });
-
     it("sem token responde 401", async () => {
       const res = await request(app).get("/grupos/compras");
 
@@ -286,8 +277,7 @@ describe("/grupos/compras", () => {
     });
 
     it.each([
-      ["um participante", () => logadoComo("CLIENTE", "u3")],
-      ["um ADMIN", () => logadoComo("ADMIN", "adm")],
+      ["um participante", () => logadoComo("u3")],
     ])("%s vê a compra", async (_nome, quem) => {
       prismaMock.compraGrupo.findUnique.mockResolvedValue(compra);
 
@@ -300,7 +290,7 @@ describe("/grupos/compras", () => {
     it("quem não participa recebe 404, como se a compra não existisse", async () => {
       prismaMock.compraGrupo.findUnique.mockResolvedValue(compra);
 
-      const res = await request(app).get("/grupos/compras/c1").set(logadoComo("CLIENTE", "u9"));
+      const res = await request(app).get("/grupos/compras/c1").set(logadoComo("u9"));
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Compra em grupo não encontrada" });
@@ -309,7 +299,7 @@ describe("/grupos/compras", () => {
     it("compra inexistente responde 404", async () => {
       prismaMock.compraGrupo.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).get("/grupos/compras/nada").set(logadoComo("ADMIN", "adm"));
+      const res = await request(app).get("/grupos/compras/nada").set(logadoComo("adm"));
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Compra em grupo não encontrada" });

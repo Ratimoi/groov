@@ -10,8 +10,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "carlos.admin",
         avatarUrl: "https://i.pravatar.cc/150?img=12",
         email: "carlos.mendes@eventos.com",
-        senha: "",
-        papel: "ADMIN"
+        senha: ""
     },
     {
         id: "usr-produtor-01",
@@ -19,8 +18,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "fernanda.produtora",
         avatarUrl: "https://i.pravatar.cc/150?img=47",
         email: "fernanda.rocha@eventos.com",
-        senha: "",
-        papel: "PRODUTOR"
+        senha: ""
     },
     {
         id: "usr-cliente-01",
@@ -28,8 +26,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "lucas.oliveira",
         avatarUrl: "https://i.pravatar.cc/150?img=33",
         email: "lucas.oliveira@email.com",
-        senha: "",
-        papel: "CLIENTE"
+        senha: ""
     },
     {
         id: "usr-cliente-02",
@@ -37,8 +34,7 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         username: "mari.souza",
         avatarUrl: "https://i.pravatar.cc/150?img=45",
         email: "mariana.souza@email.com",
-        senha: "",
-        papel: "CLIENTE"
+        senha: ""
     },
     {
         id: "usr-cliente-03",
@@ -47,7 +43,6 @@ const usuarios: Prisma.UsuarioCreateManyInput[] = [
         avatarUrl: "https://i.pravatar.cc/150?img=59",
         email: "rafael.costa@email.com",
         senha: ""
-        // papel não informado: assume o padrão CLIENTE
     }
 ];
 
@@ -416,6 +411,12 @@ export async function aplicarSeed(prisma: PrismaClient | Prisma.TransactionClien
 
     await prisma.evento.createMany({ data: eventos, skipDuplicates: true });
     log(`${eventos.length} Eventos Cadastrados...`);
+
+    // Quem criou o evento é o DONO dele (como acontece ao criar um evento pela API).
+    await prisma.membroEvento.createMany({
+        data: eventos.flatMap((evento) => (evento.criadoPorId ? [{ eventoId: evento.id as string, usuarioId: evento.criadoPorId, funcao: "DONO" as const }] : [])),
+        skipDuplicates: true,
+    });
 
     await prisma.lote.createMany({ data: lotes });
     log(`${lotes.length} Lotes Cadastrados...`);

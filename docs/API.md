@@ -50,7 +50,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3333
 1. `POST /auth/login` devolve um **token JWT**.
 2. Envie em toda rota protegida: `Authorization: Bearer <token>`.
 3. O token vale **1 dia**. Não existe refresh token nem logout no servidor: ao expirar (`401`), peça login de novo e descarte o token.
-4. O papel do usuário (`CLIENTE`, `PRODUTOR`, `ADMIN`) é lido do banco a cada requisição. Não confie em papel guardado no app para liberar telas; use `GET /auth/me` para saber o papel atual.
+4. **Não existe administrador geral nem papel de produtor global.** Qualquer pessoa logada cria eventos e vira o `DONO` do que criou; o que cada um pode fazer em um evento depende da sua **função naquele evento** (`DONO`, `PRODUTOR` ou `PORTEIRO`), lida do banco a cada requisição. Para saber em que eventos você tem função, use `GET /eventos/meus`.
 
 **Guarde o token no `expo-secure-store`**, não no `AsyncStorage` (que não é criptografado).
 
@@ -65,7 +65,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3333
   "token": "eyJhbGciOi...",
   "usuario": {
     "id": "clx...", "nome": "Ana", "username": "ana", "avatarUrl": null,
-    "email": "ana@example.com", "papel": "CLIENTE", "criadoEm": "2026-10-16T22:00:00.000Z"
+    "email": "ana@example.com", "podeResetarSeed": false, "criadoEm": "2026-10-16T22:00:00.000Z"
   }
 }
 ```
@@ -73,7 +73,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3333
 E-mail inexistente e senha errada dão o mesmo `401` (`"Credenciais inválidas"`), de propósito. `400` se faltar `email` ou `senha`. O e-mail é comparado exatamente como foi cadastrado (maiúsculas contam).
 
 ### `GET /auth/me`
-Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para validar o token guardado e obter o papel atual.
+Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para validar o token guardado e obter os dados atuais.
 
 ### `POST /usuarios` (cadastro, público)
 
@@ -86,17 +86,16 @@ Protegida. Devolve o `usuario` (mesmo formato acima). Use ao abrir o app para va
 - `senha`: mínimo **8 caracteres**.
 - `cpf`: **obrigatório**, com ou sem máscara. Guardado só com os dígitos, validado (dígitos verificadores) e **único**: `400` se faltar (`"cpf é obrigatório"`) ou for inválido (`"cpf inválido"`), `409` se já existir. **Nunca é devolvido** pela API. Contas anteriores à exigência ficam sem CPF e podem informá-lo pelo `PUT /usuarios/:id`. `POST /auth/login` e `GET /auth/me` trazem `temCpf` (boolean) no usuário: o app usa `temCpf: false` para pedir o CPF antes de liberar o resto.
 - `username` e `email` são únicos: repetido dá `409` com `"fields": ["username"]` (ou `"email"`).
-- Todo novo usuário é `CLIENTE`. Não dá para escolher o papel no cadastro.
+- `podeResetarSeed` é uma permissão da conta que só se liga direto no banco (nunca pela API): libera `POST /admin/resetar-seed`, e nada mais.
 - Depois do cadastro, faça o login (o cadastro não devolve token).
 
 ## Usuários
 
 | Rota | Quem acessa |
 |---|---|
-| `GET /usuarios/:id` | o próprio usuário ou ADMIN |
-| `PUT /usuarios/:id` | o próprio usuário ou ADMIN. Aceita `nome`, `username`, `email`, `avatarUrl`, `cpf`, `senha`; só ADMIN altera `papel` |
-| `DELETE /usuarios/:id` | o próprio usuário ou ADMIN → `204` |
-| `GET /usuarios` | só ADMIN |
+| `GET /usuarios/:id` | só o próprio usuário |
+| `PUT /usuarios/:id` | só o próprio usuário. Aceita `nome`, `username`, `email`, `avatarUrl`, `cpf`, `senha` |
+| `DELETE /usuarios/:id` | só o próprio usuário → `204` |
 
 A senha nunca é devolvida. Para trocar a senha, envie `senha` no `PUT`.
 
@@ -128,7 +127,7 @@ Parâmetros opcionais: `?page=1&limit=20` (`limit` máximo 100; inválidos dão 
 - A lista vem em `resposta.data` (**não é um array direto**).
 - Ordenada por data de início crescente (os mais antigos primeiro, inclusive eventos já passados). Ainda não há filtro por cidade, categoria ou data.
 - Para carregar mais (scroll infinito): peça `page + 1` enquanto `page < totalPages`.
-- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `atracoes` e `criadoPor` trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail, senha ou papel.
+- Cada evento já vem com `categoria`, `lotes` (do mais barato para o mais caro), `atracoes` e `criadoPor`. `categoria` e `criadoPor` podem ser `null`; `atracoes` e `lotes` podem ser listas vazias. `atracoes` e `criadoPor` trazem só `id`, `nome`, `username` e `avatarUrl`; nunca e-mail ou senha.
 - **Atenção ao formato dos lotes embutidos:** dentro do evento eles vêm **crus**, com `preco` como `"180"` (sem casas fixas) e **sem** `quantidadeDisponivel`. Para o formato completo (`"180.00"` e a disponibilidade calculada), use `GET /eventos/:eventoId/lotes` (veja a seção Lotes). Não misture os dois formatos na mesma tela.
 - `horario` (hora do dia, sem data) e `destaque` (se o evento aparece em destaque) são campos do evento; `destaque` pode ser `null` em eventos antigos.
 
@@ -137,7 +136,7 @@ Um evento, no mesmo formato. `404` com `{"message": "Event not found"}` se não 
 
 ### Escrita (`POST /eventos`, `PUT` e `DELETE /eventos/:id`)
 
-Só `PRODUTOR` ou `ADMIN`; editar e apagar exigem ser o criador do evento (ADMIN edita qualquer um). Para `CLIENTE`, `403`.
+Qualquer pessoa logada cria um evento e vira o `DONO` dele. Editar exige ser `DONO` ou `PRODUTOR` do evento; apagar, só o `DONO`. Quem não tem função no evento recebe `403`.
 
 - Obrigatórios no `POST`: `titulo`, `cidade`, `comecaEm`. Opcionais: `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (só `http`/`https`), `categoriaId`.
 - `terminaEm` não pode ser antes de `comecaEm`.
@@ -172,13 +171,13 @@ Um evento vende ingressos por **lotes** ("1º lote", "Pista", "VIP"...), cada um
 |---|---|
 | `GET /eventos/:eventoId/lotes` | público. Lista os lotes do evento, do mais antigo para o mais novo (sem paginação). `404` se o evento não existir; evento sem lotes devolve `[]` |
 | `GET /lotes/:id` | público |
-| `POST /eventos/:eventoId/lotes` | PRODUTOR criador do evento ou ADMIN |
+| `POST /eventos/:eventoId/lotes` | `DONO` ou `PRODUTOR` do evento |
 | `PUT /lotes/:id` | idem |
 | `DELETE /lotes/:id` | idem → `204` |
 
 Para o `loteId` de uma compra em grupo, use o `id` de um lote devolvido por `GET /eventos/:eventoId/lotes`.
 
-**Criar e editar** (só PRODUTOR/ADMIN):
+**Criar e editar** (só `DONO`/`PRODUTOR` do evento):
 - Obrigatórios no `POST`: `nome` (até 100 caracteres), `preco` (número ou texto, até 2 casas, de 0 a 99999999.99) e `quantidade` (inteiro de 1 a 1.000.000).
 - Compra em grupo, opcional: `tamanhoGrupo` (2 a 50), `prazoGrupoHoras` (1 a 720) e `descontoGrupo` (de 0 a 0.9999). `tamanhoGrupo` e `prazoGrupoHoras` precisam vir **juntos**, e `descontoGrupo` só existe se o grupo estiver ligado. `null` desliga o campo; para desligar a compra em grupo por inteiro, envie os três como `null`.
 - No `PUT`, envie só o que mudou. Os contadores (`quantidadeVendida`, `quantidadeReservada`) não são graváveis.
@@ -200,13 +199,13 @@ Todas as rotas exigem login. Quem **não participa** de um grupo recebe `404`, c
 | Rota | Quem | Observação |
 |---|---|---|
 | `POST /grupos` | qualquer logado | corpo `{ "nome": "..." }`. **Você vira o líder**; não envie `liderId` |
-| `GET /grupos` | qualquer logado | lista só os grupos de que você participa (ADMIN vê todos) |
-| `GET /grupos/:id` | membros e ADMIN | |
-| `PUT /grupos/:id` | líder ou ADMIN | só `nome` muda |
-| `DELETE /grupos/:id` | líder ou ADMIN | `204` |
-| `GET /grupos/:id/members` | membros e ADMIN | |
-| `POST /grupos/:id/members` | líder ou ADMIN | corpo `{ "usuarioId": "..." }`. Quem já é membro dá `409` |
-| `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | `204`. Um membro pode **sair sozinho**. O líder não pode ser removido (`400`) |
+| `GET /grupos` | qualquer logado | lista só os grupos de que você participa |
+| `GET /grupos/:id` | membros | |
+| `PUT /grupos/:id` | líder | só `nome` muda |
+| `DELETE /grupos/:id` | líder | `204` |
+| `GET /grupos/:id/members` | membros | |
+| `POST /grupos/:id/members` | líder | corpo `{ "usuarioId": "..." }`. Quem já é membro dá `409` |
+| `DELETE /grupos/:id/members/:usuarioId` | líder ou o próprio membro | `204`. Um membro pode **sair sozinho**. O líder não pode ser removido (`400`) |
 
 ### Convite por link
 
@@ -214,7 +213,7 @@ O líder compartilha um **código** (8 caracteres, ex.: `K7M2QX9P`). Quem tem o 
 
 | Rota | Quem | Observação |
 |---|---|---|
-| `POST /grupos/:id/convite` | líder ou ADMIN | devolve `{ "codigo": "K7M2QX9P" }`. O código do grupo é sempre o mesmo |
+| `POST /grupos/:id/convite` | líder | devolve `{ "codigo": "K7M2QX9P" }`. O código do grupo é sempre o mesmo |
 | `POST /grupos/entrar` | qualquer logado | corpo `{ "codigo": "..." }` (maiúsculas e espaços não importam). Devolve `{ "grupo": { "id", "nome" }, "jaEraMembro": false }`. Código inexistente dá `404`; quem já é membro recebe `jaEraMembro: true` e não duplica |
 
 Membro (`GET /grupos/:id/members`):
@@ -235,8 +234,8 @@ Todas exigem login.
 | Rota | Quem |
 |---|---|
 | `POST /grupos/compras` | membro do grupo |
-| `GET /grupos/compras` | lista só as compras de que você participa (ADMIN vê todas) |
-| `GET /grupos/compras/:id` | participantes e ADMIN (os demais recebem `404`) |
+| `GET /grupos/compras` | lista só as compras de que você participa |
+| `GET /grupos/compras/:id` | participantes (os demais recebem `404`) |
 
 ```json
 // POST /grupos/compras: o iniciador é você; não envie iniciadorId
@@ -270,7 +269,7 @@ Resposta `201` (e `GET`):
 
 Sem corpo. Cada participante paga a **própria** cota: o preço do lote com o desconto do grupo, mais a taxa de serviço (12,5%). A reserva do ingresso vira venda. Quando o **último** participante paga, a compra vira `CONFIRMADA` e os ingressos de todos são emitidos (antes disso ninguém recebe ingresso). Devolve a compra atualizada.
 
-- `404`: a compra não existe ou você não participa. `403`: ADMIN que não participa.
+- `404`: a compra não existe ou você não participa.
 - `409`: você já pagou, a compra já foi confirmada ou o prazo expirou.
 
 **Expiração:** não há tarefa agendada. Uma compra `PENDENTE` com `expiraEm` vencido expira na **primeira consulta** (`GET /grupos/compras`, `GET /grupos/compras/:id` ou uma tentativa de pagar): vira `EXPIRADA`, as reservas voltam ao lote, e quem já pagou fica `REEMBOLSADO` (pedido `CANCELADO`).
@@ -294,13 +293,12 @@ Resposta `201`: o pedido com `ingressos` (`id`, `codigoQr`, `status`, `emitidoEm
 
 ## Ingressos
 
-Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa dá `404`, até para ADMIN).
+Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa dá `404`).
 
 | Rota | |
 |---|---|
 | `GET /ingressos` | seus ingressos, do mais novo para o mais antigo, com `evento`, `lote` e `dono` (`id`, `nome`, `username`) |
 | `GET /ingressos/:id` | um ingresso seu |
-| `POST /ingressos/validar` | **só ADMIN.** Valida o ingresso na portaria (veja abaixo) |
 | `POST /ingressos/:id/transferir` | o dono passa o ingresso para outra pessoa (veja abaixo) |
 
 `codigoQr` tem o formato `GRV-` + 12 caracteres (`GRV-K7M2QX9PD4TA`): é o conteúdo do QR code.
@@ -309,9 +307,9 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 
 `POST /ingressos/:id/transferir` com `{ "username": "bia" }` (o `@` na frente é aceito; o username é exato). Devolve o ingresso já com o novo `donoId` e um **código novo**: o QR antigo deixa de valer. Só o dono transfere (`404` para os demais), só ingresso `VALIDO` (`409` se usado ou cancelado), destinatário inexistente dá `404` e transferir para si mesmo dá `400`.
 
-### Validar na portaria
+### Validar na portaria (por evento)
 
-`POST /ingressos/validar` com `{ "codigo": "GRV-K7M2QX9PD4TA", "eventoId": "clx..." }` (`eventoId` é opcional; quando vem, ingresso de outro evento é recusado). O código ignora espaços e maiúsculas. Resposta: `{ "resultado", "mensagem", "ingresso" }`.
+`POST /eventos/:eventoId/validar` com `{ "codigo": "GRV-K7M2QX9PD4TA" }`. Quem lê o QR é a **equipe do próprio evento** (`DONO`, `PRODUTOR` ou `PORTEIRO`); quem não tem função naquele evento recebe `403`, e evento inexistente dá `404`. Um ingresso de **outro** evento é sempre recusado. O código ignora espaços e maiúsculas. Resposta: `{ "resultado", "mensagem", "ingresso" }`.
 
 | Situação | HTTP | `resultado` |
 |---|---|---|
@@ -320,7 +318,7 @@ Exige login. Cada usuário vê só os **próprios** ingressos (o de outra pessoa
 | Ingresso cancelado, ou de outro evento | `409` | `INVALIDO` |
 | Código inexistente (`ingresso: null`) | `404` | `INVALIDO` |
 
-A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`). `CLIENTE` e `PRODUTOR` recebem `403`.
+A baixa é atômica: se o mesmo código for lido por dois aparelhos ao mesmo tempo, só um recebe `200`. Toda tentativa de um ingresso existente fica registrada (`ValidacaoIngresso`), com o evento e quem validou.
 
 **O que ainda não existe na API:** categorias, estorno manual e pagamento real.
 
@@ -335,11 +333,11 @@ Os tipos da branch `feat/integracao-back` espelham as tabelas do banco, e isso n
 - A resposta de listagem de eventos é um envelope (`{ data, page, limit, total, totalPages }`).
 
 ```ts
-export type Papel = "CLIENTE" | "PRODUTOR" | "ADMIN";
+export type FuncaoEvento = "DONO" | "PRODUTOR" | "PORTEIRO";
 
 export type Usuario = {
   id: string; nome: string; username: string; avatarUrl: string | null;
-  email: string; papel: Papel; criadoEm: string;
+  email: string; podeResetarSeed: boolean; criadoEm: string;
 };
 
 export type Evento = {
@@ -384,10 +382,30 @@ const { data: eventos } = await api<Pagina<Evento>>("/eventos?page=1&limit=20");
 
 Na `HomeScreen`, a chamada atual a `${apiUrl}/filmes` deve virar `/eventos`, e o resultado é lido de `.data`. Trate também o estado inicial vazio (`eventos[0]` não existe antes da resposta chegar).
 
+## Equipe e painel do evento
+
+Não há administrador geral: cada evento tem a sua equipe. Quem cria o evento vira `DONO`; o dono aloca outras contas como `PRODUTOR` ou `PORTEIRO`.
+
+| Função | Pode |
+|---|---|
+| `DONO` | tudo: editar e apagar o evento, lotes, equipe, ler QR, ver o painel com receita |
+| `PRODUTOR` | editar o evento, gerenciar lotes, ler QR, ver o painel com receita |
+| `PORTEIRO` | ler QR e ver o painel **sem** dinheiro (sem receita nem preços) |
+
+| Rota | O que faz |
+|---|---|
+| `GET /eventos/meus` | eventos em que você tem função: `[{ funcao, evento: { id, titulo, imagemUrl, comecaEm, terminaEm, cidade } }]` |
+| `GET /eventos/:eventoId/equipe` | só `DONO`. Lista `[{ usuarioId, funcao, usuario: { id, nome, username, avatarUrl } }]` |
+| `POST /eventos/:eventoId/equipe` | só `DONO`. Corpo `{ "username": "bia", "funcao": "PRODUTOR" | "PORTEIRO" }` (aceita `@`). Se a pessoa já é da equipe, troca a função. Devolve a equipe. `409` para tentar mudar o dono |
+| `DELETE /eventos/:eventoId/equipe/:usuarioId` | só `DONO` → `204`. `409` se for o dono, `404` se a pessoa não está na equipe |
+| `GET /eventos/:eventoId/dashboard` | `DONO`, `PRODUTOR` ou `PORTEIRO` (veja abaixo) |
+
+`GET /eventos/:eventoId/dashboard` devolve `{ evento, funcao, ingressos: { emitidos, aguardando, entraram, cancelados }, tentativas: { liberadas, jaUtilizados, invalidas }, entradasPorHora: [{ hora, total }], ultimasEntradas: [{ ingressoId, dono, lote, usadoEm }], lotes: [{ id, nome, quantidade, vendidos, reservados, disponiveis, preco? }], receita? }`. `preco` e `receita` (pedidos pagos) só vêm para `DONO` e `PRODUTOR`.
+
 ## Admin
 
 | Rota | O que faz |
 |---|---|
-| `POST /admin/resetar-seed` | **só ADMIN.** Apaga todos os dados, menos a conta de quem pediu, e recria o seed de demonstração |
+| `POST /admin/resetar-seed` | **só contas com `podeResetarSeed`** (ligado direto no banco). Apaga todos os dados, menos a conta de quem pediu, e recria o seed de demonstração |
 
 Responde `200 { "mensagem" }`. Recusado com `403` quando `NODE_ENV=production` (o banco real nunca é zerado pela API) e com `500` se `SEED_PASSWORD` não estiver definida no servidor, pois é a senha das contas do seed. Os dados são apagados e recriados numa única transação: se algo falhar, nada muda.

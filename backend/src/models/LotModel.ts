@@ -3,9 +3,6 @@ import prisma from "../config/prisma";
 import type { LotCreateData, LotUpdateData } from "../utils/lotInput";
 import { isNotFoundError } from "../utils/prismaErrors";
 
-// Lote com o dono do evento, para checar permissão de edição.
-export type LotWithEventOwner = Lote & { evento: { criadoPorId: string | null } };
-
 export class LotModel {
   private prismaClient: PrismaClient;
 
@@ -16,13 +13,6 @@ export class LotModel {
   async findById(id: string): Promise<Lote | null> {
     return this.prismaClient.lote.findUnique({
       where: { id },
-    });
-  }
-
-  async findByIdWithEventOwner(id: string): Promise<LotWithEventOwner | null> {
-    return this.prismaClient.lote.findUnique({
-      where: { id },
-      include: { evento: { select: { criadoPorId: true } } },
     });
   }
 

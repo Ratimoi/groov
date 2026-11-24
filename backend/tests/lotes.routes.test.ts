@@ -1,6 +1,7 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { logadoComo } from "./helpers/auth";
+import { programaEquipe } from "./helpers/equipe";
 import { prismaError } from "./helpers/prismaErrors";
 import { prismaMock, resetPrismaMock } from "./helpers/prismaMock";
 
@@ -8,7 +9,7 @@ vi.mock("../src/config/prisma", () => ({ default: prismaMock }));
 
 const { default: app } = await import("../src/app");
 
-// p1 criou o evento e2; p2 é outro produtor.
+// p1 é o dono do evento, p2 é produtor dele, p3 é porteiro dele; c1 não é da equipe.
 const evento = { id: "e1", titulo: "Show", cidade: "Recife", criadoPorId: "p1" };
 
 const lote = {
@@ -23,22 +24,24 @@ const lote = {
   descontoGrupo: null,
   prazoGrupoHoras: null,
   criadoEm: new Date("2026-10-01T12:00:00.000Z"),
-  evento: { criadoPorId: "p1" },
 };
 
 // Lote com compra em grupo configurada e sem reservas.
 const loteGrupo = { ...lote, quantidadeReservada: 0, tamanhoGrupo: 4, prazoGrupoHoras: 48, descontoGrupo: "0.1500" };
 
-const criador = () => logadoComo("PRODUTOR", "p1");
-const outroProdutor = () => logadoComo("PRODUTOR", "p2");
-const admin = () => logadoComo("ADMIN", "adm");
-const cliente = () => logadoComo("CLIENTE", "c1");
+const criador = () => logadoComo("p1");
+const produtor = () => logadoComo("p2");
+const porteiro = () => logadoComo("p3");
+const estranho = () => logadoComo("c1");
+// Conta liberada para resetar o seed: não ganha nenhum poder sobre eventos.
+const contaDoSeed = () => logadoComo("adm", true);
 
 describe("lotes", () => {
   beforeEach(() => {
     resetPrismaMock();
     prismaMock.evento.findUnique.mockResolvedValue(evento);
     prismaMock.lote.findUnique.mockResolvedValue(lote);
+    programaEquipe({ p1: "DONO", p2: "PRODUTOR", p3: "PORTEIRO" });
   });
 
   describe("GET /eventos/:eventoId/lotes (público)", () => {
@@ -165,24 +168,21 @@ describe("lotes", () => {
       });
     });
 
-    it("ADMIN cria lote em evento de outro criador", async () => {
-      const res = await request(app).post("/eventos/e1/lotes").set(admin()).send(valido);
+    it("o produtor do evento também cria lote", async () => {
+      const res = await request(app).post("/eventos/e1/lotes").set(produtor()).send(valido);
 
       expect(res.status).toBe(201);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é gravado", async () => {
-      const res = await request(app).post("/eventos/e1/lotes").set(outroProdutor()).send(valido);
+    it.each([
+      ["o porteiro", porteiro],
+      ["quem não é da equipe", estranho],
+      ["a conta liberada para resetar o seed", contaDoSeed],
+    ])("%s recebe 403 e nada é gravado", async (_nome, quem) => {
+      const res = await request(app).post("/eventos/e1/lotes").set(quem()).send(valido);
 
       expect(res.status).toBe(403);
       expect(prismaMock.lote.create).not.toHaveBeenCalled();
-    });
-
-    it("CLIENTE recebe 403 sem consultar o evento", async () => {
-      const res = await request(app).post("/eventos/e1/lotes").set(cliente()).send(valido);
-
-      expect(res.status).toBe(403);
-      expect(prismaMock.evento.findUnique).not.toHaveBeenCalled();
     });
 
     it("sem token responde 401", async () => {
@@ -194,7 +194,7 @@ describe("lotes", () => {
     it("evento inexistente responde 404", async () => {
       prismaMock.evento.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).post("/eventos/nada/lotes").set(admin()).send(valido);
+      const res = await request(app).post("/eventos/nada/lotes").set(criador()).send(valido);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Evento não encontrado" });
@@ -213,8 +213,8 @@ describe("lotes", () => {
       expect(data).not.toHaveProperty("quantidadeReservada");
     });
 
-    it("a checagem de dono vem antes da validação", async () => {
-      const res = await request(app).post("/eventos/e1/lotes").set(outroProdutor()).send({ nome: "" });
+    it("a checagem de permissão vem antes da validação", async () => {
+      const res = await request(app).post("/eventos/e1/lotes").set(estranho()).send({ nome: "" });
 
       expect(res.status).toBe(403);
     });
@@ -274,29 +274,23 @@ describe("lotes", () => {
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ id: "l1", preco: "200.00" });
       expect(prismaMock.lote.update).toHaveBeenCalledWith({ where: { id: "l1" }, data: { preco: "200.00" } });
-      expect(prismaMock.lote.findUnique).toHaveBeenCalledWith({
-        where: { id: "l1" },
-        include: { evento: { select: { criadoPorId: true } } },
-      });
     });
 
-    it("ADMIN atualiza lote de evento de outro criador", async () => {
-      const res = await request(app).put("/lotes/l1").set(admin()).send({ nome: "Novo nome" });
+    it("o produtor do evento também atualiza", async () => {
+      const res = await request(app).put("/lotes/l1").set(produtor()).send({ nome: "Novo nome" });
 
       expect(res.status).toBe(200);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é alterado", async () => {
-      const res = await request(app).put("/lotes/l1").set(outroProdutor()).send({ preco: 1 });
+    it.each([
+      ["o porteiro", porteiro],
+      ["quem não é da equipe", estranho],
+      ["a conta liberada para resetar o seed", contaDoSeed],
+    ])("%s recebe 403 e nada é alterado", async (_nome, quem) => {
+      const res = await request(app).put("/lotes/l1").set(quem()).send({ preco: 1 });
 
       expect(res.status).toBe(403);
       expect(prismaMock.lote.update).not.toHaveBeenCalled();
-    });
-
-    it("CLIENTE recebe 403", async () => {
-      const res = await request(app).put("/lotes/l1").set(cliente()).send({ preco: 1 });
-
-      expect(res.status).toBe(403);
     });
 
     it("sem token responde 401", async () => {
@@ -308,7 +302,7 @@ describe("lotes", () => {
     it("lote inexistente responde 404", async () => {
       prismaMock.lote.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).put("/lotes/nada").set(admin()).send({ preco: 1 });
+      const res = await request(app).put("/lotes/nada").set(criador()).send({ preco: 1 });
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Lote não encontrado" });
@@ -479,23 +473,21 @@ describe("lotes", () => {
       expect(prismaMock.lote.delete).toHaveBeenCalledWith({ where: { id: "l1" } });
     });
 
-    it("ADMIN apaga lote de evento de outro criador", async () => {
-      const res = await request(app).delete("/lotes/l1").set(admin());
+    it("o produtor do evento também apaga", async () => {
+      const res = await request(app).delete("/lotes/l1").set(produtor());
 
       expect(res.status).toBe(204);
     });
 
-    it("outro PRODUTOR recebe 403 e nada é apagado", async () => {
-      const res = await request(app).delete("/lotes/l1").set(outroProdutor());
+    it.each([
+      ["o porteiro", porteiro],
+      ["quem não é da equipe", estranho],
+      ["a conta liberada para resetar o seed", contaDoSeed],
+    ])("%s recebe 403 e nada é apagado", async (_nome, quem) => {
+      const res = await request(app).delete("/lotes/l1").set(quem());
 
       expect(res.status).toBe(403);
       expect(prismaMock.lote.delete).not.toHaveBeenCalled();
-    });
-
-    it("CLIENTE recebe 403", async () => {
-      const res = await request(app).delete("/lotes/l1").set(cliente());
-
-      expect(res.status).toBe(403);
     });
 
     it("sem token responde 401", async () => {
@@ -528,7 +520,7 @@ describe("lotes", () => {
     it("lote inexistente responde 404", async () => {
       prismaMock.lote.findUnique.mockResolvedValue(null);
 
-      const res = await request(app).delete("/lotes/nada").set(admin());
+      const res = await request(app).delete("/lotes/nada").set(criador());
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ message: "Lote não encontrado" });

@@ -48,6 +48,9 @@ function Conteudo() {
       <Tabs.Screen name="pagamento-confirmado" />
       <Tabs.Screen name="ingresso" />
       <Tabs.Screen name="escanear" />
+      <Tabs.Screen name="meus-eventos" />
+      <Tabs.Screen name="evento-painel" />
+      <Tabs.Screen name="equipe-evento" />
       <Tabs.Screen name="meus-dados" />
       <Tabs.Screen name="entrar-grupo" />
       <Tabs.Screen name="editar-grupo" />

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ActivityIndicator, Linking, Text, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useUser } from "@/contexts/UserContext";
 import { CabecalhoGroov } from "../components/CabecalhoGroov";
 import { api, ApiError } from "../utils/api";
@@ -22,14 +22,16 @@ const ICONE = { VALIDO: "check-circle", JA_UTILIZADO: "history", INVALIDO: "canc
 
 export default function Escanear() {
   const router = useRouter();
-  const { token, user } = useUser();
+  const { token } = useUser();
+  // A leitura é sempre de UM evento: só a equipe dele consegue validar ingressos dele.
+  const { eventoId, titulo } = useLocalSearchParams<{ eventoId?: string; titulo?: string }>();
   const [permissao, pedirPermissao] = Camera?.useCameraPermissions() ?? [null, async () => null];
   const [lendo, setLendo] = useState(false);
   const [resultado, setResultado] = useState<ValidacaoApi | null>(null);
   const [falha, setFalha] = useState("");
   const emUso = useRef(false);
 
-  const voltar = () => (router.canGoBack() ? router.back() : router.replace("/perfil"));
+  const voltar = () => (router.canGoBack() ? router.back() : router.replace("/meus-eventos"));
   const proximo = () => {
     setResultado(null);
     setFalha("");
@@ -41,7 +43,7 @@ export default function Escanear() {
     emUso.current = true;
     setLendo(true);
     try {
-      setResultado(await api<ValidacaoApi>("/ingressos/validar", { token, method: "POST", body: { codigo } }));
+      setResultado(await api<ValidacaoApi>(`/eventos/${eventoId}/validar`, { token, method: "POST", body: { codigo } }));
     } catch (error) {
       // 404 e 409 também trazem a resposta de validação no corpo.
       const corpo = error instanceof ApiError ? (error.corpo as Partial<ValidacaoApi> | null) : null;
@@ -68,7 +70,7 @@ export default function Escanear() {
     </View>
   );
 
-  if (user?.papel !== "ADMIN") return aviso("Só administradores podem validar ingressos.");
+  if (!eventoId) return aviso("Escolha um evento em Meus Eventos para ler os ingressos dele.", { rotulo: "Meus eventos", onPress: () => router.replace("/meus-eventos") });
   if (!Camera) return aviso("Esta versão do app não tem leitor de QR code. Instale a versão mais recente do Groov.");
   if (!permissao) return <View className="flex-1 bg-background" />;
   if (!permissao.granted) {
@@ -98,7 +100,7 @@ export default function Escanear() {
           <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
             <View className="w-64 h-64 rounded-3xl border-2 border-primary-container" />
             <Text className="font-body-sm text-body-sm text-white mt-6 bg-black/60 px-3 py-1 rounded-full">
-              {lendo ? "Validando..." : "Aponte para o QR code do ingresso"}
+              {lendo ? "Validando..." : titulo ? `${titulo}: aponte para o QR code` : "Aponte para o QR code do ingresso"}
             </Text>
           </View>
         )}

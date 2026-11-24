@@ -75,29 +75,32 @@ Rotas disponíveis:
 | `POST /auth/login` | público | Login com `{ email, senha }`; devolve `{ token, usuario }` |
 | `GET /auth/me` | logado | Dados do usuário do token |
 | `POST /usuarios` | público | Cadastro (sempre como `CLIENTE`) |
-| `GET /usuarios` | ADMIN | Lista usuários |
-| `GET, PUT, DELETE /usuarios/:id` | o próprio usuário ou ADMIN | Só um ADMIN altera `papel` |
+| `GET, PUT, DELETE /usuarios/:id` | só o próprio usuário | |
 | `POST /grupos`, `GET /grupos` | logado | Cria um grupo (o líder é você) e lista os grupos de que você participa |
-| `GET /grupos/:id`, `GET /grupos/:id/members` | membros do grupo ou ADMIN | Quem não participa recebe 404 |
-| `PUT, DELETE /grupos/:id`, `POST /grupos/:id/members` | líder do grupo ou ADMIN | Renomear, apagar e convidar membros |
-| `DELETE /grupos/:id/members/:usuarioId` | líder, ADMIN ou o próprio membro | Remover alguém ou sair do grupo; o líder não pode ser removido |
+| `GET /grupos/:id`, `GET /grupos/:id/members` | membros do grupo | Quem não participa recebe 404 |
+| `PUT, DELETE /grupos/:id`, `POST /grupos/:id/members` | líder do grupo | Renomear, apagar e convidar membros |
+| `DELETE /grupos/:id/members/:usuarioId` | líder ou o próprio membro | Remover alguém ou sair do grupo; o líder não pode ser removido |
 | `POST /grupos/compras` | logado | Inicia uma compra em grupo (o iniciador é você e precisa ser membro do grupo) |
-| `GET /grupos/compras`, `GET /grupos/compras/:id` | participantes da compra ou ADMIN | Lista só as suas; as demais respondem 404 |
+| `GET /grupos/compras`, `GET /grupos/compras/:id` | participantes da compra | Lista só as suas; as demais respondem 404 |
 | `POST /grupos/compras/:id/pagar` | participante da compra | Paga a sua cota (pagamento simulado). O último a pagar confirma a compra e emite os ingressos. Compras vencidas expiram na primeira consulta |
 | `POST /pedidos` | logado | Compra individual (pagamento simulado): taxa de 12,5%, baixa o estoque e emite um ingresso por unidade |
 | `GET /ingressos`, `GET /ingressos/:id` | dono do ingresso | Só os seus; o de outra pessoa responde 404 |
 | `GET /usuarios/busca?q=` | logado | Busca por nome ou username (mínimo 2 caracteres) para convidar pessoas a um grupo |
 | `GET /eventos`, `GET /eventos/:id` | público | Listagem paginada (`?page=1&limit=20`, máx. 100) e consulta de eventos |
-| `POST /eventos` | PRODUTOR ou ADMIN | Cria um evento; o criador é o usuário logado |
-| `PUT, DELETE /eventos/:id` | criador do evento ou ADMIN | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
+| `POST /eventos` | logado | Cria um evento; quem cria vira o `DONO` dele |
+| `PUT /eventos/:id` (`DONO`/`PRODUTOR`), `DELETE /eventos/:id` (`DONO`) | equipe do evento | Editar (só os campos enviados; `null` limpa os opcionais) e apagar. Evento com lotes ou pedidos não pode ser apagado (409) |
 | `GET /eventos/:eventoId/lotes`, `GET /lotes/:id` | público | Lotes de um evento (preço, quantidade e disponibilidade) e um lote |
-| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | criador do evento (PRODUTOR) ou ADMIN | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
+| `POST /eventos/:eventoId/lotes`, `PUT, DELETE /lotes/:id` | `DONO` ou `PRODUTOR` do evento | Criar, editar e apagar lotes. Não baixa a quantidade abaixo do vendido/reservado nem apaga lote com ingressos vendidos |
+| `GET /eventos/meus` | logado | Eventos em que você tem função (dono, produtor ou porteiro) |
+| `POST /eventos/:eventoId/validar` | equipe do evento | Lê o QR de um ingresso desse evento (só a equipe dele; ingresso de outro evento é recusado) |
+| `GET /eventos/:eventoId/dashboard` | equipe do evento | Painel do evento (receita só para dono e produtor) |
+| `GET, POST /eventos/:eventoId/equipe`, `DELETE /eventos/:eventoId/equipe/:usuarioId` | `DONO` | Aloca e remove produtores e porteiros |
 
 > Quem vai consumir a API (o app) deve ler o guia [docs/API.md](docs/API.md): formatos de resposta, erros, permissões e tipos TypeScript.
 
 ### Autenticação
 
-O login devolve um token JWT, que deve ser enviado nas rotas protegidas no cabeçalho `Authorization: Bearer <token>`. O token vale 1 dia (`JWT_EXPIRES_IN`) e carrega só o id do usuário: o papel é lido do banco a cada requisição, então apagar ou rebaixar um usuário vale na hora. Rotas protegidas sem token válido respondem 401; sem permissão, 403. O login é limitado a 10 tentativas por IP a cada 15 minutos (429).
+O login devolve um token JWT, que deve ser enviado nas rotas protegidas no cabeçalho `Authorization: Bearer <token>`. O token vale 1 dia (`JWT_EXPIRES_IN`) e carrega só o id do usuário: a função de cada pessoa em cada evento é lida do banco a cada requisição, então remover alguém da equipe vale na hora. Rotas protegidas sem token válido respondem 401; sem permissão, 403. O login é limitado a 10 tentativas por IP a cada 15 minutos (429).
 
 A API **não sobe** sem `JWT_SECRET` (mínimo 32 caracteres). Gere um com:
 
@@ -105,10 +108,10 @@ A API **não sobe** sem `JWT_SECRET` (mínimo 32 caracteres). Gere um com:
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-Todo cadastro entra como `CLIENTE`. Para criar o primeiro `ADMIN`, cadastre o usuário normalmente e promova-o direto no banco (console SQL do Neon):
+**Não existe administrador geral.** Quem cria um evento vira o `DONO` dele e aloca produtores e porteiros pela equipe do evento. A única permissão de conta é `podeResetarSeed`, que libera `POST /admin/resetar-seed` (nunca em produção) e só se liga direto no banco (console SQL do Neon):
 
 ```sql
-UPDATE "Usuario" SET papel = 'ADMIN' WHERE email = 'seu@email.com';
+UPDATE "Usuario" SET "podeResetarSeed" = true WHERE email = 'seu@email.com';
 ```
 
 Campos de um evento: `titulo`, `cidade` e `comecaEm` (data ISO 8601, ex.: `2026-12-31T22:00:00Z`) são obrigatórios; `terminaEm`, `descricao`, `nomeLocal`, `imagemUrl` (http ou https) e `categoriaId` são opcionais. `terminaEm` não pode ser anterior a `comecaEm`.

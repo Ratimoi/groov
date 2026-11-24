@@ -93,9 +93,9 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     return purchase;
   }
 
-  // ADMIN vê todas; os demais, só as compras de que participam.
+  // Cada pessoa vê só as compras de que participa.
   async findAll(actor: AuthUser): Promise<GroupPurchase[]> {
-    const usuarioId = actor.papel === "ADMIN" ? undefined : actor.id;
+    const usuarioId = actor.id;
     const purchases = await this.groupPurchaseModel.findAll(usuarioId);
 
     // Compras com prazo vencido expiram aqui, na primeira consulta (não há tarefa agendada).
@@ -108,7 +108,7 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     if (!purchase) return null;
 
     const participates = purchase.participantes.some((participante) => participante.usuarioId === actor.id);
-    if (actor.papel !== "ADMIN" && !participates) return null;
+    if (!participates) return null;
 
     if (await this.expireDue([purchase])) purchase = await this.groupPurchaseModel.findById(id);
     return purchase;
@@ -121,10 +121,7 @@ export class GroupPurchaseService implements GroupPurchaseServiceContract {
     const participante = purchase?.participantes.find((item) => item.usuarioId === actor.id);
     if (!purchase) throw new AppError("Compra em grupo não encontrada", 404);
     if (!participante) {
-      throw new AppError(
-        actor.papel === "ADMIN" ? "Você não participa desta compra" : "Compra em grupo não encontrada",
-        actor.papel === "ADMIN" ? 403 : 404,
-      );
+      throw new AppError("Compra em grupo não encontrada", 404);
     }
 
     if (await this.expireDue([purchase])) throw new AppError("O prazo desta compra em grupo expirou", 409);

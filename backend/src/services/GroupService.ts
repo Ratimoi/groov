@@ -37,9 +37,8 @@ export class GroupService implements GroupServiceContract {
     return this.groupModel.create({ nome: data.nome, liderId: actor.id });
   }
 
-  // ADMIN vê todos; os demais, só os grupos de que participam.
+  // Cada pessoa vê só os grupos de que participa.
   async findAll(actor: AuthUser): Promise<Grupo[]> {
-    if (actor.papel === "ADMIN") return this.groupModel.findAll();
     return this.groupModel.findAllByMember(actor.id);
   }
 
@@ -113,15 +112,12 @@ export class GroupService implements GroupServiceContract {
     }
   }
 
-  // Grupo que o usuário pode ver: ADMIN, o líder ou um membro. Para os demais, é como se não existisse.
+  // Grupo que o usuário pode ver: o líder ou um membro. Para os demais, é como se não existisse.
   private async findVisibleGroup(grupoId: string, actor: AuthUser): Promise<Grupo | null> {
     const group = await this.groupModel.findById(grupoId);
     if (!group) return null;
 
-    const canSee =
-      actor.papel === "ADMIN" ||
-      group.liderId === actor.id ||
-      (await this.groupMemberModel.isMember(grupoId, actor.id));
+    const canSee = group.liderId === actor.id || (await this.groupMemberModel.isMember(grupoId, actor.id));
     return canSee ? group : null;
   }
 
@@ -134,7 +130,7 @@ export class GroupService implements GroupServiceContract {
   }
 
   private assertCanManage(group: Grupo, actor: AuthUser): void {
-    if (actor.papel !== "ADMIN" && group.liderId !== actor.id) {
+    if (group.liderId !== actor.id) {
       throw new AppError("Somente o líder do grupo pode fazer isso", 403);
     }
   }

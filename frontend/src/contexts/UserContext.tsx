@@ -8,7 +8,8 @@ export type Usuario = {
   username: string;
   avatarUrl?: string | null;
   email: string;
-  papel: "CLIENTE" | "PRODUTOR" | "ADMIN";
+  // Liberado só direto no banco: mostra o botão de resetar o seed. Não há administrador geral.
+  podeResetarSeed?: boolean;
   // false em contas anteriores à exigência do CPF; ausente se a API for antiga.
   temCpf?: boolean;
 };
@@ -38,7 +39,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [carregandoSessao, setCarregandoSessao] = useState(true);
 
-  // Ao abrir o app, valida o token guardado (o papel é lido do banco a cada requisição).
+  // Ao abrir o app, valida o token guardado (a conta é lida do banco a cada requisição).
   useEffect(() => {
     let cancelado = false;
     async function restaurar() {

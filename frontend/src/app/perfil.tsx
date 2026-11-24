@@ -101,7 +101,7 @@ export default function Perfil() {
     { id: "ingressos", rotulo: "Ingressos" },
   ];
 
-  // Só ADMIN. A API recusa em produção; aqui apenas confirma e mostra o resultado.
+  // Só contas com `podeResetarSeed` (ligado no banco). A API recusa em produção; aqui apenas confirma e mostra o resultado.
   const confirmarReset = () =>
     Alert.alert(
       "Resetar para o seed?",
@@ -185,18 +185,19 @@ export default function Perfil() {
               <MaterialIcons name="chevron-right" size={22} color="#9d8ba0" />
             </TouchableOpacity>
 
-            {user?.papel === "ADMIN" && (
-              <TouchableOpacity
-                onPress={() => router.push("/escanear")}
-                activeOpacity={0.8}
-                className="mt-6 self-center flex-row items-center gap-2 px-6 py-3 rounded-xl bg-primary-container"
-              >
-                <MaterialIcons name="qr-code-scanner" size={20} color="#ffffff" />
-                <Text className="font-label-caps text-label-caps text-white uppercase">Validar ingressos</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => router.push("/meus-eventos")}
+              activeOpacity={0.8}
+              className="mt-3 flex-row items-center justify-between bg-surface-container-low border border-white/10 rounded-xl p-4"
+            >
+              <View className="flex-row items-center gap-3">
+                <MaterialIcons name="event-available" size={22} color="#ebb2ff" />
+                <Text className="font-body-md text-body-md font-bold text-white">Meus Eventos</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color="#9d8ba0" />
+            </TouchableOpacity>
 
-            {user?.papel === "ADMIN" && (
+            {user?.podeResetarSeed && (
               <TouchableOpacity
                 onPress={confirmarReset}
                 disabled={resetando}

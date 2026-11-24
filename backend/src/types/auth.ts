@@ -1,7 +1,6 @@
-import type { Papel } from "@prisma/client";
 import type { PublicUser } from "./user";
 
-export type AuthUser = { id: string; papel: Papel };
+export type AuthUser = { id: string; podeResetarSeed: boolean };
 
 export type LoginRequest = { email: string; senha: string };
 

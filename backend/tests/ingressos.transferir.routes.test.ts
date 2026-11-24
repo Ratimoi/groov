@@ -9,7 +9,7 @@ const { default: app } = await import("../src/app");
 
 const ingresso = { id: "i1", codigoQr: "GRV-ABCDEFGHJKLM", donoId: "u1", status: "VALIDO" };
 const transferir = (corpo: unknown, id = "u1") =>
-  request(app).post("/ingressos/i1/transferir").set(logadoComo("CLIENTE", id)).send(corpo as object);
+  request(app).post("/ingressos/i1/transferir").set(logadoComo(id)).send(corpo as object);
 
 describe("POST /ingressos/:id/transferir", () => {
   beforeEach(resetPrismaMock);
@@ -41,7 +41,7 @@ describe("POST /ingressos/:id/transferir", () => {
     runTransactionCallbacks();
     prismaMock.ingresso.updateMany.mockResolvedValue({ count: 1 });
 
-    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("CLIENTE", "u1")).send({ username: "@bia" });
+    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("u1")).send({ username: "@bia" });
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ donoId: "u2" });
@@ -75,7 +75,7 @@ describe("POST /ingressos/:id/transferir", () => {
     prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
     prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }).mockResolvedValueOnce(null);
 
-    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("CLIENTE", "u1")).send({ username: "ninguem" });
+    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("u1")).send({ username: "ninguem" });
 
     expect(res.status).toBe(404);
     expect(prismaMock.ingresso.updateMany).not.toHaveBeenCalled();
@@ -85,7 +85,7 @@ describe("POST /ingressos/:id/transferir", () => {
     prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
     prismaMock.usuario.findUnique.mockResolvedValueOnce({ id: "u1", papel: "CLIENTE" }).mockResolvedValueOnce({ id: "u1" });
 
-    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("CLIENTE", "u1")).send({ username: "eu" });
+    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("u1")).send({ username: "eu" });
 
     expect(res.status).toBe(400);
   });
@@ -96,7 +96,7 @@ describe("POST /ingressos/:id/transferir", () => {
     runTransactionCallbacks();
     prismaMock.ingresso.updateMany.mockResolvedValue({ count: 0 });
 
-    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("CLIENTE", "u1")).send({ username: "bia" });
+    const res = await request(app).post("/ingressos/i1/transferir").set(logadoComo("u1")).send({ username: "bia" });
 
     expect(res.status).toBe(409);
   });

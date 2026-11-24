@@ -2,15 +2,29 @@ import { Evento } from "@prisma/client";
 import { EventModel } from "../models/EventModel";
 import type { AuthUser } from "../types/auth";
 import { EventServiceContract, EventoCompleto } from "../types/event";
-import { assertCanManageEvent } from "../utils/eventAccess";
+import { EventTeamModel, type EventoDaEquipe } from "../models/EventTeamModel";
+import { EventAccessService } from "./EventAccessService";
 import { assertEndAfterStart, parseEventCreate, parseEventUpdate } from "../utils/eventInput";
 import { Paginated, parsePagination, PaginationQuery, toPaginated } from "../utils/pagination";
 
 export class EventService implements EventServiceContract {
   private eventModel: EventModel;
+  private teamModel: EventTeamModel;
+  private access: EventAccessService;
 
-  constructor(eventModel: EventModel = new EventModel()) {
+  constructor(
+    eventModel: EventModel = new EventModel(),
+    teamModel: EventTeamModel = new EventTeamModel(),
+    access: EventAccessService = new EventAccessService(teamModel),
+  ) {
     this.eventModel = eventModel;
+    this.teamModel = teamModel;
+    this.access = access;
+  }
+
+  // Eventos em que o usuário tem alguma função (dono, produtor ou porteiro).
+  async findMine(actor: AuthUser): Promise<EventoDaEquipe[]> {
+    return this.teamModel.findEventsByUser(actor.id);
   }
 
   async findAll(query: PaginationQuery): Promise<Paginated<EventoCompleto>> {
@@ -30,7 +44,7 @@ export class EventService implements EventServiceContract {
   async update(id: string, body: unknown, actor: AuthUser): Promise<Evento | null> {
     const event = await this.eventModel.findById(id);
     if (!event) return null;
-    assertCanManageEvent(event.criadoPorId, actor);
+    await this.access.exigir(id, actor, "EDITAR_EVENTO");
 
     const data = parseEventUpdate(body);
     assertEndAfterStart(
@@ -43,7 +57,7 @@ export class EventService implements EventServiceContract {
   async delete(id: string, actor: AuthUser): Promise<boolean> {
     const event = await this.eventModel.findById(id);
     if (!event) return false;
-    assertCanManageEvent(event.criadoPorId, actor);
+    await this.access.exigir(id, actor, "APAGAR_EVENTO");
     return this.eventModel.delete(id);
   }
 }

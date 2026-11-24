@@ -21,7 +21,8 @@ export class EventModel {
 
   async create(data: EventCreateData, criadoPorId: string): Promise<Evento> {
     return this.prismaClient.evento.create({
-      data: { ...data, criadoPorId },
+      // Quem cria o evento vira o DONO dele.
+      data: { ...data, criadoPorId, equipe: { create: { usuarioId: criadoPorId, funcao: "DONO" } } },
     });
   }
 

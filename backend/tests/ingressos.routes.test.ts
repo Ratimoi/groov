@@ -24,7 +24,7 @@ describe("/ingressos", () => {
     it("lista só os ingressos do usuário logado, sem dados sensíveis do dono", async () => {
       prismaMock.ingresso.findMany.mockResolvedValue([ingresso]);
 
-      const res = await request(app).get("/ingressos").set(logadoComo("CLIENTE", "u1"));
+      const res = await request(app).get("/ingressos").set(logadoComo("u1"));
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual([ingresso]);
@@ -36,7 +36,7 @@ describe("/ingressos", () => {
     it("ADMIN também vê só os próprios ingressos", async () => {
       prismaMock.ingresso.findMany.mockResolvedValue([]);
 
-      await request(app).get("/ingressos").set(logadoComo("ADMIN", "adm"));
+      await request(app).get("/ingressos").set(logadoComo("adm"));
 
       expect(prismaMock.ingresso.findMany.mock.calls[0][0].where).toEqual({ donoId: "adm" });
     });
@@ -46,7 +46,7 @@ describe("/ingressos", () => {
     it("o dono vê o ingresso", async () => {
       prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
 
-      const res = await request(app).get("/ingressos/i1").set(logadoComo("CLIENTE", "u1"));
+      const res = await request(app).get("/ingressos/i1").set(logadoComo("u1"));
 
       expect(res.status).toBe(200);
       expect(res.body.codigoQr).toBe("GRV-ABCDEFGHJKLM");
@@ -55,8 +55,8 @@ describe("/ingressos", () => {
     it("ingresso de outra pessoa responde 404 (nem o ADMIN vê o código)", async () => {
       prismaMock.ingresso.findUnique.mockResolvedValue(ingresso);
 
-      const comum = await request(app).get("/ingressos/i1").set(logadoComo("CLIENTE", "u2"));
-      const admin = await request(app).get("/ingressos/i1").set(logadoComo("ADMIN", "adm"));
+      const comum = await request(app).get("/ingressos/i1").set(logadoComo("u2"));
+      const admin = await request(app).get("/ingressos/i1").set(logadoComo("adm"));
 
       expect(comum.status).toBe(404);
       expect(admin.status).toBe(404);
